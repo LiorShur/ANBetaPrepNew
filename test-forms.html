@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Forms - Access Nature Redesign</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .test-header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .test-header p {
+            opacity: 0.9;
+        }
+        
+        .test-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .test-card h2 {
+            color: #2c5530;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-card .badge {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-a {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .badge-b {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .test-card p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .test-card ul {
+            color: #555;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+        
+        .test-card li {
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .test-btn {
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .test-btn-primary {
+            background: linear-gradient(135deg, #4a7c59 0%, #2c5530 100%);
+            color: white;
+        }
+        
+        .test-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 124, 89, 0.4);
+        }
+        
+        .test-btn-secondary {
+            background: white;
+            color: #4a7c59;
+            border: 2px solid #4a7c59;
+            margin-top: 10px;
+        }
+        
+        .test-btn-secondary:hover {
+            background: #f0fdf4;
+        }
+        
+        .divider {
+            text-align: center;
+            color: white;
+            margin: 30px 0;
+            font-size: 1.2rem;
+        }
+        
+        .trail-guide-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .trail-guide-section h2 {
+            color: #2c5530;
+            margin-bottom: 15px;
+        }
+        
+        .trail-guide-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .output-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        .output-section.visible {
+            display: block;
+        }
+        
+        .output-section h3 {
+            color: #2c5530;
+            margin-bottom: 15px;
+        }
+        
+        .output-section pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .guide-preview {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        
+        .guide-preview iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 15px;
+            }
+            
+            .test-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🌲 Access Nature Form Redesign</h1>
+            <p>Test and compare the new survey form options</p>
+        </div>
+        
+        <div class="test-cards">
+            <!-- Option A -->
+            <div class="test-card">
+                <h2>
+                    Option A 
+                    <span class="badge badge-a">Quick + Deep</span>
+                </h2>
+                <p>Two-phase approach: Quick essential fields first, then optional detailed categories.</p>
+                <ul>
+                    <li>5 essential fields in Phase 1</li>
+                    <li>8 expandable categories in Phase 2</li>
+                    <li>~2 minutes for basic survey</li>
+                    <li>Progressive disclosure</li>
+                </ul>
+                <button class="test-btn test-btn-primary" onclick="openFormA()">
+                    Open Form A
+                </button>
+            </div>
+            
+            <!-- Option B -->
+            <div class="test-card">
+                <h2>
+                    Option B 
+                    <span class="badge badge-b">Full Redesign</span>
+                </h2>
+                <p>All original fields with improved visual design and accordion sections.</p>
+                <ul>
+                    <li>7 collapsible sections</li>
+                    <li>Progress bar with completion tracking</li>
+                    <li>Visual cards instead of radio buttons</li>
+                    <li>All original fields preserved</li>
+                </ul>
+                <button class="test-btn test-btn-primary" onclick="openFormB()">
+                    Open Form B
+                </button>
+            </div>
+        </div>
+        
+        <div class="divider">━━━ Trail Guide Preview ━━━</div>
+        
+        <div class="trail-guide-section">
+            <h2>📄 New Trail Guide Design</h2>
+            <p>Preview the visual-first trail guide with accessibility banner, condition bars, and timeline.</p>
+            <button class="test-btn test-btn-primary" onclick="previewTrailGuide()">
+                Preview Trail Guide
+            </button>
+            <button class="test-btn test-btn-secondary" onclick="downloadTrailGuide()">
+                Download HTML
+            </button>
+            
+            <div class="guide-preview" id="guidePreview" style="display:none;">
+                <iframe id="guideFrame"></iframe>
+            </div>
+        </div>
+        
+        <!-- Output Section -->
+        <div class="output-section" id="outputSection">
+            <h3>📋 Form Output</h3>
+            <p>Data collected from the form:</p>
+            <pre id="outputData"></pre>
+        </div>
+    </div>
+
+    <!-- Import the forms as modules -->
+    <script type="module">
+        // Import both form versions
+        import { accessibilityFormV2Quick } from './src/features/accessibilityFormV2Quick.js';
+        import { accessibilityFormV2Full } from './src/features/accessibilityFormV2Full.js';
+        import { trailGuideGeneratorV2 } from './src/features/trailGuideGeneratorV2.js';
+        
+        // Initialize both forms
+        accessibilityFormV2Quick.initialize();
+        accessibilityFormV2Full.initialize();
+        
+        // Make functions globally available
+        window.openFormA = function() {
+            accessibilityFormV2Quick.open((data) => {
+                console.log('Form A data:', data);
+                showOutput(data);
+            });
+        };
+        
+        window.openFormB = function() {
+            accessibilityFormV2Full.open((data) => {
+                console.log('Form B data:', data);
+                showOutput(data);
+            });
+        };
+        
+        window.showOutput = function(data) {
+            document.getElementById('outputSection').classList.add('visible');
+            document.getElementById('outputData').textContent = JSON.stringify(data, null, 2);
+        };
+        
+        // Sample data for trail guide preview
+        const sampleRouteData = [
+            { type: 'location', coords: { lat: 40.7829, lng: -73.9654 }, timestamp: Date.now() - 3600000 },
+            { type: 'photo', data: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400', timestamp: Date.now() - 3000000, distance: 200, coords: { lat: 40.7832, lng: -73.9650 } },
+            { type: 'text', text: 'Beautiful entrance with accessible ramp', timestamp: Date.now() - 2500000, distance: 500, coords: { lat: 40.7836, lng: -73.9645 } },
+            { type: 'location', coords: { lat: 40.7840, lng: -73.9640 }, timestamp: Date.now() - 2000000 },
+            { type: 'photo', data: 'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400', timestamp: Date.now() - 1500000, distance: 1200, coords: { lat: 40.7848, lng: -73.9628 } },
+            { type: 'text', text: 'Watch for tree roots near the bridge', timestamp: Date.now() - 1000000, distance: 1500, coords: { lat: 40.7852, lng: -73.9622 } },
+            { type: 'location', coords: { lat: 40.7855, lng: -73.9620 }, timestamp: Date.now() }
+        ];
+        
+        const sampleRouteInfo = {
+            name: 'Central Park North Loop',
+            date: new Date().toISOString(),
+            totalDistance: 2.4,
+            elapsedTime: 2700 // 45 minutes
+        };
+        
+        const sampleAccessibilityData = {
+            location: 'Central Park, New York, NY',
+            wheelchairAccess: 'Fully accessible',
+            trailSurface: ['Asphalt', 'Concrete'],
+            surfaceQuality: 'Excellent - smooth and well maintained',
+            trailSlopes: 'No slopes to mild slopes (up to 5%)',
+            shadeCoverage: 'Intermittent shade',
+            disabledParking: 'Available',
+            parkingSpaces: '3',
+            restrooms: 'Separate accessible restrooms for men and women',
+            waterFountains: 'Multiple fountains along route',
+            seating: ['Multiple benches along route'],
+            lighting: 'Trail is lit in darkness',
+            accessibilitySummary: 'Accessible',
+            additionalNotes: 'Restrooms closed on Mondays for maintenance.'
+        };
+        
+        window.previewTrailGuide = function() {
+            const html = trailGuideGeneratorV2.generateHTML(
+                sampleRouteData,
+                sampleRouteInfo,
+                sampleAccessibilityData
+            );
+            
+            const preview = document.getElementById('guidePreview');
+            const frame = document.getElementById('guideFrame');
+            
+            preview.style.display = 'block';
+            frame.srcdoc = html;
+        };
+        
+        window.downloadTrailGuide = function() {
+            const html = trailGuideGeneratorV2.generateHTML(
+                sampleRouteData,
+                sampleRouteInfo,
+                sampleAccessibilityData
+            );
+            
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trail-guide-preview.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        
+        console.log('✅ Test page ready!');
+        console.log('📋 Form A (Quick): accessibilityFormV2Quick');
+        console.log('📋 Form B (Full): accessibilityFormV2Full');
+        console.log('📄 Trail Guide: trailGuideGeneratorV2');
+    </script>
+</body>
+</html>

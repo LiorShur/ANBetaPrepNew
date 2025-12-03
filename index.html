@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Nature - Making Trails Accessible</title>
+  
+  <!-- External CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+  
+  <!-- App CSS -->
+  <link rel="stylesheet" href="src/css/landing.css">
+  <link rel="stylesheet" href="src/css/auth.css">
+
+  <style>
+  .top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10000;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #111827;
+    text-decoration: none;
+  }
+  .nav-auth-indicator .auth-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-radius: 20px;
+    font-size: 0.875rem;
+  }
+  .nav-auth-indicator .auth-status.signed-in {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .nav-menu {
+    display: flex;
+    align-items: left;
+    gap: 8px;
+  }
+  .nav-menu .nav-link {
+    padding: 8px 16px;
+    color: #4b5563;
+    text-decoration: none;
+    border-radius: 8px;
+  }
+  .nav-menu .nav-link:hover { background: #f3f4f6; }
+  .nav-menu .nav-link.active { background: #667eea; color: white; }
+  .nav-menu .nav-auth .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+  }
+  .menu-toggle { display: none; }
+  .hero-section { margin-top: 64px; }
+  .auth-status-landing { display: none !important; }
+  
+  @media (max-width: 768px) {
+    .top-nav { height: 56px; }
+    .hero-section { margin-top: 56px; }
+    .menu-toggle { display: block; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    .nav-menu { display: none; }
+    .nav-menu.active {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 16px;
+    }
+    .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
+    .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+  <nav class="top-nav">
+  <a href="index.html" class="nav-brand">🌲 Access Nature</a>
+  <div class="nav-auth-indicator">
+    <div class="auth-status" id="authIndicator">
+      <span>👤</span>
+      <span id="authStatusText">Guest</span>
+    </div>
+  </div>
+  <button class="menu-toggle" id="menuToggle">☰</button>
+  <div class="nav-menu" id="navMenu">
+    <a href="index.html" class="nav-link active">🏠 Home</a>
+    <a href="tracker.html" class="nav-link">🗺️ Track</a>
+    <a href="reports.html" class="nav-link">📋 Reports</a>
+    <div class="nav-auth">
+      <button id="navAuthBtn" class="btn">Sign In</button>
+    </div>
+  </div>
+</nav>
+
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-background"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">🌲 Access Nature</h1>
+      <p class="hero-subtitle">Making outdoor spaces accessible for everyone</p>
+      
+      <!-- Auth Status -->
+      <div id="authStatusBar" class="auth-status-landing">
+        <div id="userInfo" class="user-info hidden">
+          <span class="user-greeting">Welcome back, <span id="userEmail"></span>!</span>
+          <button id="logoutBtn" class="auth-btn logout-btn">Logout</button>
+        </div>
+        <div id="authPrompt" class="auth-prompt">
+          <button id="showAuthBtn" class="auth-btn login-btn">Sign In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Add this anywhere in your landing page for debugging -->
+<!-- <div style="position: fixed; top: 80px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px;">
+  <button onclick="debugTrailGuides()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🔍 Check Guides
+  </button>
+  <button onclick="makeGuidesPublic()" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🌍 Make Public
+  </button>
+</div> -->
+
+<script>
+// Add these global functions for easy debugging
+async function debugTrailGuides() {
+  try {
+    const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db } = await import("./firebase-setup.js");
+    
+    const guidesQuery = query(collection(db, 'trail_guides'), limit(20));
+    const snapshot = await getDocs(guidesQuery);
+    
+    console.log('📊 TOTAL GUIDES:', snapshot.size);
+    alert(`Found ${snapshot.size} trail guides total`);
+    
+    if (snapshot.size > 0) {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('📄', data.routeName, '- Public:', data.isPublic, '- User:', data.userEmail);
+      });
+    }
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    alert('Debug failed: ' + error.message);
+  }
+}
+
+async function makeGuidesPublic() {
+  try {
+    const { collection, getDocs, query, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db, auth } = await import("./firebase-setup.js");
+    
+    if (!auth.currentUser) {
+      alert('Please sign in first!');
+      return;
+    }
+    
+    const guidesQuery = query(collection(db, 'trail_guides'));
+    const snapshot = await getDocs(guidesQuery);
+    
+    let updated = 0;
+    const promises = [];
+    
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.userId === auth.currentUser.uid && !data.isPublic) {
+        promises.push(updateDoc(doc(db, 'trail_guides', docSnap.id), {
+          isPublic: true,
+          publishedAt: new Date().toISOString()
+        }));
+        updated++;
+      }
+    });
+    
+    if (promises.length === 0) {
+      alert('No private guides found to make public!');
+      return;
+    }
+    
+    await Promise.all(promises);
+    alert(`✅ Made ${updated} guides public!`);
+    
+  } catch (error) {
+    console.error('❌ Failed:', error);
+    alert('Failed: ' + error.message);
+  }
+}
+</script>
+  <!-- Main Navigation -->
+  <div class="main-navigation">
+    <div class="nav-container">
+      
+      <!-- Search Trail Guides -->
+      <div class="nav-card discover-card">
+        <div class="nav-card-icon">🔍</div>
+        <h2>Discover Accessible Trails</h2>
+        <p>Browse community-contributed accessible trail guides with detailed accessibility information, photos, and reviews.</p>
+        
+        <div class="nav-card-features">
+          <span class="feature-tag">♿ Wheelchair Access</span>
+          <span class="feature-tag">📷 Photos & Notes</span>
+          <span class="feature-tag">⭐ Community Reviews</span>
+          <span class="feature-tag">🗺️ Interactive Maps</span>
+        </div>
+        
+        <button class="nav-card-button primary" onclick="openTrailBrowser()">
+          🔍 Browse Trail Guides
+        </button>
+        
+        <div class="quick-search">
+          <input type="text" id="quickSearch" placeholder="Quick search trails..." maxlength="50">
+          <button onclick="quickSearch()" class="search-btn">Search</button>
+        </div>
+      </div>
+
+      <!-- Track New Trail -->
+      <div class="nav-card track-card">
+        <div class="nav-card-icon">📍</div>
+        <h2>Map a New Trail</h2>
+        <p>Use GPS tracking to document new accessible routes. Record accessibility features, take photos, and create trail guides for the community.</p>
+        
+        <div class="nav-card-features">
+          <span class="feature-tag">📱 GPS Tracking</span>
+          <span class="feature-tag">📝 Accessibility Survey</span>
+          <span class="feature-tag">📷 Photo Documentation</span>
+          <span class="feature-tag">☁️ Cloud Sync</span>
+        </div>
+        
+        <button class="nav-card-button secondary" onclick="openTracker()">
+          📍 Start Tracking
+        </button>
+        
+        <div class="tracker-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="totalRoutes">0</span>
+            <span class="stat-label">Routes Mapped</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="totalDistance">0</span>
+            <span class="stat-label">km Documented</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Stats Section -->
+  <div class="community-section">
+    <div class="community-container">
+      <h3>🌍 Community Impact</h3>
+      <div class="community-stats">
+        <div class="community-stat">
+          <span class="stat-big" id="publicGuides">0</span>
+          <span class="stat-desc">Public Trail Guides</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="totalKm">0</span>
+          <span class="stat-desc">Kilometers Mapped</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="accessibleTrails">0</span>
+          <span class="stat-desc">Wheelchair Accessible</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="totalUsers">0</span>
+          <span class="stat-desc">Contributors</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured Trails -->
+  <div class="featured-section">
+    <div class="featured-container">
+      <h3>⭐ Featured Accessible Trails</h3>
+      
+      <!-- Trail Search & Filters -->
+      <div id="trailSearchContainer"></div>
+      
+      <!-- Results Header -->
+      <div id="trailResultsHeader"></div>
+      
+      <div id="featuredTrails" class="featured-grid">
+        <!-- Dynamically populated -->
+      </div>
+      <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreFeatured()">Load More Trails</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer-section">
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <h4>🌲 Access Nature</h4>
+          <p>Making outdoor spaces accessible for everyone</p>
+        </div>
+        <div class="footer-links">
+          <a href="#" onclick="showAbout()">About</a>
+          <a href="#" onclick="showPrivacy()">Privacy</a>
+          <a href="#" onclick="showContact()">Contact</a>
+          <a href="#" onclick="showHelp()">Help</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Access Nature. Making trails accessible for all abilities.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Trail Browser Modal -->
+  <div id="trailBrowserModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeTrailBrowser()"></div>
+    <div class="modal-container trail-browser">
+      <div class="modal-header">
+        <h2>🔍 Browse Accessible Trails</h2>
+        <button class="modal-close" onclick="closeTrailBrowser()">✕</button>
+      </div>
+      
+      <div class="modal-content">
+        <!-- Search and Filters -->
+        <div class="search-section">
+          <div class="search-bar">
+            <input type="text" id="trailSearch" placeholder="Search trail names, locations..." maxlength="100">
+            <button onclick="searchTrails()" class="search-button">🔍 Search</button>
+          </div>
+          
+          <div class="filters-section">
+            <h4>🎯 Filter by Accessibility</h4>
+            <div class="filter-grid">
+              <select id="wheelchairFilter">
+                <option value="">Wheelchair Access</option>
+                <option value="Fully Accessible">Fully Accessible</option>
+                <option value="Partially Accessible">Partially Accessible</option>
+                <option value="Not Accessible">Not Accessible</option>
+              </select>
+              
+              <select id="difficultyFilter">
+                <option value="">Difficulty Level</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Difficult">Difficult</option>
+              </select>
+              
+              <select id="distanceFilter">
+                <option value="">Distance</option>
+                <option value="0-2">0-2 km</option>
+                <option value="2-5">2-5 km</option>
+                <option value="5-10">5-10 km</option>
+                <option value="10+">10+ km</option>
+              </select>
+              
+              <button onclick="applyFilters()" class="filter-apply-btn">Apply Filters</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="results-section">
+          <div class="results-header">
+            <h4>📍 Trail Results</h4>
+            <span id="resultsCount">0 trails found</span>
+          </div>
+          
+          <div id="trailResults" class="trail-results-grid">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <div class="results-pagination">
+            <button id="loadMoreBtn" onclick="loadMoreResults()" class="load-more-btn hidden">
+              Load More Trails
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal (reuse from existing) -->
+  <div id="authModal" class="auth-modal hidden">
+    <!-- Include your existing auth modal content here -->
+  </div>
+
+  <!-- Firebase Setup -->
+  <script type="module" src="firebase-setup.js"></script>
+  
+  <!-- App JavaScript -->
+  <script type="module" src="src/landing.js"></script>
+  <script type="module" src="src/features/auth.js"></script>
+
+  <script type="module">
+  import { auth } from './firebase-setup.js';
+  import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+  
+  document.getElementById('menuToggle')?.addEventListener('click', () => {
+    document.getElementById('navMenu')?.classList.toggle('active');
+  });
+  
+  onAuthStateChanged(auth, (user) => {
+    const indicator = document.getElementById('authIndicator');
+    const text = document.getElementById('authStatusText');
+    const btn = document.getElementById('navAuthBtn');
+    
+    if (user) {
+      indicator?.classList.add('signed-in');
+      if (text) text.textContent = user.displayName || user.email?.split('@')[0];
+      if (btn) { btn.textContent = 'Sign Out'; btn.onclick = () => signOut(auth); }
+    } else {
+      indicator?.classList.remove('signed-in');
+      if (text) text.textContent = 'Guest';
+      if (btn) { btn.textContent = 'Sign In'; btn.onclick = () => signInWithPopup(auth, new GoogleAuthProvider()); }
+    }
+  });
+</script>
+</body>
+</html>
