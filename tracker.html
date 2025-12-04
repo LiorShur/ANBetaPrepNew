@@ -127,6 +127,17 @@
   /* Hide old auth bar */
   .auth-status-bar { display: none !important; }
   
+  /* Auth modal must be above everything */
+  .auth-modal {
+    z-index: 20000 !important;
+  }
+  .auth-modal-backdrop {
+    z-index: 19999 !important;
+  }
+  .auth-modal-container {
+    z-index: 20001 !important;
+  }
+  
   @media (max-width: 768px) {
     .menu-toggle { display: flex !important; }
     .nav-menu {
@@ -143,6 +154,7 @@
       background: white !important;
       padding: 16px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 9999;
     }
     .nav-menu .nav-link { 
       padding: 14px 16px; 
@@ -386,17 +398,36 @@
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
   
-  menuToggle?.addEventListener('click', () => {
+  // Helper function to close menu
+  function closeMenu() {
+    navMenu?.classList.remove('active');
+    menuToggle?.classList.remove('active');
+  }
+  
+  menuToggle?.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent document click from immediately closing
     navMenu?.classList.toggle('active');
     menuToggle?.classList.toggle('active');
   });
   
   // Close menu when clicking a link
   navMenu?.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-      navMenu?.classList.remove('active');
-      menuToggle?.classList.remove('active');
-    });
+    link.addEventListener('click', closeMenu);
+  });
+  
+  // Close menu when clicking any button inside the menu (including Sign In)
+  navMenu?.querySelectorAll('button, .btn').forEach(btn => {
+    btn.addEventListener('click', closeMenu);
+  });
+  
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (navMenu?.classList.contains('active')) {
+      // Check if click is outside the menu and toggle button
+      if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+        closeMenu();
+      }
+    }
   });
   
   // Now set up auth (in try-catch to prevent breaking the page)
