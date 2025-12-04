@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="src/css/loading-states.css">
   <link rel="stylesheet" href="src/css/navigation-features.css">
   <link rel="stylesheet" href="src/css/themes.css">
+  <link rel="stylesheet" href="src/css/auth.css">
   
   <style>
     /* ==========================================
@@ -623,6 +624,17 @@
         width: 100%;
         justify-content: center;
       }
+    }
+    
+    /* Auth modal must be above everything */
+    .auth-modal {
+      z-index: 20000 !important;
+    }
+    .auth-modal-backdrop {
+      z-index: 19999 !important;
+    }
+    .auth-modal-container {
+      z-index: 20001 !important;
     }
   </style>
 </head>
@@ -2282,8 +2294,8 @@
               await signOut(auth);
             }
           } else {
-            // Redirect to tracker page for sign-in (email/password)
-            window.location.href = 'tracker.html?signin=true';
+            // Open auth modal
+            document.getElementById('authModal')?.classList.remove('hidden');
           }
         });
       }
@@ -2543,6 +2555,146 @@
 
 
     console.log('📄 Reports page script loaded');
+  </script>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="auth-modal hidden">
+    <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
+    <div class="auth-modal-container">
+      <div class="auth-modal-header">
+        <h2 id="authModalTitle">Welcome to Access Nature</h2>
+        <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+      
+      <div class="auth-modal-content">
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form active">
+          <div class="auth-form-header">
+            <h3>Sign In to Your Account</h3>
+            <p>Continue your accessibility mapping journey</p>
+          </div>
+          
+          <form class="auth-inputs" id="loginFormElement">
+            <div class="input-group">
+              <input type="email" id="loginEmail" placeholder="Email address" required>
+              <span class="input-icon">📧</span>
+            </div>
+            
+            <div class="input-group">
+              <input type="password" id="loginPassword" placeholder="Password" required>
+              <span class="input-icon">🔒</span>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="auth-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Don't have an account? <button type="button" onclick="switchToSignup()" class="switch-btn">Sign up</button></p>
+          </div>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form">
+          <div class="auth-form-header">
+            <h3>Create Your Account</h3>
+            <p>Join the community making nature accessible</p>
+          </div>
+          
+          <form class="auth-inputs" id="signupFormElement">
+            <div class="input-group">
+              <input type="text" id="signupName" placeholder="Full name" required>
+              <span class="input-icon">👤</span>
+            </div>
+            
+            <div class="input-group">
+              <input type="email" id="signupEmail" placeholder="Email address" required>
+              <span class="input-icon">📧</span>
+            </div>
+            
+            <div class="input-group">
+              <input type="password" id="signupPassword" placeholder="Create password" required>
+              <span class="input-icon">🔒</span>
+            </div>
+            
+            <button type="submit" id="signupBtn" class="auth-submit-btn">
+              <span class="btn-text">Create Account</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Already have an account? <button type="button" onclick="switchToLogin()" class="switch-btn">Sign in</button></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal Helper Functions -->
+  <script>
+    function closeAuthModal() {
+      document.getElementById('authModal')?.classList.add('hidden');
+    }
+    function switchToSignup() {
+      document.getElementById('loginForm')?.classList.remove('active');
+      document.getElementById('signupForm')?.classList.add('active');
+    }
+    function switchToLogin() {
+      document.getElementById('signupForm')?.classList.remove('active');
+      document.getElementById('loginForm')?.classList.add('active');
+    }
+  </script>
+  
+  <!-- Auth Form Handlers -->
+  <script type="module">
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    
+    const firebaseAuth = getAuth();
+    
+    // Login form handler
+    document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      
+      try {
+        btn.disabled = true;
+        btn.querySelector('.btn-text').textContent = 'Signing in...';
+        await signInWithEmailAndPassword(firebaseAuth, email, password);
+        closeAuthModal();
+      } catch (error) {
+        alert('Sign in failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'Sign In';
+      }
+    });
+    
+    // Signup form handler
+    document.getElementById('signupFormElement')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const btn = document.getElementById('signupBtn');
+      
+      try {
+        btn.disabled = true;
+        btn.querySelector('.btn-text').textContent = 'Creating account...';
+        const result = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+        await updateProfile(result.user, { displayName: name });
+        closeAuthModal();
+      } catch (error) {
+        alert('Sign up failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'Create Account';
+      }
+    });
   </script>
 </body>
 </html>
