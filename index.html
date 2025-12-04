@@ -414,25 +414,40 @@ async function makeGuidesPublic() {
 
   <script type="module">
   import { auth } from './firebase-setup.js';
-  import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+  import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
   
   document.getElementById('menuToggle')?.addEventListener('click', () => {
     document.getElementById('navMenu')?.classList.toggle('active');
   });
   
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     const indicator = document.getElementById('authIndicator');
     const text = document.getElementById('authStatusText');
     const btn = document.getElementById('navAuthBtn');
     
     if (user) {
+      // Verify user still exists
+      try {
+        await user.reload();
+      } catch (e) {
+        console.error('User session invalid');
+        try { await signOut(auth); } catch (se) {}
+        return;
+      }
+      
       indicator?.classList.add('signed-in');
       if (text) text.textContent = user.displayName || user.email?.split('@')[0];
       if (btn) { btn.textContent = 'Sign Out'; btn.onclick = () => signOut(auth); }
     } else {
       indicator?.classList.remove('signed-in');
       if (text) text.textContent = 'Guest';
-      if (btn) { btn.textContent = 'Sign In'; btn.onclick = () => signInWithPopup(auth, new GoogleAuthProvider()); }
+      if (btn) { 
+        btn.textContent = 'Sign In'; 
+        btn.onclick = () => {
+          // Redirect to tracker page for sign-in
+          window.location.href = 'tracker.html?signin=true';
+        }; 
+      }
     }
   });
 </script>
