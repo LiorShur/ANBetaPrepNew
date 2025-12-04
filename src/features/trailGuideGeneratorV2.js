@@ -72,12 +72,13 @@ export class TrailGuideGeneratorV2 {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${routeInfo.name} - Accessible Trail Guide</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         ${this.getStyles()}
     </style>
 </head>
 <body>
-    <div class="tg-container">
+    <div class="tg-container" id="trailGuideContent">
         <!-- Header -->
         <header class="tg-header">
             <div class="tg-header-content">
@@ -98,7 +99,7 @@ export class TrailGuideGeneratorV2 {
         </div>
 
         <!-- Action Bar -->
-        <div class="tg-action-bar">
+        <div class="tg-action-bar" id="actionBar">
             ${locationPoints.length > 0 ? `
             <div class="tg-action-dropdown">
                 <button class="tg-action-btn tg-action-navigate" onclick="document.getElementById('navDropdown').classList.toggle('show')">
@@ -114,7 +115,7 @@ export class TrailGuideGeneratorV2 {
                 </div>
             </div>
             ` : ''}
-            <button class="tg-action-btn tg-action-pdf" onclick="window.print()">
+            <button class="tg-action-btn tg-action-pdf" onclick="downloadPDF()">
                 📥 Download PDF
             </button>
             <button class="tg-action-btn tg-action-details" onclick="document.getElementById('surveyDetails').classList.toggle('show')">
@@ -196,6 +197,59 @@ export class TrailGuideGeneratorV2 {
 
     <!-- Map Script -->
     ${locationPoints.length > 0 ? this.getMapScript(locationPoints, bounds, photos, notes) : ''}
+    
+    <!-- PDF Download Script -->
+    <script>
+        function downloadPDF() {
+            // Show loading state
+            const btn = document.querySelector('.tg-action-pdf');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Generating PDF...';
+            btn.disabled = true;
+            
+            // Hide action bar and show survey details for PDF
+            const actionBar = document.getElementById('actionBar');
+            const surveyPanel = document.getElementById('surveyDetails');
+            actionBar.style.display = 'none';
+            surveyPanel.classList.add('show');
+            
+            const element = document.getElementById('trailGuideContent');
+            const filename = '${routeInfo.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_trail_guide.pdf';
+            
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true,
+                    scrollY: 0
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore UI
+                actionBar.style.display = 'flex';
+                surveyPanel.classList.remove('show');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }).catch(err => {
+                console.error('PDF generation failed:', err);
+                actionBar.style.display = 'flex';
+                surveyPanel.classList.remove('show');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('PDF generation failed. Please try again or use Print to PDF.');
+            });
+        }
+    </script>
 </body>
 </html>`;
   }
@@ -238,8 +292,20 @@ export class TrailGuideGeneratorV2 {
     };
   }
 
-  formatDuration(seconds) {
-    if (!seconds) return '--';
+  formatDuration(timeValue) {
+    if (!timeValue) return '--';
+    
+    // Detect if value is in milliseconds (> 100000 means likely ms, not seconds)
+    // A route longer than ~28 hours in seconds would be 100000, which is very rare
+    // But 100000ms is only ~1.6 minutes, so we can safely assume large values are ms
+    let seconds;
+    if (timeValue > 86400) {
+      // Likely milliseconds - convert to seconds
+      seconds = Math.floor(timeValue / 1000);
+    } else {
+      seconds = Math.floor(timeValue);
+    }
+    
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     
