@@ -416,8 +416,32 @@ async function makeGuidesPublic() {
   import { auth } from './firebase-setup.js';
   import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
   
-  document.getElementById('menuToggle')?.addEventListener('click', () => {
-    document.getElementById('navMenu')?.classList.toggle('active');
+  const menuToggle = document.getElementById('menuToggle');
+  const navMenu = document.getElementById('navMenu');
+  
+  function closeMenu() {
+    navMenu?.classList.remove('active');
+    menuToggle?.classList.remove('active');
+  }
+  
+  menuToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navMenu?.classList.toggle('active');
+    menuToggle?.classList.toggle('active');
+  });
+  
+  // Close menu when clicking links or buttons
+  navMenu?.querySelectorAll('a, button, .btn').forEach(el => {
+    el.addEventListener('click', closeMenu);
+  });
+  
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (navMenu?.classList.contains('active')) {
+      if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+        closeMenu();
+      }
+    }
   });
   
   onAuthStateChanged(auth, async (user) => {
