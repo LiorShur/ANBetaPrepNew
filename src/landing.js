@@ -773,18 +773,33 @@ async updateUserStats() {
 }
 
 // Add this new method to load cloud stats
-async loadUserCloudStats() {
+async loadUserCloudStats(retryCount = 0) {
+  const MAX_RETRIES = 3;
   try {
-    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { collection, query, where, getDocs, getDocsFromServer } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
     const { auth } = await import('../firebase-setup.js');
     
-    // Get user's routes from Firebase
+    // Make sure auth is ready
+    if (!auth.currentUser) {
+      console.log('📊 No current user, using local stats');
+      this.loadLocalStats();
+      return;
+    }
+    
+    // Get user's routes from Firebase - try server first to avoid cache issues
     const routesQuery = query(
       collection(db, 'routes'),
       where('userId', '==', auth.currentUser.uid)
     );
     
-    const routesSnapshot = await getDocs(routesQuery);
+    let routesSnapshot;
+    try {
+      routesSnapshot = await getDocsFromServer(routesQuery);
+    } catch (serverError) {
+      console.log('📊 Server fetch failed, trying cache...');
+      routesSnapshot = await getDocs(routesQuery);
+    }
+    
     let totalDistance = 0;
     
     routesSnapshot.forEach(doc => {
@@ -793,13 +808,21 @@ async loadUserCloudStats() {
     });
     
     // Update display
-    this.updateElement('totalRoutes', routesSnapshot.size);
+    this.animateNumber('totalRoutes', routesSnapshot.size);
     this.updateElement('totalDistance', totalDistance.toFixed(1));
     
-    console.log(`User stats: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
+    console.log(`📊 User stats loaded: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
     
   } catch (error) {
-    console.error('Failed to load cloud stats:', error);
+    console.error('❌ Failed to load cloud stats:', error);
+    
+    // Retry on Target ID or network errors
+    if ((error.message?.includes('Target ID') || error.code === 'unavailable') && retryCount < MAX_RETRIES) {
+      console.log(`🔄 Retrying cloud stats... (${retryCount + 1}/${MAX_RETRIES})`);
+      await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+      return this.loadUserCloudStats(retryCount + 1);
+    }
+    
     // Fallback to local stats
     this.loadLocalStats();
   }
