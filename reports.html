@@ -2263,13 +2263,8 @@
               await signOut(auth);
             }
           } else {
-            const provider = new GoogleAuthProvider();
-            try {
-              await signInWithPopup(auth, provider);
-            } catch (error) {
-              console.error('Sign in error:', error);
-              alert('Sign in failed. Please try again.');
-            }
+            // Redirect to tracker page for sign-in (email/password)
+            window.location.href = 'tracker.html?signin=true';
           }
         });
       }
