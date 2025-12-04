@@ -187,6 +187,30 @@ setupCloudButtonsWithRetry() {
       if (user) {
         console.log('✅ User signed in:', user.email);
         
+        // Verify the user still exists on the server
+        try {
+          // Try to reload the user to verify they still exist
+          await user.reload();
+        } catch (reloadError) {
+          console.error('❌ User no longer exists on server:', reloadError.message);
+          
+          // User was deleted - sign them out locally
+          if (reloadError.code === 'auth/user-not-found' || 
+              reloadError.code === 'auth/user-token-expired' ||
+              reloadError.code === 'auth/invalid-user-token') {
+            console.log('🔄 Signing out deleted user...');
+            try {
+              await signOut(auth);
+            } catch (e) {
+              // Ignore signout errors
+            }
+            this.currentUser = null;
+            this.updateUI(null);
+            toast.info('Your session has expired. Please sign in again.');
+            return;
+          }
+        }
+        
         // Small delay to let Firestore warmup queries settle
         // This helps avoid "Target ID already exists" conflicts
         await new Promise(resolve => setTimeout(resolve, 100));
