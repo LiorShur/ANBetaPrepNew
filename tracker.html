@@ -386,10 +386,7 @@
   <script type="module" src="src/features/auth.js"></script>
 
   <script type="module">
-  import { auth } from './firebase-setup.js';
-  import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-  
-  // Hamburger menu toggle
+  // Set up hamburger menu FIRST (doesn't need Firebase)
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
   
@@ -406,41 +403,72 @@
     });
   });
   
-  // Auth state
-  onAuthStateChanged(auth, (user) => {
-    const indicator = document.getElementById('navAuthIndicator');
-    const text = document.getElementById('navAuthStatusText');
-    const btn = document.getElementById('navAuthBtn');
+  // Now set up auth (in try-catch to prevent breaking the page)
+  try {
+    const { auth } = await import('./firebase-setup.js');
+    const { onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js');
     
-    if (user) {
-      indicator?.classList.add('signed-in');
-      if (text) text.textContent = user.displayName || user.email?.split('@')[0];
-      if (btn) {
-        btn.textContent = 'Sign Out';
-        btn.onclick = () => {
-          if (confirm('Sign out of Access Nature?')) {
-            signOut(auth);
-          }
-        };
+    // Auth state
+    onAuthStateChanged(auth, async (user) => {
+      const indicator = document.getElementById('navAuthIndicator');
+      const text = document.getElementById('navAuthStatusText');
+      const btn = document.getElementById('navAuthBtn');
+      
+      if (user) {
+        // Verify user still exists on server
+        try {
+          await user.reload();
+        } catch (reloadError) {
+          console.error('❌ User session invalid:', reloadError.message);
+          // Sign out the deleted user
+          try {
+            await signOut(auth);
+          } catch (e) {}
+          return;
+        }
+        
+        indicator?.classList.add('signed-in');
+        if (text) text.textContent = user.displayName || user.email?.split('@')[0];
+        if (btn) {
+          btn.textContent = 'Sign Out';
+          btn.onclick = () => {
+            if (confirm('Sign out of Access Nature?')) {
+              signOut(auth);
+            }
+          };
+        }
+      } else {
+        indicator?.classList.remove('signed-in');
+        if (text) text.textContent = 'Guest';
+        if (btn) {
+          btn.textContent = 'Sign In';
+          btn.onclick = () => {
+            // Open existing auth modal instead of Google popup
+            const authModal = document.getElementById('authModal');
+            if (authModal) {
+              authModal.classList.remove('hidden');
+            } else {
+              // Fallback: try clicking the existing sign in button
+              document.getElementById('showAuthBtn')?.click();
+            }
+          };
+        }
       }
-    } else {
-      indicator?.classList.remove('signed-in');
-      if (text) text.textContent = 'Guest';
-      if (btn) {
-        btn.textContent = 'Sign In';
-        btn.onclick = () => {
-          // Open existing auth modal instead of Google popup
-          const authModal = document.getElementById('authModal');
-          if (authModal) {
-            authModal.classList.remove('hidden');
-          } else {
-            // Fallback: try clicking the existing sign in button
-            document.getElementById('showAuthBtn')?.click();
-          }
-        };
-      }
+    });
+  } catch (error) {
+    console.error('❌ Firebase auth setup failed:', error);
+    // Even if Firebase fails, the hamburger menu still works
+    const btn = document.getElementById('navAuthBtn');
+    if (btn) {
+      btn.textContent = 'Sign In';
+      btn.onclick = () => {
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+          authModal.classList.remove('hidden');
+        }
+      };
     }
-  });
+  }
 </script>
 </body>
 </html>
