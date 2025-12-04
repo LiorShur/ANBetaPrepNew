@@ -2240,17 +2240,36 @@
       // Mobile menu toggle
       const menuToggle = document.getElementById('menuToggle');
       const navMenu = document.getElementById('navMenu');
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+      }
+      
       if (menuToggle && navMenu) {
-        menuToggle.addEventListener('click', () => {
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
           navMenu.classList.toggle('active');
           menuToggle.classList.toggle('active');
         });
 
+        // Close menu when clicking links
         navMenu.querySelectorAll('a.nav-link').forEach(link => {
-          link.addEventListener('click', () => {
-            navMenu.classList.remove('active');
-            menuToggle.classList.remove('active');
-          });
+          link.addEventListener('click', closeMenu);
+        });
+        
+        // Close menu when clicking buttons
+        navMenu.querySelectorAll('button, .btn').forEach(btn => {
+          btn.addEventListener('click', closeMenu);
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+          if (navMenu.classList.contains('active')) {
+            if (!navMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+              closeMenu();
+            }
+          }
         });
       }
 
