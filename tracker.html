@@ -227,15 +227,6 @@
             </button>
           </form>
           
-          <div class="auth-divider">
-            <span>or</span>
-          </div>
-          
-          <button id="googleLoginBtn" class="google-btn">
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIyLjU2IDEyLjI1QzIyLjU2IDExLjQ3IDIyLjQ5IDEwLjcyIDIyLjM2IDEwSDEyVjE0LjI2SDE3LjkyQzE3LjY2IDE1LjYzIDE2Ljg2IDE2Ljc4IDE1LjY2IDE3LjUzVjIwLjM0SDE5LjI4QzIxLjM2IDE4LjQyIDIyLjU2IDE1LjYgMjIuNTYgMTIuMjVaIiBmaWxsPSIjNDI4NUY0Ii8+CjxwYXRoIGQ9Ik0xMiAyM0M5LjExIDIzIDYuNjYgMjEuOTIgNS4xIDIwLjM0TDEuNjUgMTcuNTNDNC42OSAyMC42MSA4LjEyIDIzIDEyIDIzWiIgZmlsbD0iIzM0QTg1MyIvPgo8cGF0aCBkPSJNNS4xIDIwLjM0QzQuMjUgMTkuNTIgMy41OCAxOC40MyAzLjIgMTcuMkgwVjIwLjM0QzAuNDggMjEuMDkgMS4wNCAyMS43NSAxLjY1IDIyLjI4TDUuMSAyMC4zNFoiIGZpbGw9IiNGQkJDMDQiLz4KPHA+" alt="Google" class="google-icon">
-            <span>Continue with Google</span>
-          </button>
-          
           <div class="auth-switch">
             <p>Don't have an account? <button type="button" onclick="switchToSignup()" class="switch-btn">Sign up</button></p>
           </div>
@@ -269,15 +260,6 @@
               <span class="btn-spinner hidden">⏳</span>
             </button>
           </form>
-          
-          <div class="auth-divider">
-            <span>or</span>
-          </div>
-          
-          <button id="googleSignupBtn" class="google-btn">
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIyLjU2IDEyLjI1QzIyLjU2IDExLjQ3IDIyLjQ5IDEwLjcyIDIyLjM2IDEwSDEyVjE0LjI2SDE3LjkyQzE3LjY2IDE1LjYzIDE2Ljg2IDE2Ljc4IDE1LjY2IDE3LjUzVjIwLjM0SDE5LjI4QzIxLjM2IDE4LjQyIDIyLjU2IDE1LjYgMjIuNTYgMTIuMjVaIiBmaWxsPSIjNDI4NUY0Ii8+CjxwYXRoIGQ9Ik0xMiAyM0M5LjExIDIzIDYuNjYgMjEuOTIgNS4xIDIwLjM0TDEuNjUgMTcuNTNDNC42OSAyMC42MSA4LjEyIDIzIDEyIDIzWiIgZmlsbD0iIzM0QTg1MyIvPgo8cGF0aCBkPSJNNS4xIDIwLjM0QzQuMjUgMTkuNTIgMy41OCAxOC40MyAzLjIgMTcuMkgwVjIwLjM0QzAuNDggMjEuMDkgMS4wNCAyMS43NSAxLjY1IDIyLjI4TDUuMSAyMC4zNFoiIGZpbGw9IiNGQkJDMDQiLz4KPHA+" alt="Google" class="google-icon">
-            <span>Continue with Google</span>
-          </button>
           
           <div class="auth-switch">
             <p>Already have an account? <button type="button" onclick="switchToLogin()" class="switch-btn">Sign in</button></p>
@@ -386,6 +368,20 @@
   <script type="module" src="src/features/auth.js"></script>
 
   <script type="module">
+  // Check if redirected for sign-in
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('signin') === 'true') {
+    // Remove the parameter from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Open auth modal after a brief delay to let page load
+    setTimeout(() => {
+      const authModal = document.getElementById('authModal');
+      if (authModal) {
+        authModal.classList.remove('hidden');
+      }
+    }, 500);
+  }
+  
   // Set up hamburger menu FIRST (doesn't need Firebase)
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
