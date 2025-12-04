@@ -51,7 +51,7 @@ export class AccessibilityFormV2Quick {
         display: none;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 20px;
+        padding: 80px 20px 20px 20px; /* Account for nav bars at top */
       }
       
       .af2-overlay.open {
@@ -65,10 +65,13 @@ export class AccessibilityFormV2Quick {
         border-radius: 20px;
         max-width: 600px;
         width: 100%;
-        margin: 20px auto;
+        margin: 0 auto 20px auto;
         box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
         overflow: hidden;
         animation: af2-slideUp 0.3s ease;
+        max-height: calc(100vh - 100px); /* Ensure it fits in viewport */
+        display: flex;
+        flex-direction: column;
       }
       
       @keyframes af2-slideUp {
@@ -157,8 +160,10 @@ export class AccessibilityFormV2Quick {
       /* ========== Form Body ========== */
       .af2-body {
         padding: 24px;
-        max-height: 60vh;
+        flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0; /* Required for flex child scrolling */
       }
       
       .af2-phase {
@@ -577,6 +582,7 @@ export class AccessibilityFormV2Quick {
       @media (max-width: 600px) {
         .af2-overlay {
           padding: 0;
+          padding-top: env(safe-area-inset-top, 0);
         }
         
         .af2-container {
@@ -584,13 +590,19 @@ export class AccessibilityFormV2Quick {
           border-radius: 0;
           max-width: 100vw;
           width: 100%;
+          height: 100vh;
+          height: 100dvh; /* Dynamic viewport height for mobile */
           max-height: 100vh;
-          overflow-x: hidden;
+          max-height: 100dvh;
+          overflow: hidden;
           box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
         }
         
         .af2-header {
-          padding: 20px 16px;
+          padding: 16px;
+          flex-shrink: 0;
         }
         
         .af2-header h1 {
@@ -599,9 +611,19 @@ export class AccessibilityFormV2Quick {
         
         .af2-body {
           padding: 16px;
-          max-width: 100%;
+          flex: 1;
+          overflow-y: auto;
           overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
           box-sizing: border-box;
+          min-height: 0;
+        }
+        
+        .af2-footer {
+          flex-direction: column;
+          padding: 16px;
+          flex-shrink: 0;
+          padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
         }
         
         .af2-card-grid,
@@ -625,11 +647,6 @@ export class AccessibilityFormV2Quick {
         .af2-category-card {
           max-width: 100%;
           overflow: hidden;
-        }
-        
-        .af2-footer {
-          flex-direction: column;
-          padding: 16px;
         }
         
         .af2-btn {

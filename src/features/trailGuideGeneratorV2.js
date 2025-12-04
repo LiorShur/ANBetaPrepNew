@@ -97,6 +97,37 @@ export class TrailGuideGeneratorV2 {
             </div>
         </div>
 
+        <!-- Action Bar -->
+        <div class="tg-action-bar">
+            ${locationPoints.length > 0 ? `
+            <div class="tg-action-dropdown">
+                <button class="tg-action-btn tg-action-navigate" onclick="document.getElementById('navDropdown').classList.toggle('show')">
+                    🧭 Navigate to Start
+                </button>
+                <div id="navDropdown" class="tg-dropdown-content">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&travelmode=driving" target="_blank" rel="noopener">
+                        📍 Google Maps
+                    </a>
+                    <a href="https://waze.com/ul?ll=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&navigate=yes" target="_blank" rel="noopener">
+                        🚗 Waze
+                    </a>
+                </div>
+            </div>
+            ` : ''}
+            <button class="tg-action-btn tg-action-pdf" onclick="window.print()">
+                📥 Download PDF
+            </button>
+            <button class="tg-action-btn tg-action-details" onclick="document.getElementById('surveyDetails').classList.toggle('show')">
+                📋 Full Survey Details
+            </button>
+        </div>
+
+        <!-- Hidden Survey Details Panel -->
+        <div id="surveyDetails" class="tg-survey-panel">
+            <h3>📋 Complete Accessibility Survey</h3>
+            ${this.renderFullSurveyDetails(accessibilityData)}
+        </div>
+
         <!-- Quick Stats -->
         <div class="tg-stats-row">
             <div class="tg-stat">
@@ -601,6 +632,69 @@ export class TrailGuideGeneratorV2 {
                 ${warnings.map(w => `<li>${w}</li>`).join('')}
             </ul>
         </section>
+    `;
+  }
+
+  renderFullSurveyDetails(data) {
+    if (!data) return '<p style="color:#666;">No survey data available.</p>';
+    
+    const items = [];
+    
+    // Helper to add item if value exists
+    const addItem = (label, value) => {
+      if (value && value !== 'Unknown' && value !== '') {
+        const displayValue = Array.isArray(value) ? value.join(', ') : value;
+        items.push({ label, value: displayValue });
+      }
+    };
+    
+    // Basic Info
+    addItem('Trail Name', data.trailName);
+    addItem('Location', data.location);
+    addItem('Route Type', data.routeType);
+    addItem('Difficulty', data.difficulty);
+    
+    // Accessibility
+    addItem('Wheelchair Access', data.wheelchairAccess);
+    addItem('Trail Surface', data.trailSurface);
+    addItem('Surface Quality', data.surfaceQuality);
+    addItem('Trail Slopes', data.trailSlopes);
+    
+    // Facilities
+    addItem('Accessible Parking', data.disabledParking);
+    addItem('Parking Spaces', data.parkingSpaces);
+    addItem('Restrooms', data.restrooms);
+    addItem('Water Fountains', data.waterFountains);
+    addItem('Seating', data.seating);
+    
+    // Environment
+    addItem('Shade Coverage', data.shadeCoverage);
+    addItem('Lighting', data.lighting);
+    addItem('Signage', data.signage);
+    addItem('Visual Access', data.visualAccess);
+    addItem('Trail Width', data.trailWidth);
+    
+    // Extras
+    addItem('Picnic Areas', data.picnicAreas);
+    addItem('Accessible Viewpoint', data.accessibleViewpoint);
+    addItem('Environment', data.environment);
+    
+    // Notes
+    addItem('Additional Notes', data.additionalNotes);
+    
+    if (items.length === 0) {
+      return '<p style="color:#666;">No detailed survey data available.</p>';
+    }
+    
+    return `
+      <div class="tg-survey-grid">
+        ${items.map(item => `
+          <div class="tg-survey-item">
+            <div class="tg-survey-label">${item.label}</div>
+            <div class="tg-survey-value">${item.value}</div>
+          </div>
+        `).join('')}
+      </div>
     `;
   }
 
@@ -1154,6 +1248,172 @@ export class TrailGuideGeneratorV2 {
             
             .tg-map-container {
                 height: 250px;
+            }
+            
+            .tg-action-bar {
+                display: none !important;
+            }
+            
+            .tg-survey-panel {
+                display: block !important;
+                page-break-before: always;
+            }
+        }
+        
+        /* Action Bar */
+        .tg-action-bar {
+            display: flex;
+            gap: 10px;
+            padding: 16px 24px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e5e5;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .tg-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .tg-action-navigate {
+            background: #3b82f6;
+        }
+        
+        .tg-action-navigate:hover {
+            background: #2563eb;
+        }
+        
+        .tg-action-pdf {
+            background: #10b981;
+        }
+        
+        .tg-action-pdf:hover {
+            background: #059669;
+        }
+        
+        .tg-action-details {
+            background: #8b5cf6;
+        }
+        
+        .tg-action-details:hover {
+            background: #7c3aed;
+        }
+        
+        /* Dropdown */
+        .tg-action-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tg-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 100;
+            margin-top: 4px;
+        }
+        
+        .tg-dropdown-content.show {
+            display: block;
+        }
+        
+        .tg-dropdown-content a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #333;
+            transition: background 0.2s;
+        }
+        
+        .tg-dropdown-content a:hover {
+            background: #f3f4f6;
+        }
+        
+        /* Survey Details Panel */
+        .tg-survey-panel {
+            display: none;
+            padding: 24px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            margin: 16px 24px;
+            border-radius: 12px;
+        }
+        
+        .tg-survey-panel.show {
+            display: block;
+        }
+        
+        .tg-survey-panel h3 {
+            margin: 0 0 16px 0;
+            color: #0369a1;
+            font-size: 1.1rem;
+        }
+        
+        .tg-survey-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .tg-survey-item {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 3px solid #0ea5e9;
+        }
+        
+        .tg-survey-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .tg-survey-value {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        @media (max-width: 480px) {
+            .tg-action-bar {
+                flex-direction: column;
+                padding: 12px 16px;
+            }
+            
+            .tg-action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tg-dropdown-content {
+                position: static;
+                box-shadow: none;
+                border: 1px solid #e5e5e5;
+                margin-top: 8px;
+            }
+            
+            .tg-survey-grid {
+                grid-template-columns: 1fr;
             }
         }
     `;
