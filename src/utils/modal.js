@@ -172,6 +172,8 @@ class ModalManager {
         .modal-footer.many-choices {
           flex-direction: column;
           gap: 8px;
+          max-height: 60vh;
+          padding-bottom: 24px;
         }
         
         .modal-footer.many-choices .modal-btn {
@@ -238,8 +240,10 @@ class ModalManager {
           
           .modal-footer {
             flex-direction: column;
-            max-height: 40vh;
+            max-height: 50vh;
             overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
           }
           
           .modal-footer .modal-btn {
@@ -249,7 +253,8 @@ class ModalManager {
           }
           
           .modal-footer.many-choices {
-            padding: 12px 16px 16px;
+            padding: 12px 16px 24px;
+            max-height: 55vh;
           }
           
           .modal-footer.many-choices .modal-btn {
