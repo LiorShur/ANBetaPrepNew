@@ -490,6 +490,18 @@ export class AccessibilityFormV2Quick {
         font-size: 1rem;
       }
       
+      .af2-number-input.af2-readonly {
+        justify-content: center;
+      }
+      
+      .af2-number-input.af2-readonly input {
+        background: #f0f9f0;
+        border-color: #4a7c59;
+        color: #2c5530;
+        font-weight: 600;
+        cursor: default;
+      }
+      
       /* ========== Notes Textarea ========== */
       .af2-textarea {
         width: 100%;
@@ -582,18 +594,18 @@ export class AccessibilityFormV2Quick {
       @media (max-width: 600px) {
         .af2-overlay {
           padding: 0;
-          padding-top: env(safe-area-inset-top, 0);
+          padding-top: calc(60px + env(safe-area-inset-top, 0)); /* Account for nav bar */
         }
         
         .af2-container {
           margin: 0;
-          border-radius: 0;
+          border-radius: 16px 16px 0 0;
           max-width: 100vw;
           width: 100%;
-          height: 100vh;
-          height: 100dvh; /* Dynamic viewport height for mobile */
-          max-height: 100vh;
-          max-height: 100dvh;
+          height: calc(100vh - 60px);
+          height: calc(100dvh - 60px); /* Dynamic viewport height for mobile */
+          max-height: calc(100vh - 60px);
+          max-height: calc(100dvh - 60px);
           overflow: hidden;
           box-sizing: border-box;
           display: flex;
@@ -602,6 +614,7 @@ export class AccessibilityFormV2Quick {
         
         .af2-header {
           padding: 16px;
+          padding-top: 20px; /* Extra space for close button */
           flex-shrink: 0;
         }
         
@@ -1116,11 +1129,18 @@ export class AccessibilityFormV2Quick {
       </div>
       <div class="af2-subsection">
         <div class="af2-subsection-title">Seating Options</div>
-        <div class="af2-chip-grid" data-field="seating" data-type="multi">
+        <div class="af2-chip-grid" data-field="seating" data-type="single">
           <div class="af2-chip" data-value="No accessible benches">No benches</div>
           <div class="af2-chip" data-value="One accessible bench">One bench</div>
           <div class="af2-chip" data-value="Multiple benches along route">Multiple</div>
-          <div class="af2-chip" data-value="Benches without handrails">No handrails</div>
+        </div>
+      </div>
+      <div class="af2-subsection">
+        <div class="af2-subsection-title">Bench Features</div>
+        <div class="af2-chip-grid" data-field="benchFeatures" data-type="multi">
+          <div class="af2-chip" data-value="With handrails">With handrails</div>
+          <div class="af2-chip" data-value="Without handrails">No handrails</div>
+          <div class="af2-chip" data-value="With backrests">With backrests</div>
         </div>
       </div>
     `;
@@ -1243,14 +1263,6 @@ export class AccessibilityFormV2Quick {
       </div>
       <div class="af2-subsection af2-grid-3col">
         <div>
-          <div class="af2-subsection-title">Picnic areas</div>
-          <div class="af2-number-input">
-            <button type="button" onclick="window.af2NumberStep('picnicCount', -1)">−</button>
-            <input type="number" id="af2-picnicCount" name="picnicCount" value="0" min="0">
-            <button type="button" onclick="window.af2NumberStep('picnicCount', 1)">+</button>
-          </div>
-        </div>
-        <div>
           <div class="af2-subsection-title">In shade</div>
           <div class="af2-number-input">
             <button type="button" onclick="window.af2NumberStep('picnicShade', -1)">−</button>
@@ -1264,6 +1276,12 @@ export class AccessibilityFormV2Quick {
             <button type="button" onclick="window.af2NumberStep('picnicSun', -1)">−</button>
             <input type="number" id="af2-picnicSun" name="picnicSun" value="0" min="0">
             <button type="button" onclick="window.af2NumberStep('picnicSun', 1)">+</button>
+          </div>
+        </div>
+        <div>
+          <div class="af2-subsection-title">Total areas</div>
+          <div class="af2-number-input af2-readonly">
+            <input type="number" id="af2-picnicCount" name="picnicCount" value="0" min="0" readonly>
           </div>
         </div>
       </div>
@@ -1347,6 +1365,33 @@ export class AccessibilityFormV2Quick {
       const newVal = Math.max(0, parseInt(input.value || 0) + delta);
       input.value = newVal;
       this.updateCategoryStatus(input);
+      
+      // Auto-calculate picnic total when shade or sun changes
+      if (field === 'picnicShade' || field === 'picnicSun') {
+        this.updatePicnicTotal();
+      }
+      
+      // Validate picnic total doesn't go below shade+sun
+      if (field === 'picnicCount') {
+        const shade = parseInt(document.getElementById('af2-picnicShade')?.value || 0);
+        const sun = parseInt(document.getElementById('af2-picnicSun')?.value || 0);
+        const total = shade + sun;
+        if (newVal < total) {
+          input.value = total;
+        }
+      }
+    }
+  }
+  
+  updatePicnicTotal() {
+    const shadeInput = document.getElementById('af2-picnicShade');
+    const sunInput = document.getElementById('af2-picnicSun');
+    const totalInput = document.getElementById('af2-picnicCount');
+    
+    if (shadeInput && sunInput && totalInput) {
+      const shade = parseInt(shadeInput.value || 0);
+      const sun = parseInt(sunInput.value || 0);
+      totalInput.value = shade + sun;
     }
   }
 
