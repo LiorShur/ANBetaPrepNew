@@ -30,6 +30,9 @@ class LandingPageController {
     try {
       console.log('🏠 Initializing landing page...');
       
+      // Show loading indicators immediately
+      this.showLoadingIndicators();
+      
       // Initialize offline indicator
       offlineIndicator.initialize();
       
@@ -40,9 +43,9 @@ class LandingPageController {
       
       this.setupEventListeners();
       await this.updateLandingAuthStatus();
-      await this.loadCommunityStats();
-      await this.loadFeaturedTrails();
-      this.updateUserStats();
+      
+      // Load data with retry wrapper
+      await this.loadDataWithRetry();
       
       // Make this instance globally available for modal functions
       window.landingAuth = this;
@@ -51,6 +54,67 @@ class LandingPageController {
     } catch (error) {
       console.error('❌ Landing page initialization failed:', error);
       showError(error);
+      this.hideLoadingIndicators();
+    }
+  }
+  
+  showLoadingIndicators() {
+    // Community stats loading indicators
+    const statIds = ['publicGuides', 'totalKm', 'accessibleTrails', 'totalUsers', 'totalRoutes', 'totalDistance'];
+    statIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = '<span class="stat-loading"></span>';
+      }
+    });
+    
+    // Featured trails loading skeleton
+    const featuredContainer = document.getElementById('featuredTrails');
+    if (featuredContainer) {
+      featuredContainer.innerHTML = `
+        <div class="featured-loading">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+      `;
+    }
+  }
+  
+  hideLoadingIndicators() {
+    // Set defaults if still showing loading
+    const statIds = ['publicGuides', 'totalKm', 'accessibleTrails', 'totalUsers', 'totalRoutes', 'totalDistance'];
+    statIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.querySelector('.stat-loading')) {
+        el.textContent = '0';
+      }
+    });
+  }
+  
+  async loadDataWithRetry(retryCount = 0) {
+    const MAX_RETRIES = 3;
+    
+    try {
+      await this.loadCommunityStats();
+      await this.loadFeaturedTrails();
+      this.updateUserStats();
+    } catch (error) {
+      console.error(`❌ Data loading failed (attempt ${retryCount + 1}):`, error);
+      
+      if (retryCount < MAX_RETRIES && (
+        error.message?.includes('Target ID') ||
+        error.message?.includes('unavailable') ||
+        error.message?.includes('timeout')
+      )) {
+        console.log(`🔄 Retrying data load... (${retryCount + 1}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return this.loadDataWithRetry(retryCount + 1);
+      }
+      
+      // Show defaults on final failure
+      this.hideLoadingIndicators();
+      toast.error('Some data failed to load. Pull to refresh.');
     }
   }
 
