@@ -103,6 +103,50 @@
   .auth-modal-container {
     z-index: 20001 !important;
   }
+  
+  /* Loading indicators for stats */
+  .stat-loading {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  .stat-big.stat-loading,
+  .stat-number.stat-loading {
+    width: 32px;
+    height: 32px;
+    border-width: 4px;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Featured trails loading skeleton */
+  .featured-loading {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    padding: 40px 0;
+  }
+  
+  .skeleton-card {
+    width: 280px;
+    height: 200px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 12px;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
 </style>
 </head>
 <body>
