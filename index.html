@@ -35,6 +35,10 @@
     font-size: 1.25rem;
     color: #111827;
     text-decoration: none;
+    flex-shrink: 0;
+  }
+  .nav-auth-indicator {
+    flex-shrink: 0;
   }
   .nav-auth-indicator .auth-status {
     display: flex;
@@ -44,6 +48,7 @@
     background: #f3f4f6;
     border-radius: 20px;
     font-size: 0.875rem;
+    white-space: nowrap;
   }
   .nav-auth-indicator .auth-status.signed-in {
     background: #dcfce7;
@@ -51,8 +56,9 @@
   }
   .nav-menu {
     display: flex;
-    align-items: left;
+    align-items: center;
     gap: 8px;
+    flex-shrink: 0;
   }
   .nav-menu .nav-link {
     padding: 8px 16px;
@@ -70,14 +76,23 @@
     color: white;
     cursor: pointer;
   }
-  .menu-toggle { display: none; }
+  .menu-toggle { display: none; flex-shrink: 0; }
   .hero-section { margin-top: 64px; }
   .auth-status-landing { display: none !important; }
   
   @media (max-width: 768px) {
     .top-nav { height: 56px; }
     .hero-section { margin-top: 56px; }
-    .menu-toggle { display: block; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    .menu-toggle { 
+      display: block !important; 
+      visibility: visible !important;
+      opacity: 1 !important;
+      background: none; 
+      border: none; 
+      font-size: 1.5rem; 
+      cursor: pointer;
+      flex-shrink: 0;
+    }
     .nav-menu { display: none; }
     .nav-menu.active {
       display: flex;
@@ -91,6 +106,15 @@
     }
     .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
     .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
+    
+    /* Ensure nav elements always visible on mobile */
+    .nav-auth-indicator { 
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+    .menu-toggle {
+      flex-shrink: 0;
+    }
   }
   
   /* Auth modal must be above everything */
@@ -544,6 +568,37 @@ async function makeGuidesPublic() {
       document.getElementById('signupForm')?.classList.remove('active');
       document.getElementById('loginForm')?.classList.add('active');
     }
+    
+    // Setup hamburger menu immediately (no Firebase dependency)
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const navMenu = document.getElementById('navMenu');
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+      });
+      
+      // Close menu when clicking links or buttons
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      // Close menu when clicking outside
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+    })();
   </script>
 
   <!-- Firebase Setup -->
@@ -557,37 +612,9 @@ async function makeGuidesPublic() {
   import { auth } from './firebase-setup.js';
   import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
   
-  const menuToggle = document.getElementById('menuToggle');
-  const navMenu = document.getElementById('navMenu');
-  
-  function closeMenu() {
-    navMenu?.classList.remove('active');
-    menuToggle?.classList.remove('active');
-  }
-  
   function openAuthModal() {
     document.getElementById('authModal')?.classList.remove('hidden');
   }
-  
-  menuToggle?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    navMenu?.classList.toggle('active');
-    menuToggle?.classList.toggle('active');
-  });
-  
-  // Close menu when clicking links or buttons
-  navMenu?.querySelectorAll('a, button, .btn').forEach(el => {
-    el.addEventListener('click', closeMenu);
-  });
-  
-  // Close menu when clicking outside
-  document.addEventListener('click', (e) => {
-    if (navMenu?.classList.contains('active')) {
-      if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
-        closeMenu();
-      }
-    }
-  });
   
   // Login form handler
   document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {
