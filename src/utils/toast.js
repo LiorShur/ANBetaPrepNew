@@ -232,6 +232,9 @@ class ToastManager {
     requestAnimationFrame(() => {
       toast.classList.add('show');
     });
+    
+    // Haptic feedback based on toast type
+    this.triggerHaptic(type);
 
     // Auto dismiss
     if (config.duration > 0) {
@@ -239,6 +242,33 @@ class ToastManager {
     }
 
     return toastId;
+  }
+  
+  /**
+   * Trigger haptic feedback for toast type
+   * @param {string} type - Toast type
+   */
+  triggerHaptic(type) {
+    if (typeof window.displayPreferences?.haptic === 'function') {
+      const hapticMap = {
+        success: 'success',
+        error: 'error',
+        warning: 'warning',
+        info: 'light'
+      };
+      window.displayPreferences.haptic(hapticMap[type] || 'light');
+    } else if (navigator.vibrate) {
+      // Fallback if displayPreferences not loaded
+      const patterns = {
+        success: [10, 50, 10],
+        error: [50, 30, 50],
+        warning: [20, 30, 20],
+        info: [10]
+      };
+      try {
+        navigator.vibrate(patterns[type] || patterns.info);
+      } catch (e) {}
+    }
   }
 
   dismiss(toastId) {

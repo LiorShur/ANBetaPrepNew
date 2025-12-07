@@ -5,28 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Access Nature - Making Trails Accessible</title>
   
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2c5530">
+  <meta name="description" content="Making outdoor spaces accessible for everyone. Document trails, report barriers, and discover accessible routes.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Access Nature">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg">
+  
+  <!-- Preload critical CSS for faster rendering -->
+  <link rel="preload" href="src/css/landing.css" as="style">
+  <link rel="preload" href="src/css/high-contrast.css" as="style">
+  
   <!-- External CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
   
   <!-- App CSS -->
   <link rel="stylesheet" href="src/css/landing.css">
   <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      // Apply high contrast immediately if saved
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+      
+      // Debug: Mark that critical script ran
+      document.documentElement.dataset.criticalScriptRan = 'true';
+    })();
+  </script>
+
+  <!-- CRITICAL: Inline styles for elements that must be visible immediately -->
+  <style>
+    /* Prevent flash of unstyled content for critical nav elements */
+    .top-nav {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      height: 64px !important;
+      background: white !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0 24px !important;
+      z-index: 10000 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      overflow: hidden !important; /* Prevent overflow pushing items off screen */
+    }
+    
+    .nav-brand {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-shrink: 0 !important;
+    }
+    
+    /* High contrast toggle - always visible */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 9999;
+      padding: 12px 16px;
+      background: #000;
+      color: #fff;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex !important;
+      align-items: center;
+      gap: 8px;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .high-contrast .high-contrast-toggle {
+      background: #FFFFFF !important;
+      color: #000000 !important;
+      border: 3px solid #000000 !important;
+    }
+    
+    /* Nav auth indicator - always visible */
+    .nav-auth-indicator {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-shrink: 0 !important;
+    }
+    .nav-auth-indicator .auth-status {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      padding: 4px 10px !important;
+      background: #f3f4f6 !important;
+      border-radius: 16px !important;
+      font-size: 0.8rem !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .nav-auth-indicator .auth-status.signed-in {
+      background: #dcfce7 !important;
+    }
+    
+    /* Menu toggle - visible on mobile only */
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 8px;
+    }
+    .menu-toggle:focus {
+      outline: none !important;
+      background: transparent !important;
+    }
+    
+    /* CRITICAL: Mobile layout - must be in critical CSS */
+    @media (max-width: 768px) {
+      .top-nav {
+        height: 56px !important;
+        padding: 0 12px !important;
+        align-items: center !important;
+      }
+      .menu-toggle {
+        display: flex !important;
+      }
+      /* Hide nav-menu on mobile by default (no !important so .active can override) */
+      .nav-menu {
+        display: none;
+      }
+      /* Show menu when active - !important ensures it overrides */
+      .nav-menu.active {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 16px;
+        z-index: 9999;
+      }
+    }
+  </style>
 
   <style>
-  .top-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    z-index: 10000;
-  }
+  /* Non-critical nav styles - can load from CSS */
   .nav-brand {
     display: flex;
     align-items: center;
@@ -36,19 +183,6 @@
     color: #111827;
     text-decoration: none;
     flex-shrink: 0;
-  }
-  .nav-auth-indicator {
-    flex-shrink: 0;
-  }
-  .nav-auth-indicator .auth-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: #f3f4f6;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    white-space: nowrap;
   }
   .nav-auth-indicator .auth-status.signed-in {
     background: #dcfce7;
@@ -81,21 +215,22 @@
   .auth-status-landing { display: none !important; }
   
   @media (max-width: 768px) {
-    .top-nav { height: 56px; }
+    .top-nav { height: 56px; align-items: center; }
     .hero-section { margin-top: 56px; }
     .menu-toggle { 
-      display: block !important; 
-      visibility: visible !important;
-      opacity: 1 !important;
+      display: flex !important; 
+      align-items: center;
       background: none; 
       border: none; 
       font-size: 1.5rem; 
       cursor: pointer;
       flex-shrink: 0;
     }
+    /* Hide nav-menu on mobile - no !important so .active can override */
     .nav-menu { display: none; }
+    /* Show when active */
     .nav-menu.active {
-      display: flex;
+      display: flex !important;
       flex-direction: column;
       position: fixed;
       top: 56px;
@@ -103,6 +238,7 @@
       right: 0;
       background: white;
       padding: 16px;
+      z-index: 9999;
     }
     .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
     .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
@@ -111,9 +247,6 @@
     .nav-auth-indicator { 
       flex-shrink: 0;
       min-width: 80px;
-    }
-    .menu-toggle {
-      flex-shrink: 0;
     }
   }
   
@@ -172,18 +305,58 @@
     100% { background-position: -200% 0; }
   }
 </style>
+
+<!-- Critical: Apply preferences immediately before render -->
+<script>
+(function() {
+  // Apply high contrast immediately from localStorage
+  try {
+    const prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+    if (prefs.highContrast) {
+      document.documentElement.classList.add('high-contrast');
+    }
+  } catch(e) {}
+})();
+</script>
 </head>
 <body>
+<script>
+  // Debug: Log nav visibility immediately
+  console.log('[NAV DEBUG] Body loaded, checking nav visibility...');
+  setTimeout(function() {
+    var nav = document.querySelector('.top-nav');
+    if (nav) {
+      var style = window.getComputedStyle(nav);
+      console.log('[NAV DEBUG] Nav element:', nav);
+      console.log('[NAV DEBUG] display:', style.display);
+      console.log('[NAV DEBUG] visibility:', style.visibility);
+      console.log('[NAV DEBUG] opacity:', style.opacity);
+      console.log('[NAV DEBUG] position:', style.position);
+      console.log('[NAV DEBUG] top:', style.top);
+      console.log('[NAV DEBUG] left:', style.left);
+      console.log('[NAV DEBUG] right:', style.right);
+      console.log('[NAV DEBUG] transform:', style.transform);
+    } else {
+      console.log('[NAV DEBUG] Nav element not found!');
+    }
+  }, 0);
+</script>
 
-  <nav class="top-nav">
-  <a href="index.html" class="nav-brand">🌲 Access Nature</a>
-  <div class="nav-auth-indicator">
-    <div class="auth-status" id="authIndicator">
+  <!-- High Contrast Toggle - rendered immediately -->
+  <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode">
+    <span class="toggle-icon">☀️</span>
+    <span class="toggle-text">High Contrast</span>
+  </button>
+
+  <nav class="top-nav" style="display: flex !important; visibility: visible !important; opacity: 1 !important; position: fixed; top: 0; left: 0; right: 0; height: 64px; background: white; z-index: 10000;">
+  <a href="index.html" class="nav-brand" style="display: flex !important; visibility: visible !important;">🌲 Access Nature</a>
+  <div class="nav-auth-indicator" style="display: flex !important; visibility: visible !important;">
+    <div class="auth-status" id="authIndicator" style="display: flex !important; visibility: visible !important;">
       <span>👤</span>
       <span id="authStatusText">Guest</span>
     </div>
   </div>
-  <button class="menu-toggle" id="menuToggle">☰</button>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" style="visibility: visible !important;">☰</button>
   <div class="nav-menu" id="navMenu">
     <a href="index.html" class="nav-link active">🏠 Home</a>
     <a href="tracker.html" class="nav-link">🗺️ Track</a>
@@ -598,6 +771,31 @@ async function makeGuidesPublic() {
           }
         }
       });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      var hcText = hcToggle?.querySelector('.toggle-text');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcText) hcText.textContent = isHC ? 'Normal' : 'High Contrast';
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        if (navigator.vibrate) navigator.vibrate(10);
+      });
     })();
   </script>
 
@@ -607,6 +805,8 @@ async function makeGuidesPublic() {
   <!-- App JavaScript -->
   <script type="module" src="src/landing.js"></script>
   <script type="module" src="src/features/auth.js"></script>
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
 
   <script type="module">
   import { auth } from './firebase-setup.js';

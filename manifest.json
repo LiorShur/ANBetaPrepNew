@@ -1,0 +1,43 @@
+{
+  "name": "Access Nature",
+  "short_name": "Access Nature",
+  "description": "Making outdoor spaces accessible for everyone. Document trails, report barriers, and discover accessible routes.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c5530",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["navigation", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Tracking",
+      "short_name": "Track",
+      "description": "Start a new GPS tracking session",
+      "url": "/tracker.html?action=start"
+    },
+    {
+      "name": "Report Barrier",
+      "short_name": "Report",
+      "description": "Report an accessibility barrier",
+      "url": "/reports.html?action=new"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

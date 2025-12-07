@@ -666,4 +666,13 @@ window.getErrorMessage = getErrorMessage;
 // Setup badge notification popups
 gamificationUI.setupBadgeNotifications();
 
+// Connect offlineMapsUI to the map when available
+setTimeout(() => {
+  const mapController = window.AccessNatureApp?.getController('map');
+  if (mapController?.map && window.offlineMapsUI) {
+    window.offlineMapsUI.setMap(mapController.map);
+    console.log('✅ Offline Maps UI connected to map');
+  }
+}, 2000);
+
 export { AccessNatureApp, offlineIndicator, loadingStates, gamificationUI, accessibilityRating, trailSearch, showError, getErrorMessage };

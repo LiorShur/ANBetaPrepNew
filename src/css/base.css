@@ -32,10 +32,24 @@ html, body {
   margin: 0 auto;
 }
 
-/* Focus styles */
-:focus {
+/* Focus styles - only show for keyboard navigation */
+:focus-visible {
   outline: 2px solid #4CAF50;
   outline-offset: 2px;
+}
+
+/* Remove default focus for mouse clicks */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Remove green focus from nav elements - use blue instead */
+.menu-toggle:focus,
+.nav-link:focus,
+.nav-brand:focus,
+button.menu-toggle:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
 }
 
 .custom-div-icon {

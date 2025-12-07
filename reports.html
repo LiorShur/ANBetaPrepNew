@@ -6,6 +6,13 @@
   <title>Accessibility Reports - Access Nature</title>
   <meta name="description" content="View and report accessibility barriers in outdoor spaces and urban areas">
   
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2c5530">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
@@ -22,6 +29,24 @@
   <link rel="stylesheet" href="src/css/navigation-features.css">
   <link rel="stylesheet" href="src/css/themes.css">
   <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+    })();
+  </script>
   
   <style>
     /* ==========================================
@@ -418,6 +443,11 @@
       display: flex;
       align-items: center;
     }
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
     .nav-auth-indicator .auth-status {
       display: flex;
       align-items: center;
@@ -461,15 +491,21 @@
     }
     .menu-toggle {
       display: none;
+      align-items: center;
+      justify-content: center;
       background: none;
       border: none;
       cursor: pointer;
       padding: 8px;
+      flex-shrink: 0;
+    }
+    .menu-toggle:focus {
+      outline: none !important;
+      background: transparent !important;
     }
     .hamburger-icon {
       width: 24px;
       height: 18px;
-      position: relative;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -608,18 +644,21 @@
         height: 56px; 
         font-size: 1.5rem; 
       }
+      
+      /* Show hamburger on mobile */
       .menu-toggle { 
-        display: flex !important; 
+        display: flex !important;
+        align-items: center;
       }
-      /* .nav-auth-indicator .auth-status span:last-child {
-        display: none;
-      } */
+      
+      /* Hide nav-menu on mobile by default (no !important so .active can override) */
       .nav-menu {
         display: none;
-        background: white;
       }
+      
+      /* Show menu when active - !important ensures it overrides */
       .nav-menu.active {
-        display: flex;
+        display: flex !important;
         flex-direction: column;
         position: fixed;
         top: 56px;
@@ -628,7 +667,9 @@
         background: white !important;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 99999 !important; /* Higher than Leaflet controls */
       }
+      
       .nav-menu .nav-link {
         width: 100%;
         padding: 14px 16px;
@@ -674,7 +715,7 @@
         <span id="navAuthStatusText">Guest</span>
       </div>
     </div>
-    <button class="menu-toggle" id="menuToggle">
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
       <span class="hamburger-icon">
         <span></span>
         <span></span>
@@ -691,6 +732,12 @@
       </div>
     </div>
   </nav>
+
+  <!-- High Contrast Toggle - Placed in HTML for immediate visibility -->
+  <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode for outdoor visibility" title="Toggle high contrast mode">
+    <span class="toggle-icon">☀️</span>
+    <span class="toggle-text">High Contrast</span>
+  </button>
 
   <div class="page-container">
     <!-- Header -->
@@ -923,137 +970,77 @@
     </div>
   </div>
 
-  <!-- Report Creation Modal -->
-  <div id="reportCreateModal" class="hidden">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-header">
-        <h2>📋 Report Accessibility Issue</h2>
-        <button class="modal-close" id="closeCreateModalBtn">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="reportForm">
-          <!-- Location -->
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;">📍 Location</label>
-            <div id="locationStatus" style="padding: 12px; background: #f3f4f6; border-radius: 8px; margin-bottom: 8px;">
-              <span id="locationText">Click "Use My Location" or click on the map</span>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" id="useLocationBtn" class="btn btn-secondary" style="flex: 1;">📍 Use My Location</button>
-              <button type="button" id="pickOnMapBtn" class="btn btn-secondary" style="flex: 1;">🗺️ Pick on Map</button>
-            </div>
-            <input type="hidden" id="reportLat" name="latitude">
-            <input type="hidden" id="reportLng" name="longitude">
-          </div>
-
-          <!-- Title -->
-          <div style="margin-bottom: 20px;">
-            <label for="reportTitle" style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Title *</label>
-            <input type="text" id="reportTitle" name="title" required
-                   placeholder="Brief description of the issue"
-                   style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
-          </div>
-
-          <!-- Issue Type -->
-          <div style="margin-bottom: 20px;">
-            <label for="reportType" style="display: block; margin-bottom: 8px; font-weight: 600;">🏷️ Issue Type *</label>
-            <select id="reportType" name="issueType" required
-                    style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
-              <option value="">Select issue type...</option>
-              <optgroup label="Sidewalk Issues">
-                <option value="curb_ramp">♿ Missing/Damaged Curb Ramp</option>
-                <option value="sidewalk_blocked">🚧 Blocked Sidewalk</option>
-                <option value="damaged_sidewalk">💔 Damaged Sidewalk</option>
-                <option value="tactile_paving">🔲 Missing Tactile Paving</option>
-              </optgroup>
-              <optgroup label="Building Access">
-                <option value="inaccessible_entrance">🚪 Inaccessible Entrance</option>
-                <option value="broken_elevator">🛗 Broken Elevator/Lift</option>
-                <option value="heavy_doors">🚪 Heavy/Manual Doors</option>
-                <option value="stairs_only">🪜 Stairs Only Access</option>
-              </optgroup>
-              <optgroup label="Parking">
-                <option value="parking_blocked">🅿️ Blocked Accessible Parking</option>
-                <option value="no_parking">🚫 No Accessible Parking</option>
-                <option value="damaged_parking">⚠️ Damaged Parking Space</option>
-              </optgroup>
-              <optgroup label="Trail & Outdoor">
-                <option value="trail_obstacle">🪨 Trail Obstacle</option>
-                <option value="trail_erosion">🕳️ Trail Erosion/Damage</option>
-                <option value="overgrown">🌿 Overgrown Vegetation</option>
-                <option value="missing_sign">🪧 Missing Signage</option>
-              </optgroup>
-              <optgroup label="Facilities">
-                <option value="inaccessible_restroom">🚻 Inaccessible Restroom</option>
-                <option value="inaccessible_fountain">🚰 Inaccessible Water Fountain</option>
-              </optgroup>
-              <option value="other">📍 Other Issue</option>
-            </select>
-          </div>
-
-          <!-- Severity -->
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;">⚠️ Severity *</label>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="severity" value="low" style="margin-bottom: 4px;">
-                <span style="color: #84cc16; font-weight: 600;">Low</span>
-              </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="severity" value="medium" checked style="margin-bottom: 4px;">
-                <span style="color: #f59e0b; font-weight: 600;">Medium</span>
-              </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="severity" value="high" style="margin-bottom: 4px;">
-                <span style="color: #ea580c; font-weight: 600;">High</span>
-              </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="severity" value="critical" style="margin-bottom: 4px;">
-                <span style="color: #dc2626; font-weight: 600;">Critical</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Description -->
-          <div style="margin-bottom: 20px;">
-            <label for="reportDescription" style="display: block; margin-bottom: 8px; font-weight: 600;">📄 Description</label>
-            <textarea id="reportDescription" name="description" rows="4"
-                      placeholder="Provide more details about the accessibility barrier..."
-                      style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
-          </div>
-
-          <!-- Photos -->
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;">📷 Photos</label>
-            <input type="file" id="reportPhotos" name="photos" accept="image/*" multiple
-                   style="display: none;">
-            <button type="button" id="addPhotosBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">
-              📸 Add Photos
-            </button>
-            <div id="photoPreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px;"></div>
-          </div>
-
-          <!-- Public/Private -->
-          <div style="margin-bottom: 20px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" id="reportPublic" name="isPublic" checked style="width: 18px; height: 18px;">
-              <span>Make this report public (visible to other users)</span>
-            </label>
-          </div>
-
-          <!-- Submit -->
-          <div style="display: flex; gap: 12px;">
-            <button type="button" id="cancelReportBtn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
-            <button type="submit" id="submitReportBtn" class="btn btn-primary" style="flex: 1;">📋 Submit Report</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- IMMEDIATE UI Handlers - No module dependencies -->
+  <script>
+    (function() {
+      // Hamburger Menu - Immediate handler
+      var menuToggle = document.getElementById('menuToggle');
+      var navMenu = document.getElementById('navMenu');
+      
+      console.log('[NAV] menuToggle:', menuToggle);
+      console.log('[NAV] navMenu:', navMenu);
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        console.log('[NAV] Menu closed');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+        console.log('[NAV] Menu toggled, navMenu.classList:', navMenu?.classList.toString());
+        console.log('[NAV] navMenu display:', window.getComputedStyle(navMenu).display);
+      });
+      
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      var hcText = hcToggle?.querySelector('.toggle-text');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcText) hcText.textContent = isHC ? 'Normal' : 'High Contrast';
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        if (navigator.vibrate) navigator.vibrate(10);
+      });
+    })();
+  </script>
+
+  <!-- PWA & Display Preferences -->
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
 
   <!-- Firebase -->
   <script type="module">
@@ -2267,42 +2254,6 @@
           document.getElementById('reportDetailModal').classList.add('hidden');
         }
       });
-
-      // Mobile menu toggle
-      const menuToggle = document.getElementById('menuToggle');
-      const navMenu = document.getElementById('navMenu');
-      
-      function closeMenu() {
-        navMenu?.classList.remove('active');
-        menuToggle?.classList.remove('active');
-      }
-      
-      if (menuToggle && navMenu) {
-        menuToggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          navMenu.classList.toggle('active');
-          menuToggle.classList.toggle('active');
-        });
-
-        // Close menu when clicking links
-        navMenu.querySelectorAll('a.nav-link').forEach(link => {
-          link.addEventListener('click', closeMenu);
-        });
-        
-        // Close menu when clicking buttons
-        navMenu.querySelectorAll('button, .btn').forEach(btn => {
-          btn.addEventListener('click', closeMenu);
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-          if (navMenu.classList.contains('active')) {
-            if (!navMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-              closeMenu();
-            }
-          }
-        });
-      }
 
       // Auth button
       const navAuthBtn = document.getElementById('navAuthBtn');

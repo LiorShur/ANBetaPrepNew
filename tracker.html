@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Access Nature</title>
   
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2c5530">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  
   <!-- External CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
@@ -16,6 +23,24 @@
   <link rel="stylesheet" href="src/css/accessibility.css">
   <link rel="stylesheet" href="src/css/themes.css">
   <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+    })();
+  </script>
 
   <style>
 .top-nav {
@@ -41,6 +66,12 @@
     font-size: 1rem;
     color: #111827;
     text-decoration: none;
+    flex-shrink: 0;
+  }
+  .nav-auth-indicator {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
   .nav-auth-indicator .auth-status {
     display: flex;
@@ -55,6 +86,8 @@
     background: #dcfce7;
     color: #166534;
   }
+  
+  /* Desktop: show nav-menu inline */
   .nav-menu {
     display: flex;
     align-items: center;
@@ -83,19 +116,24 @@
     font-size: 0.75rem;
   }
   
-  /* Hamburger button */
+  /* Hamburger button - hidden on desktop */
   .menu-toggle {
     display: none;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     cursor: pointer;
     padding: 8px;
-    z-index: 10001;
+    flex-shrink: 0;
+  }
+  .menu-toggle:focus {
+    outline: none !important;
+    background: transparent !important;
   }
   .hamburger-icon {
     width: 24px;
     height: 18px;
-    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -127,6 +165,29 @@
   /* Hide old auth bar */
   .auth-status-bar { display: none !important; }
   
+  /* Compact weather widget for tracker */
+  .weather-container .weather-widget {
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .weather-container .weather-icon {
+    font-size: 1.8rem;
+  }
+  
+  .weather-container .weather-temp {
+    font-size: 1.5rem;
+  }
+  
+  .weather-container .weather-details {
+    font-size: 0.75rem;
+  }
+  
+  .weather-container .weather-header {
+    margin-bottom: 8px;
+  }
+  
   /* Auth modal must be above everything */
   .auth-modal {
     z-index: 20000 !important;
@@ -139,13 +200,20 @@
   }
   
   @media (max-width: 768px) {
-    .menu-toggle { display: flex !important; }
+    /* Show hamburger on mobile */
+    .menu-toggle { 
+      display: flex !important;
+      align-items: center;
+    }
+    
+    /* Hide nav-menu on mobile by default (no !important so .active can override) */
     .nav-menu {
       display: none;
-      background: white;
     }
+    
+    /* Show menu when active - !important ensures it overrides */
     .nav-menu.active {
-      display: flex;
+      display: flex !important;
       flex-direction: column;
       position: fixed;
       top: 50px;
@@ -154,7 +222,7 @@
       background: white !important;
       padding: 16px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      z-index: 9999;
+      z-index: 99999 !important; /* Higher than Leaflet controls */
     }
     .nav-menu .nav-link { 
       padding: 14px 16px; 
@@ -163,6 +231,14 @@
     }
     .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
     .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
+    
+    /* Ensure proper alignment */
+    .top-nav {
+      align-items: center !important;
+    }
+    .nav-auth-indicator {
+      flex-shrink: 0;
+    }
   }
   
 </style>
@@ -176,7 +252,7 @@
       <span id="navAuthStatusText">Guest</span>
     </div>
   </div>
-  <button class="menu-toggle" id="menuToggle">
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
     <span class="hamburger-icon">
       <span></span>
       <span></span>
@@ -193,6 +269,12 @@
     </div>
   </div>
 </nav>
+
+<!-- High Contrast Toggle - Placed in HTML for immediate visibility -->
+<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode for outdoor visibility" title="Toggle high contrast mode">
+  <span class="toggle-icon">☀️</span>
+  <span class="toggle-text">High Contrast</span>
+</button>
 
   <!-- Auth Status Bar -->
   <div id="authStatusBar" class="auth-status-bar">
@@ -311,6 +393,7 @@
   <div class="floating-left">
     <button id="toggleBtn" class="round-button" title="Toggle Rotation">🧭</button>
     <button class="round-button" onclick="openAccessibilityForm()" title="Accessibility">♿</button>
+    <button class="round-button" onclick="safetyFeatures?.startLifeline()" title="Start Lifeline">📡</button>
   </div>
 
   <!-- Right Media Panel -->
@@ -319,13 +402,16 @@
     <button class="round-button" onclick="addTextNote()" title="Add Note">📝</button>
     <button class="round-button" onclick="showRouteDataOnMap()" title="Show Route Data">🗺</button>
   </div>
+  
+  <!-- Weather Widget Container (top right, below nav) -->
+  <div id="weatherContainer" class="weather-container" style="position: fixed; top: 60px; right: 10px; z-index: 900; max-width: 200px;"></div>
 
   <!-- Bottom Navigation -->
   <div id="bottomNav" class="bottom-nav">
     <button class="nav-button" onclick="togglePanel('exportPanel')">Export</button>
     <button class="nav-button" onclick="togglePanel('summaryPanel')">Routes</button>
     <button class="nav-button" onclick="togglePanel('trailGuidePanel')">Guides</button>
-    <button class="nav-button" onclick="togglePanel('devToolsPanel')">Tools</button>
+    <button class="nav-button" onclick="togglePanel('safetyPanel')">Safety</button>
   </div>
 
   <!-- Export Panel -->
@@ -343,6 +429,15 @@
   <button id="loadMyGuidesBtn" class="cloud-load-btn">🌐 Load My Guides</button>
   <button id="clearAllSessionsBtn">🗑️ Clear Routes</button>
   <button id="clearAllAppDataBtn">🧹 Clear Everything</button>
+  </div>
+  
+  <!-- Safety Panel -->
+  <div id="safetyPanel" class="bottom-popup hidden">
+    <button onclick="safetyFeatures?.openEmergencyModal()">🆘 Emergency SOS</button>
+    <button onclick="safetyFeatures?.startLifeline()">📡 Start Lifeline</button>
+    <button onclick="safetyFeatures?.manageContacts()">👥 Emergency Contacts</button>
+    <button onclick="safetyFeatures?.showCurrentWeather('weatherContainer')">🌤️ Check Weather</button>
+    <button onclick="offlineMapsUI?.openModal()">📥 Offline Maps</button>
   </div>
 
   <!-- Dev Tools Panel -->
@@ -375,9 +470,77 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
+  <!-- IMMEDIATE UI Handlers - No module dependencies -->
+  <script>
+    (function() {
+      // Hamburger Menu - Immediate handler
+      var menuToggle = document.getElementById('menuToggle');
+      var navMenu = document.getElementById('navMenu');
+      
+      console.log('[NAV] menuToggle:', menuToggle);
+      console.log('[NAV] navMenu:', navMenu);
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        console.log('[NAV] Menu closed');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+        console.log('[NAV] Menu toggled, navMenu.classList:', navMenu?.classList.toString());
+        console.log('[NAV] navMenu display:', window.getComputedStyle(navMenu).display);
+      });
+      
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      var hcText = hcToggle?.querySelector('.toggle-text');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcText) hcText.textContent = isHC ? 'Normal' : 'High Contrast';
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        if (navigator.vibrate) navigator.vibrate(10);
+      });
+    })();
+  </script>
+
   <!-- App JavaScript -->
   <script type="module" src="src/main.js"></script>
   <script type="module" src="src/features/auth.js"></script>
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/features/safetyFeatures.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
+  <script type="module" src="src/pwa/offlineMapsUI.js"></script>
 
   <script type="module">
   // Check if redirected for sign-in
@@ -394,43 +557,7 @@
     }, 500);
   }
   
-  // Set up hamburger menu FIRST (doesn't need Firebase)
-  const menuToggle = document.getElementById('menuToggle');
-  const navMenu = document.getElementById('navMenu');
-  
-  // Helper function to close menu
-  function closeMenu() {
-    navMenu?.classList.remove('active');
-    menuToggle?.classList.remove('active');
-  }
-  
-  menuToggle?.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent document click from immediately closing
-    navMenu?.classList.toggle('active');
-    menuToggle?.classList.toggle('active');
-  });
-  
-  // Close menu when clicking a link
-  navMenu?.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', closeMenu);
-  });
-  
-  // Close menu when clicking any button inside the menu (including Sign In)
-  navMenu?.querySelectorAll('button, .btn').forEach(btn => {
-    btn.addEventListener('click', closeMenu);
-  });
-  
-  // Close menu when clicking outside
-  document.addEventListener('click', (e) => {
-    if (navMenu?.classList.contains('active')) {
-      // Check if click is outside the menu and toggle button
-      if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
-        closeMenu();
-      }
-    }
-  });
-  
-  // Now set up auth (in try-catch to prevent breaking the page)
+  // Auth setup (hamburger menu is handled in IMMEDIATE UI Handlers above)
   try {
     const { auth } = await import('./firebase-setup.js');
     const { onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js');

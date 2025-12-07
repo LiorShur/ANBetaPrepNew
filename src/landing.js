@@ -1875,6 +1875,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize access report if available
     await initAccessReport();
+    
+    // Setup pull-to-refresh handler
+    window.refreshPageData = async () => {
+      console.log('🔄 Pull-to-refresh triggered');
+      try {
+        // Clear cache to force fresh data
+        landingController.publicGuidesCache = null;
+        
+        // Show loading indicators
+        landingController.showLoadingIndicators();
+        
+        // Reload data
+        await landingController.loadDataWithRetry();
+        
+        toast.success('Data refreshed!');
+      } catch (error) {
+        console.error('Refresh failed:', error);
+        toast.error('Refresh failed. Please try again.');
+      }
+    };
+    
+    // Listen for pull-to-refresh event
+    window.addEventListener('pullToRefresh', window.refreshPageData);
+    
   } catch (error) {
     console.error('Failed to initialize landing page:', error);
   }
