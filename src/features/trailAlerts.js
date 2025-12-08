@@ -89,6 +89,25 @@ class TrailAlerts {
   initialize() {
     this.injectStyles();
     this.loadSettings();
+    
+    // Listen for tracking events from TrackingController
+    window.addEventListener('trackingStarted', () => {
+      console.log('⚠️ Trail Alerts: Tracking started event received');
+      this.startMonitoring();
+    });
+    
+    window.addEventListener('trackingStopped', () => {
+      console.log('⚠️ Trail Alerts: Tracking stopped event received');
+      this.stopMonitoring();
+    });
+    
+    // Listen for position updates from map/GPS
+    window.addEventListener('positionUpdate', (e) => {
+      if (e.detail && e.detail.lat && e.detail.lng) {
+        this.updatePosition(e.detail.lat, e.detail.lng);
+      }
+    });
+    
     console.log('⚠️ Trail Alerts initialized');
   }
 
@@ -775,10 +794,76 @@ class TrailAlerts {
       </div>
     `;
   }
+
+  /**
+   * Show settings in a modal dialog
+   */
+  showSettingsModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'trail-alert-overlay';
+    overlay.id = 'alertSettingsOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10001;
+    `;
+
+    const modal = document.createElement('div');
+    modal.className = 'trail-alert-settings-modal';
+    modal.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: calc(100% - 32px);
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    `;
+
+    modal.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.25em;">⚠️ Alert Settings</h3>
+        <button id="closeAlertSettings" style="background: none; border: none; font-size: 1.5em; cursor: pointer; padding: 4px;">×</button>
+      </div>
+      ${this.renderSettingsPanel()}
+      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 0.85em; color: #6b7280; margin: 0;">
+          Trail alerts notify you when you're approaching reported hazards or accessibility issues during tracking.
+        </p>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    document.getElementById('closeAlertSettings').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
 }
 
 // Create and export singleton
 export const trailAlerts = new TrailAlerts();
+
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => trailAlerts.initialize());
+} else {
+  trailAlerts.initialize();
+}
 
 // Make available globally
 window.trailAlerts = trailAlerts;
