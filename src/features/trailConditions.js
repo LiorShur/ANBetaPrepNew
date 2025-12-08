@@ -493,6 +493,8 @@ class TrailConditions {
       const { collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
       const { db } = await import('../../firebase-setup.js');
       
+      console.log('📝 Saving condition report...', report);
+      
       const docData = {
         ...report,
         userId: user?.uid || 'anonymous',
@@ -504,12 +506,11 @@ class TrailConditions {
       
       const docRef = await addDoc(collection(db, 'trail_conditions'), docData);
       
-      toast.success('Condition report submitted! Thank you for helping others.');
+      console.log('✅ Condition report saved with ID:', docRef.id);
       return docRef.id;
       
     } catch (error) {
       console.error('Failed to save condition report:', error);
-      toast.error('Failed to submit report. Please try again.');
       throw error;
     }
   }
@@ -643,11 +644,42 @@ class TrailConditions {
       return;
     }
     
-    const lat = position.coords.latitude.toFixed(5);
-    const lng = position.coords.longitude.toFixed(5);
-    const locationId = `loc_${lat}_${lng}`;
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const locationId = `loc_${lat.toFixed(5)}_${lng.toFixed(5)}`;
     
-    return this.openReportModal(locationId, 'Current Location');
+    // Open modal and get report data
+    const report = await this.openReportModal(locationId, 'Current Location');
+    
+    if (!report) {
+      // User cancelled
+      return;
+    }
+    
+    // Add location to report
+    report.location = { lat, lng };
+    report.trailName = 'Current Location';
+    
+    // Get current user
+    let user = null;
+    try {
+      const { auth } = await import('../../firebase-setup.js');
+      user = auth.currentUser;
+    } catch (e) {
+      console.warn('Could not get current user:', e);
+    }
+    
+    // Save to Firebase
+    try {
+      await this.saveReport(report, user);
+      // Show success with slight delay to ensure visibility
+      setTimeout(() => {
+        toast.success('✅ Condition report submitted! Thank you for helping others.');
+      }, 100);
+    } catch (error) {
+      console.error('Failed to save report:', error);
+      toast.error('Failed to submit report: ' + (error.message || 'Unknown error'));
+    }
   }
 
   /**
@@ -676,20 +708,32 @@ class TrailConditions {
         'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
       );
 
-      const now = new Date();
+      const now = new Date().toISOString();
       
-      // Get all non-expired conditions
-      const q = query(
-        collection(db, 'trail_conditions'),
-        where('expiresAt', '>', now.toISOString()),
-        orderBy('expiresAt'),
-        orderBy('timestamp', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
+      // Try simple query first (no index required)
+      let snapshot;
+      try {
+        const q = query(
+          collection(db, 'trail_conditions'),
+          where('expiresAt', '>', now)
+        );
+        snapshot = await getDocs(q);
+      } catch (queryError) {
+        console.warn('Query with filter failed, trying to get all docs:', queryError);
+        // Fallback: get all documents and filter client-side
+        const allDocsSnapshot = await getDocs(collection(db, 'trail_conditions'));
+        const validDocs = [];
+        allDocsSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.expiresAt && data.expiresAt > now) {
+            validDocs.push({ id: doc.id, data: () => data });
+          }
+        });
+        snapshot = { empty: validDocs.length === 0, forEach: (cb) => validDocs.forEach(d => cb(d)) };
+      }
       
       if (snapshot.empty) {
-        toast.info('No recent trail conditions reported in your area.');
+        toast.info('No recent trail conditions reported yet. Be the first to report!');
         return;
       }
 
@@ -698,9 +742,9 @@ class TrailConditions {
       const userLng = position.coords.longitude;
 
       snapshot.forEach(doc => {
-        const data = doc.data();
+        const data = typeof doc.data === 'function' ? doc.data() : doc.data;
         // Check if condition has location and is within ~5km
-        if (data.location) {
+        if (data.location && data.location.lat && data.location.lng) {
           const dist = this.calculateDistance(
             userLat, userLng,
             data.location.lat, data.location.lng
@@ -716,7 +760,7 @@ class TrailConditions {
         return;
       }
 
-      // Sort by distance
+      // Sort by distance (closest first)
       conditions.sort((a, b) => a.distance - b.distance);
 
       // Display in modal
@@ -724,7 +768,14 @@ class TrailConditions {
 
     } catch (error) {
       console.error('Error fetching nearby conditions:', error);
-      toast.error('Unable to fetch conditions. Check your connection.');
+      // More specific error message
+      if (error.code === 'permission-denied') {
+        toast.error('Permission denied. Please sign in to view conditions.');
+      } else if (error.code === 'unavailable') {
+        toast.error('Service unavailable. Check your internet connection.');
+      } else {
+        toast.error('Unable to fetch conditions: ' + (error.message || 'Unknown error'));
+      }
     }
   }
 
