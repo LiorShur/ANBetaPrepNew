@@ -801,13 +801,14 @@ class TrailConditions {
     overlay.className = 'conditions-overlay open';
     overlay.id = 'nearbyConditionsOverlay';
 
-    const conditionCards = conditions.map(c => {
+    const conditionCards = conditions.map((c, index) => {
       const timeAgo = this.getTimeAgo(c.timestamp);
       const severityColor = this.getSeverityColor(c.maxSeverity || 2);
       const conditionList = c.conditions?.map(cond => cond.label).join(', ') || 'Unknown';
       
       return `
-        <div class="condition-card" style="border-left: 4px solid ${severityColor}; padding: 12px; margin-bottom: 8px; background: #f9fafb; border-radius: 8px;">
+        <div class="condition-card" data-condition-id="${c.id}" data-lat="${c.location?.lat}" data-lng="${c.location?.lng}" 
+             style="border-left: 4px solid ${severityColor}; padding: 12px; margin-bottom: 12px; background: #f9fafb; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong>${c.trailName || 'Trail'}</strong>
             <span style="font-size: 0.8em; color: #6b7280;">${c.distance.toFixed(1)} km away</span>
@@ -815,6 +816,21 @@ class TrailConditions {
           <div style="margin-top: 4px; color: #374151; font-size: 0.9em;">${conditionList}</div>
           <div style="margin-top: 4px; font-size: 0.75em; color: #9ca3af;">Reported ${timeAgo}</div>
           ${c.notes ? `<div style="margin-top: 4px; font-style: italic; color: #6b7280; font-size: 0.85em;">"${c.notes}"</div>` : ''}
+          
+          <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+            <button class="condition-action-btn view-on-map" data-index="${index}" 
+                    style="padding: 6px 12px; font-size: 0.8em; border: 1px solid #3b82f6; background: white; color: #3b82f6; border-radius: 6px; cursor: pointer;">
+              🗺️ View on Map
+            </button>
+            <button class="condition-action-btn report-fixed" data-index="${index}"
+                    style="padding: 6px 12px; font-size: 0.8em; border: 1px solid #22c55e; background: white; color: #22c55e; border-radius: 6px; cursor: pointer;">
+              ✅ Fixed
+            </button>
+            <button class="condition-action-btn report-not-there" data-index="${index}"
+                    style="padding: 6px 12px; font-size: 0.8em; border: 1px solid #f59e0b; background: white; color: #f59e0b; border-radius: 6px; cursor: pointer;">
+              ❌ Not There
+            </button>
+          </div>
         </div>
       `;
     }).join('');
@@ -836,6 +852,45 @@ class TrailConditions {
 
     document.body.appendChild(overlay);
 
+    // Store conditions for reference
+    this._currentConditions = conditions;
+
+    // View on Map handlers
+    overlay.querySelectorAll('.view-on-map').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const condition = conditions[index];
+        if (condition?.location) {
+          this.viewConditionOnMap(condition);
+          overlay.remove();
+        }
+      });
+    });
+
+    // Report Fixed handlers
+    overlay.querySelectorAll('.report-fixed').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const condition = conditions[index];
+        await this.reportConditionStatus(condition, 'fixed');
+        e.target.closest('.condition-card').style.opacity = '0.5';
+        e.target.disabled = true;
+        e.target.textContent = '✅ Reported';
+      });
+    });
+
+    // Report Not There handlers
+    overlay.querySelectorAll('.report-not-there').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const condition = conditions[index];
+        await this.reportConditionStatus(condition, 'not_found');
+        e.target.closest('.condition-card').style.opacity = '0.5';
+        e.target.disabled = true;
+        e.target.textContent = '❌ Reported';
+      });
+    });
+
     document.getElementById('closeNearbyConditions').addEventListener('click', () => {
       overlay.remove();
     });
@@ -843,6 +898,132 @@ class TrailConditions {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.remove();
     });
+  }
+
+  /**
+   * View a condition on the map
+   * @param {object} condition - Condition with location
+   */
+  viewConditionOnMap(condition) {
+    if (!condition?.location?.lat || !condition?.location?.lng) {
+      toast.error('Location not available for this condition');
+      return;
+    }
+
+    const { lat, lng } = condition.location;
+    
+    // Get the map controller
+    const mapController = window.AccessNatureApp?.getController('map');
+    
+    if (mapController?.map) {
+      // Pan to location
+      mapController.map.setView([lat, lng], 16);
+      
+      // Add a temporary marker
+      const conditionList = condition.conditions?.map(c => c.label).join(', ') || 'Unknown condition';
+      const timeAgo = this.getTimeAgo(condition.timestamp);
+      
+      const marker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'condition-marker',
+          html: `<div style="background: ${this.getSeverityColor(condition.maxSeverity || 2)}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px;">⚠️</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(mapController.map);
+      
+      marker.bindPopup(`
+        <div style="min-width: 200px;">
+          <strong style="font-size: 1.1em;">${condition.trailName || 'Trail Condition'}</strong>
+          <div style="margin-top: 6px; color: #374151;">${conditionList}</div>
+          <div style="margin-top: 4px; font-size: 0.85em; color: #6b7280;">Reported ${timeAgo}</div>
+          ${condition.notes ? `<div style="margin-top: 6px; font-style: italic; color: #6b7280;">"${condition.notes}"</div>` : ''}
+          <div style="margin-top: 10px; display: flex; gap: 6px;">
+            <button onclick="trailConditions.reportConditionStatus({id:'${condition.id}'}, 'fixed'); this.parentElement.innerHTML='<span style=color:#22c55e>✅ Marked as Fixed</span>'" 
+                    style="padding: 4px 8px; font-size: 0.8em; border: 1px solid #22c55e; background: white; color: #22c55e; border-radius: 4px; cursor: pointer;">
+              ✅ Fixed
+            </button>
+            <button onclick="trailConditions.reportConditionStatus({id:'${condition.id}'}, 'not_found'); this.parentElement.innerHTML='<span style=color:#f59e0b>❌ Reported</span>'" 
+                    style="padding: 4px 8px; font-size: 0.8em; border: 1px solid #f59e0b; background: white; color: #f59e0b; border-radius: 4px; cursor: pointer;">
+              ❌ Not There
+            </button>
+          </div>
+        </div>
+      `).openPopup();
+      
+      // Remove marker after 30 seconds
+      setTimeout(() => {
+        mapController.map.removeLayer(marker);
+      }, 30000);
+      
+      toast.success('📍 Showing condition on map');
+    } else {
+      // No map available, open in external maps
+      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+      window.open(mapsUrl, '_blank');
+      toast.info('Opening in Google Maps...');
+    }
+  }
+
+  /**
+   * Report a condition as fixed or not found
+   * @param {object} condition - The condition to update
+   * @param {string} status - 'fixed' or 'not_found'
+   */
+  async reportConditionStatus(condition, status) {
+    try {
+      const { db } = await import('../../firebase-setup.js');
+      const { doc, updateDoc, arrayUnion, increment, deleteDoc, getDoc } = await import(
+        'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+      );
+      const { auth } = await import('../../firebase-setup.js');
+      
+      const user = auth.currentUser;
+      const userId = user?.uid || 'anonymous';
+      
+      const conditionRef = doc(db, 'trail_conditions', condition.id);
+      
+      // Get current data
+      const conditionDoc = await getDoc(conditionRef);
+      if (!conditionDoc.exists()) {
+        toast.error('Condition no longer exists');
+        return;
+      }
+      
+      const data = conditionDoc.data();
+      const statusField = status === 'fixed' ? 'fixedReports' : 'notFoundReports';
+      const currentReports = data[statusField] || [];
+      
+      // Check if user already reported
+      if (currentReports.includes(userId)) {
+        toast.info('You already reported this condition');
+        return;
+      }
+      
+      // Update the document
+      await updateDoc(conditionRef, {
+        [statusField]: arrayUnion(userId),
+        [`${statusField}Count`]: increment(1),
+        lastStatusUpdate: new Date().toISOString()
+      });
+      
+      // If enough people report it fixed/not found, auto-expire it
+      const newCount = (data[`${statusField}Count`] || 0) + 1;
+      if (newCount >= 3) {
+        // Auto-expire by setting expiresAt to now
+        await updateDoc(conditionRef, {
+          expiresAt: new Date().toISOString(),
+          autoExpiredReason: status === 'fixed' ? 'Reported fixed by community' : 'Reported not found by community'
+        });
+        toast.success(`Condition marked as ${status === 'fixed' ? 'resolved' : 'not found'} by community!`);
+      } else {
+        toast.success(`Thank you! ${3 - newCount} more report${3 - newCount !== 1 ? 's' : ''} needed to remove.`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to update condition status:', error);
+      toast.error('Failed to update. Please try again.');
+    }
   }
 }
 
