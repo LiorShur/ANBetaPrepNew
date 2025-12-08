@@ -56,8 +56,8 @@ async start() {
     (error) => this.handlePositionError(error),
     {
       enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 15000
+      maximumAge: 5000,  // Allow cached position up to 5 seconds old for faster initial lock
+      timeout: 30000    // Increased timeout to 30 seconds for slow GPS
     }
   );
 
@@ -80,6 +80,11 @@ async start() {
   } else {
     console.log('✅ GPS tracking started successfully');
   }
+  
+  // Dispatch tracking started event for other modules (trail alerts, etc.)
+  window.dispatchEvent(new CustomEvent('trackingStarted', { 
+    detail: { isResuming } 
+  }));
   
   return true;
 }
@@ -140,6 +145,9 @@ async stop() {
 
   // Prompt for save (await to ensure proper sequencing)
   await this.promptForSave();
+
+  // Dispatch tracking stopped event for other modules
+  window.dispatchEvent(new CustomEvent('trackingStopped'));
 
   console.log('✅ GPS tracking stopped');
   return true;
@@ -238,6 +246,11 @@ async stop() {
     if (this.dependencies.map) {
       this.dependencies.map.updateMarkerPosition(currentCoords);
     }
+
+    // Dispatch position update event for trail alerts and other modules
+    window.dispatchEvent(new CustomEvent('positionUpdate', {
+      detail: { lat: latitude, lng: longitude, accuracy }
+    }));
 
     console.log(`📍 GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${accuracy.toFixed(1)}m)`);
   }
