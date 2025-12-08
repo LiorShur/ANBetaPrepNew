@@ -623,6 +623,176 @@ class TrailConditions {
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
   }
+
+  /**
+   * Quick report for current location (no trailId needed)
+   * Uses current GPS position as the "trail"
+   */
+  async quickReportCondition() {
+    // Get current position
+    let position = null;
+    try {
+      position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      });
+    } catch (e) {
+      toast.error('Unable to get your location. Please enable GPS.');
+      return;
+    }
+    
+    const lat = position.coords.latitude.toFixed(5);
+    const lng = position.coords.longitude.toFixed(5);
+    const locationId = `loc_${lat}_${lng}`;
+    
+    return this.openReportModal(locationId, 'Current Location');
+  }
+
+  /**
+   * Show conditions in nearby area
+   */
+  async showNearbyConditions() {
+    // Get current position
+    let position = null;
+    try {
+      position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      });
+    } catch (e) {
+      toast.error('Unable to get your location. Please enable GPS.');
+      return;
+    }
+
+    toast.info('Searching for nearby trail conditions...');
+
+    try {
+      const { db } = await import('../../firebase-setup.js');
+      const { collection, getDocs, query, where, orderBy } = await import(
+        'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+      );
+
+      const now = new Date();
+      
+      // Get all non-expired conditions
+      const q = query(
+        collection(db, 'trail_conditions'),
+        where('expiresAt', '>', now.toISOString()),
+        orderBy('expiresAt'),
+        orderBy('timestamp', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        toast.info('No recent trail conditions reported in your area.');
+        return;
+      }
+
+      const conditions = [];
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        // Check if condition has location and is within ~5km
+        if (data.location) {
+          const dist = this.calculateDistance(
+            userLat, userLng,
+            data.location.lat, data.location.lng
+          );
+          if (dist <= 5) { // Within 5km
+            conditions.push({ ...data, id: doc.id, distance: dist });
+          }
+        }
+      });
+
+      if (conditions.length === 0) {
+        toast.info('No conditions reported within 5km of your location.');
+        return;
+      }
+
+      // Sort by distance
+      conditions.sort((a, b) => a.distance - b.distance);
+
+      // Display in modal
+      this.showConditionsListModal(conditions);
+
+    } catch (error) {
+      console.error('Error fetching nearby conditions:', error);
+      toast.error('Unable to fetch conditions. Check your connection.');
+    }
+  }
+
+  /**
+   * Calculate distance between two points (km)
+   */
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  /**
+   * Show list of conditions in modal
+   */
+  showConditionsListModal(conditions) {
+    const overlay = document.createElement('div');
+    overlay.className = 'conditions-overlay open';
+    overlay.id = 'nearbyConditionsOverlay';
+
+    const conditionCards = conditions.map(c => {
+      const timeAgo = this.getTimeAgo(c.timestamp);
+      const severityColor = this.getSeverityColor(c.maxSeverity || 2);
+      const conditionList = c.conditions?.map(cond => cond.label).join(', ') || 'Unknown';
+      
+      return `
+        <div class="condition-card" style="border-left: 4px solid ${severityColor}; padding: 12px; margin-bottom: 8px; background: #f9fafb; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>${c.trailName || 'Trail'}</strong>
+            <span style="font-size: 0.8em; color: #6b7280;">${c.distance.toFixed(1)} km away</span>
+          </div>
+          <div style="margin-top: 4px; color: #374151; font-size: 0.9em;">${conditionList}</div>
+          <div style="margin-top: 4px; font-size: 0.75em; color: #9ca3af;">Reported ${timeAgo}</div>
+          ${c.notes ? `<div style="margin-top: 4px; font-style: italic; color: #6b7280; font-size: 0.85em;">"${c.notes}"</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div class="conditions-modal" style="max-height: 80vh; overflow-y: auto;">
+        <div class="conditions-header">
+          <h2>📍 Nearby Conditions</h2>
+          <p>${conditions.length} report${conditions.length !== 1 ? 's' : ''} within 5km</p>
+        </div>
+        <div class="conditions-body" style="max-height: 50vh; overflow-y: auto;">
+          ${conditionCards}
+        </div>
+        <div class="conditions-footer">
+          <button class="btn-submit" id="closeNearbyConditions">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('closeNearbyConditions').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
 }
 
 // Create singleton instance
