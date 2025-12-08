@@ -11,7 +11,7 @@
 
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
-import { haptic } from './displayPreferences.js';
+import { haptic } from '../ui/displayPreferences.js';
 
 class TrailConditions {
   constructor() {

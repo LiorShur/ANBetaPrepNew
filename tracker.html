@@ -264,6 +264,9 @@
     <a href="tracker.html" class="nav-link active">🗺️ Track</a>
     <a href="reports.html" class="nav-link">📋 Reports</a>
     <!-- <a href="routes.html" class="nav-link">📂 Routes</a> -->
+    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;">
+      ♿ Mobility Profile
+    </button>
     <div class="nav-auth">
       <button id="navAuthBtn" class="btn">Sign In</button>
     </div>
@@ -541,6 +544,8 @@
   <script type="module" src="src/features/safetyFeatures.js"></script>
   <script type="module" src="src/pwa/pwaManager.js"></script>
   <script type="module" src="src/pwa/offlineMapsUI.js"></script>
+  <script type="module" src="src/features/trailConditions.js"></script>
+  <script type="module" src="src/features/trailAlerts.js"></script>
 
   <script type="module">
   // Check if redirected for sign-in

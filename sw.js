@@ -9,7 +9,7 @@
  * - Images: Cache First
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v2.1.0-clean';
 const APP_CACHE = `access-nature-app-${CACHE_VERSION}`;
 const DATA_CACHE = `access-nature-data-${CACHE_VERSION}`;
 const MAP_CACHE = `access-nature-maps-${CACHE_VERSION}`;
@@ -41,7 +41,7 @@ const APP_SHELL = [
   
   // Features
   '/src/features/auth.js',
-  '/src/features/tracking.js',
+  '/src/core/tracking.js',
   '/src/features/accessibility.js',
   '/src/features/export.js',
   '/src/features/media.js',
@@ -218,9 +218,17 @@ async function networkFirstWithCache(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
     
-    if (networkResponse.ok) {
-      // Cache successful responses
-      cache.put(request, networkResponse.clone());
+    // Only cache successful, cacheable responses (not streaming, not opaque)
+    if (networkResponse.ok && 
+        networkResponse.type !== 'opaque' && 
+        !request.url.includes('firestore.googleapis.com') &&
+        !request.url.includes('/Listen/channel')) {
+      try {
+        cache.put(request, networkResponse.clone());
+      } catch (cacheError) {
+        // Silently fail for non-cacheable responses
+        console.debug('[SW] Could not cache:', request.url.slice(0, 60));
+      }
     }
     
     return networkResponse;
@@ -455,9 +463,12 @@ self.addEventListener('notificationclick', (event) => {
 // ==================== Message Handler ====================
 
 self.addEventListener('message', (event) => {
-  console.log('[SW] Message received:', event.data);
+  const { type, payload } = event.data || {};
   
-  const { type, payload } = event.data;
+  // Only log relevant app messages, not Firebase internal messages (ping, keyChanged, etc.)
+  if (type && !['ping', 'keyChanged'].includes(event.data?.eventType)) {
+    console.log('[SW] Message received:', type);
+  }
   
   switch (type) {
     case 'SKIP_WAITING':

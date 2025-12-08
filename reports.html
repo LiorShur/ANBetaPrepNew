@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- CLEAN-VERSION-2024-12-08 -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -281,6 +282,12 @@
     .report-card.severity-high { border-left-color: #ea580c; }
     .report-card.severity-medium { border-left-color: #f59e0b; }
     .report-card.severity-low { border-left-color: #84cc16; }
+
+    /* Temporary marker pulse animation */
+    @keyframes tempPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    }
 
     .report-card-header {
       display: flex;
@@ -784,10 +791,11 @@
           <label for="severityFilter">Severity</label>
           <select id="severityFilter" class="form-select">
             <option value="">All Severities</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="5,critical">⚠️ 5 - Critical</option>
+            <option value="4,high">⚠️ 4 - High</option>
+            <option value="3,medium">⚠️ 3 - Medium</option>
+            <option value="2,low">⚠️ 2 - Low</option>
+            <option value="1,minor">⚠️ 1 - Minor</option>
           </select>
         </div>
         <div class="form-group">
@@ -804,11 +812,20 @@
             <option value="other">Other</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="durationFilter">Duration Type</label>
+          <select id="durationFilter" class="form-select">
+            <option value="">All Types</option>
+            <option value="permanent">🏗️ Permanent Only</option>
+            <option value="temporary">⏳ Temporary Only</option>
+          </select>
+        </div>
       </div>
       <div class="filter-actions">
         <button class="btn btn-primary" id="applyFiltersBtn">🔍 Apply Filters</button>
         <button class="btn btn-secondary" id="resetFiltersBtn">🔄 Reset</button>
         <button class="btn btn-secondary" id="useMyLocationBtn">📍 Use My Location</button>
+        <button class="btn btn-secondary" id="exportAllBtn" title="Export filtered reports to CSV for 311 submission">📊 Export CSV</button>
       </div>
     </div>
 
@@ -911,28 +928,144 @@
             </select>
           </div>
 
-          <!-- Severity -->
+          <!-- Severity - Enhanced 1-5 Scale -->
           <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;">⚠️ Severity *</label>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="reportSeverity" value="low" style="margin-bottom: 4px;">
-                <span style="font-size: 0.875rem; color: #84cc16; font-weight: 600;">Low</span>
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">⚠️ Severity Level *</label>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 12px;">Rate how much this barrier impacts accessibility (1 = minor inconvenience, 5 = completely blocks access)</p>
+            
+            <div class="severity-scale" style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="1" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">1️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #22c55e;">Minor</span>
               </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="reportSeverity" value="medium" checked style="margin-bottom: 4px;">
-                <span style="font-size: 0.875rem; color: #f59e0b; font-weight: 600;">Medium</span>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="2" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">2️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #84cc16;">Low</span>
               </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="reportSeverity" value="high" style="margin-bottom: 4px;">
-                <span style="font-size: 0.875rem; color: #ea580c; font-weight: 600;">High</span>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="3" checked style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">3️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #f59e0b;">Medium</span>
               </label>
-              <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="reportSeverity" value="critical" style="margin-bottom: 4px;">
-                <span style="font-size: 0.875rem; color: #dc2626; font-weight: 600;">Critical</span>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="4" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">4️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #ea580c;">High</span>
+              </label>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="5" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">5️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #dc2626;">Critical</span>
               </label>
             </div>
+            
+            <div id="severityDescription" style="padding: 12px; background: #fef3c7; border-radius: 8px; font-size: 0.85rem; color: #92400e;">
+              <strong>Medium (3):</strong> Significant barrier that makes the area difficult to use for people with mobility needs.
+            </div>
           </div>
+          
+          <script>
+            // Severity scale interaction
+            document.querySelectorAll('.severity-option').forEach(option => {
+              option.addEventListener('click', function() {
+                // Remove selected state from all
+                document.querySelectorAll('.severity-option').forEach(o => {
+                  o.style.borderColor = '#e5e7eb';
+                  o.style.background = 'white';
+                  o.style.transform = 'scale(1)';
+                });
+                
+                // Add selected state
+                const input = this.querySelector('input');
+                input.checked = true;
+                const value = parseInt(input.value);
+                
+                const colors = {
+                  1: { border: '#22c55e', bg: '#f0fdf4' },
+                  2: { border: '#84cc16', bg: '#f7fee7' },
+                  3: { border: '#f59e0b', bg: '#fef3c7' },
+                  4: { border: '#ea580c', bg: '#fff7ed' },
+                  5: { border: '#dc2626', bg: '#fef2f2' }
+                };
+                
+                this.style.borderColor = colors[value].border;
+                this.style.background = colors[value].bg;
+                this.style.transform = 'scale(1.05)';
+                
+                // Update description
+                const descriptions = {
+                  1: { label: 'Minor (1)', text: 'Small inconvenience that doesn\'t significantly impact accessibility. Example: slightly uneven pavement.', color: '#166534', bg: '#f0fdf4' },
+                  2: { label: 'Low (2)', text: 'Noticeable barrier that causes minor difficulty. Example: narrow section that requires careful navigation.', color: '#3f6212', bg: '#f7fee7' },
+                  3: { label: 'Medium (3)', text: 'Significant barrier that makes the area difficult to use for people with mobility needs.', color: '#92400e', bg: '#fef3c7' },
+                  4: { label: 'High (4)', text: 'Major barrier that prevents independent access for many users. Example: stairs with no ramp alternative.', color: '#9a3412', bg: '#fff7ed' },
+                  5: { label: 'Critical (5)', text: 'Complete barrier that blocks access entirely. Example: locked gate, missing bridge, dangerous hazard.', color: '#991b1b', bg: '#fef2f2' }
+                };
+                
+                const desc = document.getElementById('severityDescription');
+                desc.innerHTML = '<strong>' + descriptions[value].label + ':</strong> ' + descriptions[value].text;
+                desc.style.background = descriptions[value].bg;
+                desc.style.color = descriptions[value].color;
+              });
+              
+              // Initialize selected state
+              const input = option.querySelector('input');
+              if (input.checked) {
+                option.click();
+              }
+            });
+          </script>
+
+          <!-- Temporary/Permanent Indicator -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">🕐 Duration Type</label>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 12px;">Is this a temporary or permanent barrier?</p>
+            <div style="display: flex; gap: 12px;">
+              <label class="duration-option" style="flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="durationType" value="permanent" checked style="width: 20px; height: 20px;">
+                <div>
+                  <span style="font-size: 1.2rem;">🏗️</span>
+                  <span style="font-weight: 600; margin-left: 4px;">Permanent</span>
+                  <div style="font-size: 0.8rem; color: #6b7280;">Ongoing structural issue</div>
+                </div>
+              </label>
+              <label class="duration-option" style="flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="durationType" value="temporary" style="width: 20px; height: 20px;">
+                <div>
+                  <span style="font-size: 1.2rem;">⏳</span>
+                  <span style="font-weight: 600; margin-left: 4px;">Temporary</span>
+                  <div style="font-size: 0.8rem; color: #6b7280;">Construction, seasonal, etc.</div>
+                </div>
+              </label>
+            </div>
+            
+            <!-- Expected resolution date (only shown for temporary) -->
+            <div id="expectedResolutionContainer" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+              <label for="expectedResolution" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">📅 Expected Resolution Date (optional)</label>
+              <input type="date" id="expectedResolution" class="form-select" style="width: 100%;">
+              <p style="font-size: 0.75rem; color: #0369a1; margin-top: 6px; margin-bottom: 0;">When do you expect this barrier to be removed?</p>
+            </div>
+          </div>
+
+          <script>
+            // Duration type interaction
+            document.querySelectorAll('.duration-option').forEach(option => {
+              option.addEventListener('click', function() {
+                // Update visual state
+                document.querySelectorAll('.duration-option').forEach(o => {
+                  o.style.borderColor = '#e5e7eb';
+                  o.style.background = 'white';
+                });
+                this.style.borderColor = '#3b82f6';
+                this.style.background = '#eff6ff';
+                
+                // Show/hide expected resolution date
+                const isTemporary = this.querySelector('input').value === 'temporary';
+                document.getElementById('expectedResolutionContainer').style.display = isTemporary ? 'block' : 'none';
+              });
+            });
+          </script>
 
           <!-- Title -->
           <div style="margin-bottom: 20px;">
@@ -1079,12 +1212,26 @@
     let markerClusterGroup = null;
     let currentUser = null;
 
-    // Severity colors
+    // Severity colors - supports both numeric (1-5) and text values
     const severityColors = {
-      critical: '#dc2626',
-      high: '#ea580c',
+      // Numeric 1-5 scale
+      1: '#22c55e',  // Minor - green
+      2: '#84cc16',  // Low - lime
+      3: '#f59e0b',  // Medium - amber
+      4: '#ea580c',  // High - orange
+      5: '#dc2626',  // Critical - red
+      // Legacy text values (backward compatibility)
+      minor: '#22c55e',
+      low: '#84cc16',
       medium: '#f59e0b',
-      low: '#84cc16'
+      high: '#ea580c',
+      critical: '#dc2626'
+    };
+    
+    // Severity labels for display
+    const severityLabels = {
+      1: 'Minor', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Critical',
+      minor: 'Minor', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical'
     };
 
     // Issue type icons
@@ -1463,14 +1610,21 @@
      * Create marker for a report
      */
     function createReportMarker(report, lat, lng) {
-      const severity = report.severity || 'medium';
-      const color = severityColors[severity];
+      const severity = report.severity || 3;
+      const color = severityColors[severity] || severityColors[3];
+      const label = severityLabels[severity] || 'Medium';
       const icon = issueIcons[report.issueType] || '📍';
       const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : '';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+
+      // Add pulsing border for temporary issues
+      const markerStyle = isTemporary 
+        ? `width: 36px; height: 36px; background: ${color}; border: 3px dashed #3b82f6; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; animation: tempPulse 2s infinite;`
+        : `width: 36px; height: 36px; background: ${color}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px;`;
 
       const divIcon = L.divIcon({
-        html: `<div style="width: 36px; height: 36px; background: ${color}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>`,
-        className: 'report-marker',
+        html: `<div style="${markerStyle}">${icon}</div>`,
+        className: 'report-marker' + (isTemporary ? ' temporary' : ''),
         iconSize: [36, 36],
         iconAnchor: [18, 18]
       });
@@ -1478,12 +1632,13 @@
       const marker = L.marker([lat, lng], { icon: divIcon });
 
       // Add tooltip for hover preview
+      const tempBadge = isTemporary ? '<span style="background: #3b82f6; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-left: 4px;">⏳ TEMP</span>' : '';
       const tooltipContent = `
         <div style="min-width: 180px; max-width: 250px;">
-          <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">${escapeHtml(report.title)}</div>
+          <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">${escapeHtml(report.title)}${tempBadge}</div>
           <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${escapeHtml((report.description || '').substring(0, 80))}${(report.description || '').length > 80 ? '...' : ''}</div>
           <div style="display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
-            <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px;">${severity.toUpperCase()}</span>
+            <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px;">${label}</span>
             <span>${date}</span>
           </div>
         </div>
@@ -1524,22 +1679,31 @@
 
       timeline.innerHTML = filteredReports.slice(0, 20).map(report => {
         const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Unknown date';
-        const severity = report.severity || 'medium';
+        const severity = report.severity || 3;
+        const severityLabel = severityLabels[severity] || 'Medium';
+        const severityClass = typeof severity === 'number' ? 
+          (severity <= 1 ? 'low' : severity <= 2 ? 'low' : severity <= 3 ? 'medium' : severity <= 4 ? 'high' : 'critical') :
+          severity;
         const lat = report.latitude || report.location?.latitude;
         const lng = report.longitude || report.location?.longitude;
         const location = report.address || report.location?.placeDescription || (lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Unknown location');
+        const isTemporary = report.isTemporary || report.durationType === 'temporary';
+        const temporaryBadge = isTemporary ? '<span style="background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 6px;">⏳ TEMP</span>' : '';
+        const isVerified = (report.verificationCount || 0) >= 3;
+        const verifiedBadge = isVerified ? '<span style="background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 6px;">✓ VERIFIED</span>' : '';
 
         return `
-          <div class="report-card severity-${severity}" onclick="window.viewReportDetails('${report.id}')">
+          <div class="report-card severity-${severityClass}" onclick="window.viewReportDetails('${report.id}')">
             <div class="report-card-header">
-              <h4 class="report-card-title">${escapeHtml(report.title)}</h4>
+              <h4 class="report-card-title">${escapeHtml(report.title)}${temporaryBadge}${verifiedBadge}</h4>
               <span class="report-card-date">${date}</span>
             </div>
             <p class="report-card-description">${escapeHtml((report.description || '').substring(0, 150))}${(report.description || '').length > 150 ? '...' : ''}</p>
             <div class="report-card-meta">
               <span>📍 ${escapeHtml(location)}</span>
-              <span>⚠️ ${severity.toUpperCase()}</span>
+              <span>⚠️ ${severityLabel}</span>
               <span>👍 ${report.upvotes || 0}</span>
+              ${(report.verificationCount || 0) > 0 ? `<span>✓ ${report.verificationCount}</span>` : ''}
             </div>
           </div>
         `;
@@ -1573,18 +1737,128 @@
       const lat = report.latitude || report.location?.latitude;
       const lng = report.longitude || report.location?.longitude;
       const location = report.address || report.location?.placeDescription || (lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'Unknown location');
+      const severity = report.severity || 3;
+      const severityColor = severityColors[severity] || severityColors[3];
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+      const expectedResolution = report.expectedResolution?.toDate ? report.expectedResolution.toDate().toLocaleDateString() : null;
+
+      // Status workflow configuration
+      const statusConfig = {
+        new: { label: 'New', icon: '🆕', color: '#6b7280', bgColor: '#f3f4f6', nextStatus: 'acknowledged' },
+        acknowledged: { label: 'Acknowledged', icon: '👀', color: '#0369a1', bgColor: '#e0f2fe', nextStatus: 'in_progress' },
+        in_progress: { label: 'In Progress', icon: '🔧', color: '#d97706', bgColor: '#fef3c7', nextStatus: 'resolved' },
+        resolved: { label: 'Resolved', icon: '✅', color: '#059669', bgColor: '#d1fae5', nextStatus: null },
+        closed: { label: 'Closed', icon: '📁', color: '#374151', bgColor: '#e5e7eb', nextStatus: null }
+      };
+      
+      const currentStatus = report.status || 'new';
+      const statusInfo = statusConfig[currentStatus] || statusConfig.new;
+      const isOwner = currentUser && currentUser.uid === report.userId;
+      const statusHistory = report.statusHistory || [];
 
       modalBody.innerHTML = `
+        <!-- Status Workflow Section -->
         <div style="margin-bottom: 16px;">
-          <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${severityColors[report.severity || 'medium']}; color: white; margin-right: 8px;">${(report.severity || 'medium').toUpperCase()}</span>
-          <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #e5e7eb; color: #374151;">${(report.status || 'new').toUpperCase()}</span>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; background: ${statusInfo.bgColor}; color: ${statusInfo.color};">
+              ${statusInfo.icon} ${statusInfo.label}
+            </span>
+            <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${severityColor}; color: white;">${severityLabel}</span>
+            ${isTemporary ? '<span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #3b82f6; color: white;">⏳ TEMPORARY</span>' : ''}
+          </div>
+          
+          <!-- Status Progress Bar -->
+          <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px;">
+            ${Object.entries(statusConfig).slice(0, 4).map(([key, config], index) => {
+              const isActive = key === currentStatus;
+              const isPast = ['new', 'acknowledged', 'in_progress', 'resolved'].indexOf(key) < ['new', 'acknowledged', 'in_progress', 'resolved'].indexOf(currentStatus);
+              const dotColor = isActive ? config.color : isPast ? '#10b981' : '#d1d5db';
+              const lineColor = isPast ? '#10b981' : '#d1d5db';
+              return `
+                <div style="display: flex; align-items: center; flex: 1;">
+                  <div style="width: 24px; height: 24px; border-radius: 50%; background: ${dotColor}; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white;" title="${config.label}">
+                    ${isPast ? '✓' : (index + 1)}
+                  </div>
+                  ${index < 3 ? `<div style="flex: 1; height: 3px; background: ${lineColor};"></div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #9ca3af;">
+            <span>New</span>
+            <span>Acknowledged</span>
+            <span>In Progress</span>
+            <span>Resolved</span>
+          </div>
         </div>
+        
+        ${isTemporary && expectedResolution ? `
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
+            <strong>📅 Expected Resolution:</strong> ${expectedResolution}
+          </div>
+        ` : ''}
         <p style="color: #6b7280; margin-bottom: 16px;">${escapeHtml(report.description || 'No description provided')}</p>
         <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
           <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>📍 Location:</strong> ${escapeHtml(location)}</p>
           <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>📅 Reported:</strong> ${date}</p>
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>🕐 Type:</strong> ${isTemporary ? 'Temporary (construction, seasonal, etc.)' : 'Permanent (structural issue)'}</p>
           <p style="margin: 0; font-size: 14px;"><strong>👤 Reporter:</strong> ${escapeHtml(report.userName || report.userEmail || 'Anonymous')}</p>
         </div>
+        
+        ${report.municipalTrackingId ? `
+        <!-- Municipal Tracking Info -->
+        <div style="background: #ede9fe; border: 1px solid #c4b5fd; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; color: #5b21b6; display: flex; align-items: center; gap: 6px;">
+            <span>🏛️</span> Municipal Tracking
+          </h4>
+          <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>Reference ID:</strong> <span style="font-family: monospace; background: #f5f3ff; padding: 2px 6px; border-radius: 4px;">${escapeHtml(report.municipalTrackingId)}</span></p>
+          ${report.scheduledRepairDate ? `<p style="margin: 4px 0 0 0; font-size: 14px;"><strong>Scheduled:</strong> ${new Date(report.scheduledRepairDate).toLocaleDateString()}</p>` : ''}
+          ${report.resolvedAt ? `<p style="margin: 4px 0 0 0; font-size: 14px;"><strong>Resolved:</strong> ${report.resolvedAt.toDate ? report.resolvedAt.toDate().toLocaleDateString() : new Date(report.resolvedAt).toLocaleDateString()}</p>` : ''}
+        </div>
+        ` : ''}
+        
+        <!-- Status History (if exists) -->
+        ${statusHistory.length > 0 ? `
+          <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+              <span>📋</span> Status History
+            </h4>
+            <div style="background: #f9fafb; border-radius: 8px; padding: 12px;">
+              ${statusHistory.slice(-5).reverse().map(entry => {
+                const entryDate = entry.timestamp?.toDate ? entry.timestamp.toDate().toLocaleString() : 'Unknown';
+                const entryStatus = statusConfig[entry.status] || statusConfig.new;
+                return `
+                  <div style="display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="font-size: 1rem;">${entryStatus.icon}</span>
+                    <div style="flex: 1;">
+                      <div style="font-weight: 600; font-size: 0.85rem;">${entryStatus.label}</div>
+                      ${entry.note ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">${escapeHtml(entry.note)}</div>` : ''}
+                      <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;">${entryDate}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Status Update (for report owner) -->
+        ${isOwner && statusInfo.nextStatus ? `
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 0.9rem;">🔄 Update Status</h4>
+            <p style="font-size: 0.85rem; color: #92400e; margin-bottom: 12px;">As the report owner, you can update the status when there's progress.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button onclick="window.updateReportStatus('${report.id}', '${statusInfo.nextStatus}')" class="btn btn-primary" style="font-size: 0.85rem; padding: 8px 16px;">
+                ${statusConfig[statusInfo.nextStatus].icon} Mark as ${statusConfig[statusInfo.nextStatus].label}
+              </button>
+              <button onclick="window.showStatusUpdateModal('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 16px;">
+                ✏️ Add Note
+              </button>
+            </div>
+          </div>
+        ` : ''}
+        
         ${report.photos && report.photos.length > 0 ? (() => {
           // Extract all photo URLs for the gallery
           const photoUrls = report.photos.map(photo => {
@@ -1615,12 +1889,61 @@
             </div>
           `;
         })() : ''}
+        
+        <!-- Verification Section -->
+        <div style="background: ${(report.verificationCount || 0) >= 3 ? '#ecfdf5' : '#f9fafb'}; border: 1px solid ${(report.verificationCount || 0) >= 3 ? '#a7f3d0' : '#e5e7eb'}; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span style="font-weight: 600; color: #374151;">
+                ${(report.verificationCount || 0) >= 3 ? '✅ Community Verified' : '🔍 Community Verification'}
+              </span>
+              <span style="font-size: 0.85rem; color: #6b7280; margin-left: 8px;">
+                ${report.verificationCount || 0} ${(report.verificationCount || 0) === 1 ? 'user has' : 'users have'} verified this report
+              </span>
+            </div>
+            <button onclick="window.verifyReport('${report.id}')" 
+                    class="btn btn-secondary" 
+                    style="font-size: 0.85rem; padding: 6px 12px;"
+                    ${(report.verifiedBy || []).includes(currentUser?.uid) ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}
+                    ${report.userId === currentUser?.uid ? 'disabled title="Cannot verify your own report" style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+              ${(report.verifiedBy || []).includes(currentUser?.uid) ? '✓ Verified' : '✓ Verify Accuracy'}
+            </button>
+          </div>
+          ${(report.verificationCount || 0) < 3 ? `
+            <p style="font-size: 0.75rem; color: #9ca3af; margin: 8px 0 0 0;">
+              Help confirm this report is accurate. Reports verified by 3+ users get a "Community Verified" badge.
+            </p>
+          ` : ''}
+        </div>
+        
         <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
           <button onclick="window.upvoteReport('${report.id}')" class="btn btn-secondary" style="flex: 1; min-width: 120px;">👍 Upvote (${report.upvotes || 0})</button>
           ${lat && lng ? `
             <button onclick="window.zoomToReport(${lat}, ${lng})" class="btn btn-primary" style="flex: 1; min-width: 120px;">📍 Show on Map</button>
             <button onclick="window.navigateToLocation(${lat}, ${lng})" class="btn" style="flex: 1; min-width: 120px; background: #10b981; color: white;">🧭 Navigate</button>
           ` : ''}
+        </div>
+        
+        <!-- 311 Export Options -->
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+          <h4 style="margin: 0 0 12px 0; font-size: 0.9rem; color: #374151;">📋 Submit to Authorities</h4>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="window.printReport('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              🖨️ Print Report
+            </button>
+            <button onclick="window.downloadReport('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              📥 Download PDF
+            </button>
+            <button onclick="window.export311Email('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              ✉️ Email Template
+            </button>
+            <button onclick="window.export311Text('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              📄 Copy Text
+            </button>
+          </div>
+          <p style="font-size: 0.75rem; color: #9ca3af; margin: 8px 0 0 0;">
+            Print or download this report to submit to your local 311 service or accessibility office.
+          </p>
         </div>
       `;
 
@@ -1674,6 +1997,74 @@
       } catch (error) {
         console.error('Error upvoting:', error);
         alert('Failed to upvote. Please try again.');
+      }
+    };
+
+    /**
+     * Verify a report (crowd validation)
+     */
+    window.verifyReport = async function(reportId) {
+      if (!currentUser) {
+        alert('Please sign in to verify reports');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        const reportDoc = await getDoc(reportRef);
+        
+        if (!reportDoc.exists()) {
+          console.error('Report not found');
+          return;
+        }
+
+        const report = reportDoc.data();
+        
+        // Prevent self-verification
+        if (report.userId === currentUser.uid) {
+          alert('You cannot verify your own report');
+          return;
+        }
+        
+        const verifiedBy = report.verifiedBy || [];
+
+        if (verifiedBy.includes(currentUser.uid)) {
+          // Already verified - can't undo verification
+          alert('You have already verified this report');
+          return;
+        }
+        
+        // Add verification
+        await updateDoc(reportRef, {
+          verificationCount: increment(1),
+          verifiedBy: arrayUnion(currentUser.uid),
+          lastVerifiedAt: serverTimestamp()
+        });
+        
+        // Award points for verifying
+        if (typeof userService !== 'undefined' && userService.isInitialized) {
+          try {
+            await userService.addPoints(5, 'Verified an accessibility report');
+            showToast('✓ Report verified! +5 points', 'success');
+          } catch (e) {
+            showToast('✓ Report verified!', 'success');
+          }
+        } else {
+          showToast('✓ Report verified! Thank you for helping confirm accessibility information.', 'success');
+        }
+
+        // Reload reports
+        await loadReports();
+        
+        // Close and reopen modal if open
+        const modal = document.getElementById('reportDetailModal');
+        if (!modal.classList.contains('hidden')) {
+          window.viewReportDetails(reportId);
+        }
+
+      } catch (error) {
+        console.error('Error verifying:', error);
+        alert('Failed to verify. Please try again.');
       }
     };
 
@@ -2064,9 +2455,13 @@
         return;
       }
       
-      const severity = document.querySelector('input[name="reportSeverity"]:checked')?.value || 'medium';
+      const severity = parseInt(document.querySelector('input[name="reportSeverity"]:checked')?.value) || 3;
       const description = document.getElementById('reportDescription').value.trim();
       const address = document.getElementById('reportAddress').value.trim();
+      
+      // Get duration type and expected resolution
+      const durationType = document.querySelector('input[name="durationType"]:checked')?.value || 'permanent';
+      const expectedResolution = document.getElementById('expectedResolution')?.value || null;
       
       // Disable submit button
       const submitBtn = document.getElementById('submitReportBtn');
@@ -2087,6 +2482,11 @@
           status: 'new',
           upvotes: 0,
           upvotedBy: [],
+          // Duration info
+          durationType,
+          isTemporary: durationType === 'temporary',
+          expectedResolution: expectedResolution ? new Date(expectedResolution) : null,
+          // User info
           userId: currentUser.uid,
           userEmail: currentUser.email,
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
@@ -2178,6 +2578,9 @@
 
       // Reset filters
       document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+
+      // Export filtered reports to CSV
+      document.getElementById('exportAllBtn').addEventListener('click', exportFilteredReportsCSV);
 
       // Use my location
       document.getElementById('useMyLocationBtn').addEventListener('click', async () => {
@@ -2295,13 +2698,29 @@
      */
     function applyFilters() {
       const status = document.getElementById('statusFilter').value;
-      const severity = document.getElementById('severityFilter').value;
+      const severityFilter = document.getElementById('severityFilter').value;
       const type = document.getElementById('typeFilter').value;
+      const duration = document.getElementById('durationFilter').value;
 
       filteredReports = allReports.filter(report => {
         if (status && report.status !== status) return false;
-        if (severity && report.severity !== severity) return false;
+        
+        // Handle severity filter (supports "5,critical" format for both numeric and text)
+        if (severityFilter) {
+          const validValues = severityFilter.split(',');
+          const reportSeverity = String(report.severity);
+          if (!validValues.includes(reportSeverity)) return false;
+        }
+        
         if (type && report.issueType !== type) return false;
+        
+        // Handle duration filter
+        if (duration) {
+          const isTemporary = report.isTemporary || report.durationType === 'temporary';
+          if (duration === 'temporary' && !isTemporary) return false;
+          if (duration === 'permanent' && isTemporary) return false;
+        }
+        
         return true;
       });
 
@@ -2316,6 +2735,7 @@
       document.getElementById('statusFilter').value = '';
       document.getElementById('severityFilter').value = '';
       document.getElementById('typeFilter').value = '';
+      document.getElementById('durationFilter').value = '';
 
       filteredReports = allReports;
       displayReports();
@@ -2398,6 +2818,769 @@
       });
       document.body.appendChild(modal);
     };
+
+    // ============== 311 EXPORT FUNCTIONS ==============
+
+    /**
+     * Status workflow configuration with municipal tracking
+     */
+    const statusWorkflow = {
+      new: { label: 'New', icon: '🆕', color: '#6b7280', bgColor: '#f3f4f6', nextStatus: 'acknowledged', description: 'Report just submitted' },
+      acknowledged: { label: 'Acknowledged', icon: '👀', color: '#0369a1', bgColor: '#e0f2fe', nextStatus: 'in_progress', description: 'Report has been reviewed' },
+      submitted_311: { label: 'Submitted to 311', icon: '🏛️', color: '#7c3aed', bgColor: '#ede9fe', nextStatus: 'in_progress', description: 'Reported to municipal authority' },
+      in_progress: { label: 'In Progress', icon: '🔧', color: '#d97706', bgColor: '#fef3c7', nextStatus: 'resolved', description: 'Work is being done' },
+      scheduled: { label: 'Scheduled', icon: '📅', color: '#0891b2', bgColor: '#cffafe', nextStatus: 'in_progress', description: 'Repair scheduled by authority' },
+      resolved: { label: 'Resolved', icon: '✅', color: '#059669', bgColor: '#d1fae5', nextStatus: 'closed', description: 'Issue has been fixed' },
+      closed: { label: 'Closed', icon: '📁', color: '#374151', bgColor: '#e5e7eb', nextStatus: null, description: 'Report finalized' },
+      wont_fix: { label: "Won't Fix", icon: '❌', color: '#dc2626', bgColor: '#fee2e2', nextStatus: null, description: 'Authority declined to fix' },
+      duplicate: { label: 'Duplicate', icon: '📋', color: '#9ca3af', bgColor: '#f3f4f6', nextStatus: null, description: 'Already reported elsewhere' }
+    };
+
+    /**
+     * Update report status with enhanced municipal tracking
+     */
+    window.updateReportStatus = async function(reportId, newStatus, note = '') {
+      if (!currentUser) {
+        showToast('Please sign in to update status', 'error');
+        return;
+      }
+
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      // Only owner can update status
+      if (report.userId !== currentUser.uid) {
+        showToast('Only the report owner can update status', 'error');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        
+        // Create status history entry
+        const historyEntry = {
+          status: newStatus,
+          previousStatus: report.status || 'new',
+          timestamp: serverTimestamp(),
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          note: note || null
+        };
+
+        // Update the report
+        await updateDoc(reportRef, {
+          status: newStatus,
+          statusHistory: arrayUnion(historyEntry),
+          updatedAt: serverTimestamp()
+        });
+
+        const statusInfo = statusWorkflow[newStatus];
+        showToast(`${statusInfo.icon} Status updated to: ${statusInfo.label}`, 'success');
+
+        // Reload reports and refresh modal
+        await loadReports();
+        window.viewReportDetails(reportId);
+
+      } catch (error) {
+        console.error('Error updating status:', error);
+        showToast('Failed to update status: ' + error.message, 'error');
+      }
+    };
+
+    /**
+     * Show status update modal with municipal tracking
+     */
+    window.showStatusUpdateModal = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) return;
+
+      const currentStatus = report.status || 'new';
+      const municipalId = report.municipalTrackingId || '';
+      
+      const modal = document.createElement('div');
+      modal.id = 'statusUpdateModal';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000000; padding: 20px;';
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 450px; width: 100%; max-height: 90vh; overflow-y: auto;">
+          <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+            <span>🔄</span> Update Report Status
+          </h3>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">New Status</label>
+            <select id="newStatusSelect" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" onchange="window.toggleMunicipalFields()">
+              ${Object.entries(statusWorkflow).map(([key, config]) => `
+                <option value="${key}" ${key === currentStatus ? 'selected' : ''} title="${config.description}">${config.icon} ${config.label}</option>
+              `).join('')}
+            </select>
+            <p id="statusDescription" style="margin: 6px 0 0 0; font-size: 0.8rem; color: #6b7280;">
+              ${statusWorkflow[currentStatus]?.description || ''}
+            </p>
+          </div>
+          
+          <!-- Municipal Tracking Section (shown for submitted_311 or scheduled) -->
+          <div id="municipalTrackingSection" style="display: none; margin-bottom: 16px; padding: 12px; background: #ede9fe; border-radius: 8px; border: 1px solid #c4b5fd;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #5b21b6;">
+              🏛️ Municipal Tracking ID
+            </label>
+            <input type="text" id="municipalTrackingId" value="${municipalId}" 
+                   placeholder="e.g., 311-2025-12345, SR-00123456"
+                   style="width: 100%; padding: 10px; border: 1px solid #c4b5fd; border-radius: 8px; font-size: 0.9rem; background: white;">
+            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #7c3aed;">
+              Enter the reference number from your 311 submission
+            </p>
+          </div>
+          
+          <!-- Scheduled Date (shown for scheduled status) -->
+          <div id="scheduledDateSection" style="display: none; margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">
+              📅 Scheduled Repair Date
+            </label>
+            <input type="date" id="scheduledDate" 
+                   style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem;">
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">Add Note (optional)</label>
+            <textarea id="statusNote" placeholder="e.g., 'Reported to city 311', 'Construction crew on site', 'Issue fixed!'" 
+                      style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; resize: vertical; min-height: 80px;"></textarea>
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button onclick="document.getElementById('statusUpdateModal').remove()" 
+                    style="flex: 1; padding: 12px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #374151;">
+              Cancel
+            </button>
+            <button onclick="window.submitStatusUpdate('${reportId}')" 
+                    style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+              Update Status
+            </button>
+          </div>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+      
+      // Initialize visibility of conditional fields
+      window.toggleMunicipalFields();
+    };
+
+    /**
+     * Toggle visibility of municipal tracking fields based on selected status
+     */
+    window.toggleMunicipalFields = function() {
+      const select = document.getElementById('newStatusSelect');
+      const municipalSection = document.getElementById('municipalTrackingSection');
+      const scheduledSection = document.getElementById('scheduledDateSection');
+      const descriptionEl = document.getElementById('statusDescription');
+      
+      if (!select) return;
+      
+      const status = select.value;
+      const config = statusWorkflow[status];
+      
+      // Update description
+      if (descriptionEl && config) {
+        descriptionEl.textContent = config.description || '';
+      }
+      
+      // Show municipal tracking for 311-related statuses
+      if (municipalSection) {
+        municipalSection.style.display = ['submitted_311', 'scheduled', 'in_progress'].includes(status) ? 'block' : 'none';
+      }
+      
+      // Show scheduled date for scheduled status
+      if (scheduledSection) {
+        scheduledSection.style.display = status === 'scheduled' ? 'block' : 'none';
+      }
+    };
+
+    /**
+     * Submit status update from modal with municipal tracking
+     */
+    window.submitStatusUpdate = async function(reportId) {
+      const newStatus = document.getElementById('newStatusSelect').value;
+      const note = document.getElementById('statusNote').value.trim();
+      const municipalId = document.getElementById('municipalTrackingId')?.value.trim() || null;
+      const scheduledDate = document.getElementById('scheduledDate')?.value || null;
+      
+      document.getElementById('statusUpdateModal').remove();
+      
+      // Build additional data
+      const additionalData = {};
+      if (municipalId) additionalData.municipalTrackingId = municipalId;
+      if (scheduledDate) additionalData.scheduledRepairDate = new Date(scheduledDate);
+      if (newStatus === 'resolved') additionalData.resolvedAt = serverTimestamp();
+      
+      await window.updateReportStatusExtended(reportId, newStatus, note, additionalData);
+    };
+
+    /**
+     * Extended status update with additional fields
+     */
+    window.updateReportStatusExtended = async function(reportId, newStatus, note = '', additionalData = {}) {
+      if (!currentUser) {
+        showToast('Please sign in to update status', 'error');
+        return;
+      }
+
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      // Only owner can update status
+      if (report.userId !== currentUser.uid) {
+        showToast('Only the report owner can update status', 'error');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        
+        // Create status history entry
+        const historyEntry = {
+          status: newStatus,
+          previousStatus: report.status || 'new',
+          timestamp: serverTimestamp(),
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          note: note || null,
+          municipalTrackingId: additionalData.municipalTrackingId || null
+        };
+
+        // Build update object
+        const updateData = {
+          status: newStatus,
+          statusHistory: arrayUnion(historyEntry),
+          updatedAt: serverTimestamp(),
+          ...additionalData
+        };
+
+        // Update the report
+        await updateDoc(reportRef, updateData);
+
+        const statusInfo = statusWorkflow[newStatus];
+        showToast(`${statusInfo.icon} Status updated to: ${statusInfo.label}`, 'success');
+
+        // Reload reports and refresh modal
+        await loadReports();
+        window.viewReportDetails(reportId);
+
+      } catch (error) {
+        console.error('Error updating status:', error);
+        showToast('Failed to update status: ' + error.message, 'error');
+      }
+    };
+
+    /**
+     * Service codes for 311 integration
+     */
+    const SERVICE_CODES = {
+      curb_ramp: { code: 'CURB_RAMP', name: 'Curb Ramp Issue', group: 'Sidewalk & Accessibility' },
+      sidewalk_blocked: { code: 'SIDEWALK_OBSTRUCTION', name: 'Sidewalk Obstruction', group: 'Sidewalk & Accessibility' },
+      damaged_sidewalk: { code: 'SIDEWALK_REPAIR', name: 'Sidewalk Repair Needed', group: 'Sidewalk & Accessibility' },
+      tactile_paving: { code: 'TACTILE_PAVING', name: 'Tactile Paving Issue', group: 'Sidewalk & Accessibility' },
+      inaccessible_entrance: { code: 'BUILDING_ACCESS', name: 'Inaccessible Building Entrance', group: 'Building Accessibility' },
+      broken_elevator: { code: 'ELEVATOR_REPAIR', name: 'Elevator/Lift Out of Service', group: 'Building Accessibility' },
+      heavy_doors: { code: 'DOOR_ACCESSIBILITY', name: 'Door Accessibility Issue', group: 'Building Accessibility' },
+      stairs_only: { code: 'NO_RAMP_ACCESS', name: 'No Ramp/Elevator Access', group: 'Building Accessibility' },
+      parking_blocked: { code: 'PARKING_VIOLATION', name: 'Accessible Parking Blocked', group: 'Parking' },
+      no_parking: { code: 'PARKING_MISSING', name: 'No Accessible Parking', group: 'Parking' },
+      trail_obstacle: { code: 'TRAIL_HAZARD', name: 'Trail Obstacle/Hazard', group: 'Parks & Trails' },
+      trail_erosion: { code: 'TRAIL_EROSION', name: 'Trail Erosion/Damage', group: 'Parks & Trails' },
+      overgrown: { code: 'VEGETATION', name: 'Overgrown Vegetation', group: 'Parks & Trails' },
+      missing_sign: { code: 'SIGNAGE', name: 'Missing/Damaged Signage', group: 'Signage' },
+      other: { code: 'OTHER_ACCESS', name: 'Other Accessibility Issue', group: 'Other' }
+    };
+
+    /**
+     * Export report as formatted text for 311 submission
+     */
+    window.export311Text = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+
+      const textReport = `
+═══════════════════════════════════════════════════════════════
+               ACCESSIBILITY BARRIER REPORT
+                  For Municipal 311 Submission
+═══════════════════════════════════════════════════════════════
+
+ISSUE CATEGORY: ${serviceInfo.name}
+SERVICE CODE: ${serviceInfo.code}
+
+───────────────────────────────────────────────────────────────
+ISSUE DETAILS
+───────────────────────────────────────────────────────────────
+
+Title: ${report.title}
+
+Description:
+${report.description || 'No additional description provided.'}
+
+Severity Level: ${severity}/5 - ${severityLabel}
+
+Duration: ${report.isTemporary ? 'TEMPORARY' : 'PERMANENT/ONGOING'}
+${report.isTemporary && report.expectedResolution ? 'Expected Resolution: ' + new Date(report.expectedResolution).toLocaleDateString() : ''}
+
+───────────────────────────────────────────────────────────────
+LOCATION
+───────────────────────────────────────────────────────────────
+
+Coordinates: ${report.latitude?.toFixed(6)}, ${report.longitude?.toFixed(6)}
+${report.address ? 'Address: ' + report.address : ''}
+
+Google Maps: https://www.google.com/maps?q=${report.latitude},${report.longitude}
+
+───────────────────────────────────────────────────────────────
+VERIFICATION & SOURCE
+───────────────────────────────────────────────────────────────
+
+Report Date: ${date}
+Source: Access Nature Community App
+Report ID: ${report.id}
+
+Community Verifications: ${report.verificationCount || 0}
+Status: ${(report.verificationCount || 0) >= 3 ? '✓ COMMUNITY VERIFIED' : 'Pending verification'}
+Community Upvotes: ${report.upvotes || 0}
+
+${report.photos && report.photos.length > 0 ? 'Photos Attached: ' + report.photos.length + ' photo(s)' : 'No photos attached'}
+
+───────────────────────────────────────────────────────────────
+SUGGESTED DEPARTMENT: ${serviceInfo.group}
+═══════════════════════════════════════════════════════════════
+Report generated by Access Nature - Making nature accessible
+═══════════════════════════════════════════════════════════════
+`.trim();
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(textReport).then(() => {
+        showToast('📋 Report copied to clipboard! Paste into your 311 submission.', 'success');
+      }).catch(err => {
+        // Fallback: show in modal for manual copy
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;';
+        modal.innerHTML = `
+          <div style="background: white; border-radius: 16px; padding: 24px; max-width: 600px; width: 100%; max-height: 80vh; overflow: auto;">
+            <h3 style="margin: 0 0 16px 0;">📋 311 Report</h3>
+            <p style="color: #6b7280; margin-bottom: 12px;">Copy the text below and paste into your 311 submission:</p>
+            <textarea style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px;" readonly>${textReport}</textarea>
+            <button onclick="this.closest('div').parentElement.remove()" style="margin-top: 16px; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Close</button>
+          </div>
+        `;
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+      });
+    };
+
+    /**
+     * Generate email template for 311 submission
+     */
+    window.export311Email = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+
+      const subject = `[Accessibility Report] ${severityLabel} Priority: ${report.title}`;
+      const body = `Dear ${serviceInfo.group} Department,
+
+I am writing to report an accessibility barrier that has been documented by the Access Nature community.
+
+ISSUE: ${report.title}
+CATEGORY: ${serviceInfo.name}
+SEVERITY: ${severity}/5 (${severityLabel})
+LOCATION: ${report.address || 'Coordinates: ' + report.latitude?.toFixed(6) + ', ' + report.longitude?.toFixed(6)}
+
+DESCRIPTION:
+${report.description || 'Please see attached report for details.'}
+
+MAP LINK: https://www.google.com/maps?q=${report.latitude},${report.longitude}
+
+This report has been ${(report.verificationCount || 0) >= 3 ? 'verified by multiple community members' : 'submitted'} through the Access Nature accessibility mapping platform.
+
+${report.isTemporary ? 'Note: This appears to be a TEMPORARY issue' + (report.expectedResolution ? ' with expected resolution by ' + new Date(report.expectedResolution).toLocaleDateString() : '') + '.' : ''}
+
+Thank you for your attention to this accessibility matter.
+
+Best regards,
+Access Nature Community
+
+---
+Report ID: ${report.id}
+Generated: ${new Date().toLocaleString()}`;
+
+      // Open mailto link
+      const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(mailto);
+      
+      showToast('✉️ Email template opened. Add your local 311 email address.', 'success');
+    };
+
+    /**
+     * Print a formatted report
+     */
+    window.printReport = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Accessibility Report - ${escapeHtml(report.title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1f2937; line-height: 1.5; }
+    h1 { color: #1f2937; border-bottom: 3px solid #667eea; padding-bottom: 12px; margin-bottom: 8px; }
+    .subtitle { color: #6b7280; margin-bottom: 24px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .report-id { background: #f3f4f6; padding: 8px 16px; border-radius: 8px; font-family: monospace; }
+    .section { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+    .section-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; color: #374151; }
+    .field { margin-bottom: 14px; }
+    .field-label { font-weight: 600; color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .field-value { font-size: 1rem; color: #111827; }
+    .severity-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; color: white; font-weight: 700; background: ${severityColor}; }
+    .temp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.8rem; margin-left: 8px; }
+    .stats-row { display: flex; gap: 30px; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; }
+    .verified-badge { background: #ecfdf5; border: 2px solid #10b981; color: #059669; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-top: 12px; display: inline-block; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; font-size: 0.85rem; color: #6b7280; }
+    @media print { body { padding: 0; } .section { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="header-row">
+    <div>
+      <h1>🏛️ Accessibility Issue Report</h1>
+      <div class="subtitle">For Municipal 311 Submission</div>
+    </div>
+    <div class="report-id"><strong>ID:</strong> ${report.id?.substring(0, 8) || 'N/A'}</div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📋 Issue Details</div>
+    <div class="field">
+      <div class="field-label">Report Title</div>
+      <div class="field-value" style="font-size: 1.2rem; font-weight: 600;">${escapeHtml(report.title)}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Issue Category</div>
+      <div class="field-value">${serviceInfo.name} <span style="color: #6b7280;">(${serviceInfo.group})</span></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Severity Level</div>
+      <div class="field-value">
+        <span class="severity-badge">${severity}/5 - ${severityLabel}</span>
+        ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Description</div>
+      <div class="field-value">${escapeHtml(report.description) || 'No additional description provided'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Service Code</div>
+      <div class="field-value" style="font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: inline-block;">${serviceInfo.code}</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📍 Location Information</div>
+    <div class="field">
+      <div class="field-label">Address</div>
+      <div class="field-value">${escapeHtml(report.address) || 'Address not provided'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">GPS Coordinates</div>
+      <div class="field-value">${report.latitude?.toFixed(6) || 'N/A'}, ${report.longitude?.toFixed(6) || 'N/A'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Map Link</div>
+      <div class="field-value">https://www.google.com/maps?q=${report.latitude},${report.longitude}</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">👥 Community Validation</div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value">${report.upvotes || 0}</div>
+        <div class="stat-label">Community Upvotes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${report.verificationCount || 0}</div>
+        <div class="stat-label">User Verifications</div>
+      </div>
+    </div>
+    ${(report.verificationCount || 0) >= 3 ? '<div class="verified-badge">✅ Community Verified Report</div>' : ''}
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📅 Timeline</div>
+    <div class="field">
+      <div class="field-label">Reported On</div>
+      <div class="field-value">${date}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Current Status</div>
+      <div class="field-value" style="text-transform: uppercase; font-weight: 600;">${report.status || 'NEW'}</div>
+    </div>
+    ${isTemporary && report.expectedResolution ? `
+    <div class="field">
+      <div class="field-label">Expected Resolution</div>
+      <div class="field-value">${new Date(report.expectedResolution).toLocaleDateString()}</div>
+    </div>
+    ` : ''}
+  </div>
+  
+  <div class="footer">
+    <p><strong>Report ID:</strong> ${report.id}</p>
+    <p><strong>Source:</strong> Access Nature - Community Accessibility Mapping Platform</p>
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+  </div>
+</bo${""}dy>
+</html>`;
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    };
+
+    /**
+     * Download report as HTML file
+     */
+    window.downloadReport = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      // Reuse printReport HTML generation
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+
+      // Simplified version for download
+      const textContent = `ACCESSIBILITY BARRIER REPORT
+============================
+For Municipal 311 Submission
+Generated: ${new Date().toLocaleString()}
+
+ISSUE DETAILS
+-------------
+Title: ${report.title}
+Category: ${serviceInfo.name} (${serviceInfo.group})
+Service Code: ${serviceInfo.code}
+Severity: ${severity}/5 - ${severityLabel}
+Type: ${report.isTemporary ? 'TEMPORARY' : 'PERMANENT'}
+
+Description:
+${report.description || 'No additional description provided.'}
+
+LOCATION
+--------
+Address: ${report.address || 'Not provided'}
+GPS: ${report.latitude?.toFixed(6)}, ${report.longitude?.toFixed(6)}
+Map: https://www.google.com/maps?q=${report.latitude},${report.longitude}
+
+COMMUNITY VALIDATION
+--------------------
+Upvotes: ${report.upvotes || 0}
+Verifications: ${report.verificationCount || 0}
+${(report.verificationCount || 0) >= 3 ? '✅ COMMUNITY VERIFIED' : ''}
+
+TIMELINE
+--------
+Reported: ${date}
+Status: ${(report.status || 'NEW').toUpperCase()}
+
+---
+Report ID: ${report.id}
+Source: Access Nature Community Platform
+`;
+
+      const blob = new Blob([textContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `accessibility-report-${report.id?.substring(0, 8) || 'export'}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('📥 Report downloaded!', 'success');
+    };
+
+    /**
+     * Show 311 submission info modal
+     */
+    window.show311Info = function() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;';
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 100%; max-height: 80vh; overflow: auto;">
+          <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5rem;">📋</span> How to Submit to 311
+          </h3>
+          
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; color: #0369a1;">What is 311?</h4>
+            <p style="margin: 0; color: #0c4a6e; font-size: 0.9rem;">
+              311 is a non-emergency municipal service hotline used by cities to report issues like broken sidewalks, accessibility barriers, and other civic concerns.
+            </p>
+          </div>
+          
+          <h4 style="margin: 0 0 12px 0;">Steps to Submit:</h4>
+          <ol style="margin: 0 0 16px 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 8px;"><strong>Copy the Report</strong> - Click "📄 Copy Report" to copy the formatted report to your clipboard.</li>
+            <li style="margin-bottom: 8px;"><strong>Find Your Local 311</strong> - Search for "[Your City] 311" or "[Your City] accessibility services"</li>
+            <li style="margin-bottom: 8px;"><strong>Submit Online or Call</strong> - Most cities have online portals, mobile apps, or phone lines (dial 311)</li>
+            <li style="margin-bottom: 8px;"><strong>Paste the Report</strong> - Use the copied text in the description field</li>
+            <li style="margin-bottom: 8px;"><strong>Include Photos</strong> - If you have photos, attach them to your submission</li>
+          </ol>
+          
+          <h4 style="margin: 0 0 12px 0;">Common 311 Portals:</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+            <a href="https://www.capetown.gov.za/Collaborate/Report-a-problem" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🇿🇦 Cape Town</a>
+            <a href="https://portal.311.nyc.gov/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🗽 NYC 311</a>
+            <a href="https://311.la.gov/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🌴 LA 311</a>
+            <a href="https://sf311.org/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🌉 SF 311</a>
+          </div>
+          
+          <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 16px;">
+            <strong>Tip:</strong> Reports verified by 3+ community members are more likely to be prioritized by authorities.
+          </p>
+          
+          <button onclick="this.closest('div').parentElement.remove()" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Got it!</button>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+
+    /**
+     * Export filtered reports to CSV for 311 bulk submission
+     */
+    function exportFilteredReportsCSV() {
+      // Get currently filtered reports
+      const reportsToExport = filteredReports.length > 0 ? filteredReports : allReports;
+      
+      if (reportsToExport.length === 0) {
+        showToast('No reports to export', 'error');
+        return;
+      }
+
+      const headers = [
+        'Report ID',
+        'Title',
+        'Issue Type',
+        'Service Code',
+        'Severity',
+        'Priority',
+        'Status',
+        'Is Temporary',
+        'Latitude',
+        'Longitude',
+        'Address',
+        'Description',
+        'Upvotes',
+        'Verifications',
+        'Community Verified',
+        'Reported Date',
+        'Reporter Name',
+        'Municipal Tracking ID',
+        'Resolution Date',
+        'Map Link'
+      ];
+
+      const priorityMap = { 1: 'Low', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Urgent' };
+
+      const escapeCsvField = (value) => {
+        if (!value) return '""';
+        const escaped = String(value).replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, '');
+        return `"${escaped}"`;
+      };
+
+      const rows = reportsToExport.map(report => {
+        const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+        const date = report.createdAt?.toDate?.() || new Date();
+        const severity = report.severity || 3;
+        const resolutionDate = report.resolvedAt?.toDate?.() || null;
+
+        return [
+          report.id || '',
+          escapeCsvField(report.title || ''),
+          report.issueType || '',
+          serviceInfo.code,
+          `${severity} - ${severityLabels[severity]}`,
+          priorityMap[severity] || 'Medium',
+          report.status || 'new',
+          report.isTemporary ? 'Yes' : 'No',
+          report.latitude?.toFixed(6) || '',
+          report.longitude?.toFixed(6) || '',
+          escapeCsvField(report.address || ''),
+          escapeCsvField((report.description || '').substring(0, 500)),
+          report.upvotes || 0,
+          report.verificationCount || 0,
+          (report.verificationCount || 0) >= 3 ? 'Yes' : 'No',
+          date.toISOString().split('T')[0],
+          escapeCsvField(report.userName || 'Anonymous'),
+          escapeCsvField(report.municipalTrackingId || ''),
+          resolutionDate ? resolutionDate.toISOString().split('T')[0] : '',
+          `https://www.google.com/maps?q=${report.latitude},${report.longitude}`
+        ].join(',');
+      });
+
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `access-nature-reports-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast(`📊 Exported ${reportsToExport.length} reports to CSV`, 'success');
+    }
 
     /**
      * Toggle fullscreen map with proper modal
@@ -2620,9 +3803,26 @@
   
   <!-- Auth Form Handlers -->
   <script type="module">
+    import { initializeApp, getApp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
     
-    const firebaseAuth = getAuth();
+    // Get existing Firebase app (already initialized in main script)
+    let authApp;
+    try {
+      authApp = getApp();
+    } catch (e) {
+      // Fallback: initialize if not already done
+      authApp = initializeApp({
+        apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
+        authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+        projectId: "accessnaturebeta-821a2",
+        storageBucket: "accessnaturebeta-821a2.appspot.com",
+        messagingSenderId: "670888101781",
+        appId: "1:670888101781:web:b4cf57f58e86182466589c"
+      });
+    }
+    
+    const firebaseAuth = getAuth(authApp);
     
     // Login form handler
     document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {

@@ -58,8 +58,29 @@ class PWAManager {
 
   /**
    * Register service worker
+   * TEMPORARILY DISABLED to fix infinite update loop
    */
   async registerServiceWorker() {
+    // TEMPORARY: Skip service worker registration entirely
+    // This breaks the infinite update loop while we debug
+    console.log('[PWA] Service Worker registration SKIPPED (temporary fix)');
+    
+    // Unregister any existing service workers to clean up
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+          console.log('[PWA] Unregistered old service worker');
+        }
+      } catch (e) {
+        console.warn('[PWA] Could not unregister service workers:', e);
+      }
+    }
+    
+    return;
+    
+    /* ORIGINAL CODE - DISABLED
     if (!('serviceWorker' in navigator)) {
       console.warn('[PWA] Service workers not supported');
       return;
@@ -90,6 +111,7 @@ class PWAManager {
     } catch (error) {
       console.error('[PWA] Service Worker registration failed:', error);
     }
+    */
   }
 
   /**
@@ -111,14 +133,9 @@ class PWAManager {
    * Prompt user to update to new version
    */
   async promptForUpdate() {
-    const update = await modal.confirm(
-      'A new version of Access Nature is available. Would you like to update now?',
-      '🔄 Update Available'
-    );
-
-    if (update) {
-      this.applyUpdate();
-    }
+    console.log('[PWA] New version detected - auto-updating...');
+    // Skip the modal and just apply the update directly
+    this.applyUpdate();
   }
 
   /**

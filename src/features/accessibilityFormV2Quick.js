@@ -9,6 +9,7 @@
 
 import { toast } from '../utils/toast.js';
 import { userService } from '../services/userService.js';
+import { getProfile } from '../config/mobilityProfiles.js';
 
 export class AccessibilityFormV2Quick {
   constructor() {
@@ -17,6 +18,7 @@ export class AccessibilityFormV2Quick {
     this.formData = {};
     this.currentPhase = 1; // 1 = Quick, 2 = Detailed
     this.expandedCategories = new Set();
+    this.userMobilityProfile = null; // Cache user's mobility profile
   }
 
   initialize() {
@@ -1537,6 +1539,9 @@ export class AccessibilityFormV2Quick {
     this.currentCallback = callback;
     this.currentPhase = 1;
     
+    // Load user's mobility profile for pre-filling and category prioritization
+    this.loadMobilityProfile();
+    
     const overlay = document.getElementById('af2-overlay');
     if (overlay) {
       overlay.classList.add('open');
@@ -1556,6 +1561,12 @@ export class AccessibilityFormV2Quick {
       overlay.querySelectorAll('.selected').forEach(s => s.classList.remove('selected'));
       overlay.querySelectorAll('.has-data').forEach(c => c.classList.remove('has-data'));
       
+      // Show mobility profile indicator if set
+      this.showMobilityProfileIndicator();
+      
+      // Highlight priority categories based on mobility profile
+      this.highlightPriorityCategories();
+      
       // Then prefill from saved data
       this.prefillForm();
       
@@ -1567,6 +1578,123 @@ export class AccessibilityFormV2Quick {
         <button class="af2-btn af2-btn-primary" id="af2-next-btn" onclick="window.af2Next()">Continue →</button>
       `;
     }
+  }
+
+  /**
+   * Load user's mobility profile
+   */
+  loadMobilityProfile() {
+    const profileId = userService.getMobilityProfile();
+    if (profileId) {
+      this.userMobilityProfile = getProfile(profileId);
+      console.log('♿ Loaded mobility profile:', this.userMobilityProfile?.name);
+    } else {
+      this.userMobilityProfile = null;
+    }
+  }
+
+  /**
+   * Show mobility profile indicator in form header
+   */
+  showMobilityProfileIndicator() {
+    const header = document.querySelector('.af2-header');
+    if (!header) return;
+
+    // Remove existing indicator
+    const existing = header.querySelector('.af2-profile-indicator');
+    if (existing) existing.remove();
+
+    if (this.userMobilityProfile) {
+      const indicator = document.createElement('div');
+      indicator.className = 'af2-profile-indicator';
+      indicator.innerHTML = `
+        <span class="profile-icon">${this.userMobilityProfile.icon}</span>
+        <span class="profile-text">Documenting for: ${this.userMobilityProfile.name}</span>
+      `;
+      indicator.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 8px;
+        font-size: 0.85rem;
+      `;
+      header.appendChild(indicator);
+    }
+  }
+
+  /**
+   * Highlight priority categories based on mobility profile
+   */
+  highlightPriorityCategories() {
+    if (!this.userMobilityProfile) return;
+
+    const priorityCategories = this.userMobilityProfile.formPrefills?.priorityCategories || [];
+    
+    // Add visual highlighting to priority categories in Phase 2
+    priorityCategories.forEach(categoryId => {
+      const card = document.querySelector(`.af2-category-card[data-category="${categoryId}"]`);
+      if (card) {
+        card.classList.add('priority-category');
+        
+        // Add priority badge if not exists
+        if (!card.querySelector('.priority-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'priority-badge';
+          badge.textContent = '★ Recommended';
+          badge.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+          `;
+          card.style.position = 'relative';
+          card.appendChild(badge);
+        }
+      }
+    });
+
+    // Reorder categories to show priority ones first
+    this.reorderCategories(priorityCategories);
+  }
+
+  /**
+   * Reorder category cards to show priority ones first
+   * @param {string[]} priorityCategories 
+   */
+  reorderCategories(priorityCategories) {
+    const grid = document.querySelector('.af2-category-grid');
+    if (!grid || priorityCategories.length === 0) return;
+
+    // Get all category cards
+    const cards = Array.from(grid.querySelectorAll('.af2-category-card'));
+    
+    // Sort: priority categories first, then others
+    cards.sort((a, b) => {
+      const aPriority = priorityCategories.indexOf(a.dataset.category);
+      const bPriority = priorityCategories.indexOf(b.dataset.category);
+      
+      // Both are priority - sort by priority order
+      if (aPriority !== -1 && bPriority !== -1) {
+        return aPriority - bPriority;
+      }
+      // Only a is priority
+      if (aPriority !== -1) return -1;
+      // Only b is priority
+      if (bPriority !== -1) return 1;
+      // Neither is priority - keep original order
+      return 0;
+    });
+
+    // Re-append in new order
+    cards.forEach(card => grid.appendChild(card));
   }
 
   close() {

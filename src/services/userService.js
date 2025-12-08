@@ -829,6 +829,76 @@ class UserService {
     };
   }
 
+  // ==================== Mobility Profile Methods ====================
+
+  /**
+   * Get user's current mobility profile
+   * @returns {string|null} Profile ID or null
+   */
+  getMobilityProfile() {
+    return this.userData?.preferences?.mobilityProfile || null;
+  }
+
+  /**
+   * Set user's mobility profile
+   * @param {string} profileId - Mobility profile ID
+   */
+  async setMobilityProfile(profileId) {
+    if (!this.currentUser) {
+      console.warn('⚠️ Cannot set mobility profile: not logged in');
+      return false;
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', this.currentUser.uid), {
+        'preferences.mobilityProfile': profileId
+      });
+      
+      // Update local cache
+      if (!this.userData.preferences) {
+        this.userData.preferences = {};
+      }
+      this.userData.preferences.mobilityProfile = profileId;
+      
+      console.log('✅ Mobility profile set to:', profileId);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to set mobility profile:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if user has a mobility profile set
+   * @returns {boolean}
+   */
+  hasMobilityProfile() {
+    const profile = this.getMobilityProfile();
+    return profile !== null && profile !== 'no_mobility_aids';
+  }
+
+  /**
+   * Get user's mobility concerns based on their profile
+   * @returns {string[]} Array of concern strings
+   */
+  getMobilityConcerns() {
+    const profileId = this.getMobilityProfile();
+    if (!profileId) return [];
+    
+    // Dynamic import would be better but for now we'll check the profile data
+    // This will be populated when mobilityProfiles.js is loaded
+    return this._mobilityProfileData?.[profileId]?.concerns || [];
+  }
+
+  /**
+   * Store mobility profiles data for reference
+   * Called by mobilityProfileUI on initialization
+   * @param {object} profilesData 
+   */
+  setMobilityProfilesData(profilesData) {
+    this._mobilityProfileData = profilesData;
+  }
+
   /**
    * Reset user on logout
    */

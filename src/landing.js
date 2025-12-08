@@ -5,6 +5,8 @@ import { modal } from './utils/modal.js';
 import { offlineIndicator } from './ui/offlineIndicator.js';
 import { loadingStates } from './ui/loadingStates.js';
 import { gamificationUI } from './ui/gamificationUI.js';
+import { mobilityProfileUI } from './ui/mobilityProfileUI.js';
+import { communityChallenges } from './features/communityChallenges.js';
 import { accessibilityRating } from './features/accessibilityRating.js';
 import { trailSearch } from './features/trailSearch.js';
 import { showError, getErrorMessage } from './utils/errorMessages.js';
@@ -1864,6 +1866,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.offlineIndicator = offlineIndicator;
     window.loadingStates = loadingStates;
     window.gamificationUI = gamificationUI;
+    window.mobilityProfileUI = mobilityProfileUI;
+    window.communityChallenges = communityChallenges;
     window.accessibilityRating = accessibilityRating;
     window.trailSearch = trailSearch;
     window.userService = userService;
@@ -1872,6 +1876,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup badge notification popups
     gamificationUI.setupBadgeNotifications();
+    
+    // Initialize mobility profile UI
+    mobilityProfileUI.initialize();
+    
+    // Initialize community challenges
+    communityChallenges.initialize();
+    const challengesContainer = document.getElementById('communityChallengesPanel');
+    if (challengesContainer) {
+      communityChallenges.mount(challengesContainer);
+    }
     
     // Initialize access report if available
     await initAccessReport();

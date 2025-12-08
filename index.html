@@ -2,9 +2,125 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Access Nature - Making Trails Accessible</title>
   
+  <!-- CRITICAL CSS - Nav styles inline for immediate render -->
+  <style>
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(255,255,255,0.98);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 10000;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #111827;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-auth-indicator .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #f3f4f6;
+      border-radius: 16px;
+      font-size: 0.75rem;
+    }
+    .nav-auth-indicator .auth-status.signed-in {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    /* Desktop: show nav-menu, hide hamburger */
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-menu .nav-link {
+      padding: 8px 12px;
+      color: #4b5563;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .nav-menu .nav-link:hover { background: #f3f4f6; }
+    .nav-menu .nav-link.active { background: #667eea; color: white; }
+    .menu-toggle { display: none; }
+    
+    /* Mobile: hide nav-menu, show hamburger */
+    @media (max-width: 768px) {
+      .top-nav { height: 50px; }
+      .menu-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        padding: 8px;
+        cursor: pointer;
+        color: #111827;
+      }
+      .nav-menu {
+        display: none;
+        position: fixed;
+        top: 50px;
+        left: 0;
+        right: 0;
+        background: white;
+        flex-direction: column;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+      }
+      .nav-menu.active { display: flex !important; }
+      .nav-menu .nav-link { padding: 12px 16px; width: 100%; }
+      .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
+      .nav-menu .nav-auth .btn { width: 100%; }
+    }
+    
+    /* High contrast toggle */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #000;
+      color: #fff;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+  </style>
+
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#2c5530">
   <meta name="description" content="Making outdoor spaces accessible for everyone. Document trails, report barriers, and discover accessible routes.">
@@ -16,11 +132,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
   <link rel="apple-touch-icon" href="assets/icons/icon.svg">
   
-  <!-- Preload critical CSS for faster rendering -->
-  <link rel="preload" href="src/css/landing.css" as="style">
-  <link rel="preload" href="src/css/high-contrast.css" as="style">
-  
-  <!-- External CSS -->
+  <!-- External CSS - normal blocking load -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
   
   <!-- App CSS -->
@@ -49,129 +161,6 @@
     })();
   </script>
 
-  <!-- CRITICAL: Inline styles for elements that must be visible immediately -->
-  <style>
-    /* Prevent flash of unstyled content for critical nav elements */
-    .top-nav {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      height: 64px !important;
-      background: white !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      padding: 0 24px !important;
-      z-index: 10000 !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      overflow: hidden !important; /* Prevent overflow pushing items off screen */
-    }
-    
-    .nav-brand {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      flex-shrink: 0 !important;
-    }
-    
-    /* High contrast toggle - always visible */
-    .high-contrast-toggle {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 9999;
-      padding: 12px 16px;
-      background: #000;
-      color: #fff;
-      border: 2px solid #fff;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      display: flex !important;
-      align-items: center;
-      gap: 8px;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    .high-contrast .high-contrast-toggle {
-      background: #FFFFFF !important;
-      color: #000000 !important;
-      border: 3px solid #000000 !important;
-    }
-    
-    /* Nav auth indicator - always visible */
-    .nav-auth-indicator {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      flex-shrink: 0 !important;
-    }
-    .nav-auth-indicator .auth-status {
-      display: flex !important;
-      align-items: center !important;
-      gap: 4px !important;
-      padding: 4px 10px !important;
-      background: #f3f4f6 !important;
-      border-radius: 16px !important;
-      font-size: 0.8rem !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    .nav-auth-indicator .auth-status.signed-in {
-      background: #dcfce7 !important;
-    }
-    
-    /* Menu toggle - visible on mobile only */
-    .menu-toggle {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 8px;
-    }
-    .menu-toggle:focus {
-      outline: none !important;
-      background: transparent !important;
-    }
-    
-    /* CRITICAL: Mobile layout - must be in critical CSS */
-    @media (max-width: 768px) {
-      .top-nav {
-        height: 56px !important;
-        padding: 0 12px !important;
-        align-items: center !important;
-      }
-      .menu-toggle {
-        display: flex !important;
-      }
-      /* Hide nav-menu on mobile by default (no !important so .active can override) */
-      .nav-menu {
-        display: none;
-      }
-      /* Show menu when active - !important ensures it overrides */
-      .nav-menu.active {
-        display: flex !important;
-        flex-direction: column;
-        position: fixed;
-        top: 56px;
-        left: 0;
-        right: 0;
-        background: white;
-        padding: 16px;
-        z-index: 9999;
-      }
-    }
-  </style>
-
   <style>
   /* Non-critical nav styles - can load from CSS */
   .nav-brand {
@@ -188,12 +177,7 @@
     background: #dcfce7;
     color: #166534;
   }
-  .nav-menu {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
+  /* nav-menu display is handled by critical CSS above */
   .nav-menu .nav-link {
     padding: 8px 16px;
     color: #4b5563;
@@ -210,36 +194,12 @@
     color: white;
     cursor: pointer;
   }
-  .menu-toggle { display: none; flex-shrink: 0; }
-  .hero-section { margin-top: 64px; }
+  /* menu-toggle display is handled by critical CSS above */
+  .hero-section { margin-top: 56px; }
   .auth-status-landing { display: none !important; }
   
   @media (max-width: 768px) {
-    .top-nav { height: 56px; align-items: center; }
-    .hero-section { margin-top: 56px; }
-    .menu-toggle { 
-      display: flex !important; 
-      align-items: center;
-      background: none; 
-      border: none; 
-      font-size: 1.5rem; 
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    /* Hide nav-menu on mobile - no !important so .active can override */
-    .nav-menu { display: none; }
-    /* Show when active */
-    .nav-menu.active {
-      display: flex !important;
-      flex-direction: column;
-      position: fixed;
-      top: 56px;
-      left: 0;
-      right: 0;
-      background: white;
-      padding: 16px;
-      z-index: 9999;
-    }
+    .hero-section { margin-top: 50px; }
     .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
     .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
     
@@ -320,52 +280,34 @@
 </script>
 </head>
 <body>
-<script>
-  // Debug: Log nav visibility immediately
-  console.log('[NAV DEBUG] Body loaded, checking nav visibility...');
-  setTimeout(function() {
-    var nav = document.querySelector('.top-nav');
-    if (nav) {
-      var style = window.getComputedStyle(nav);
-      console.log('[NAV DEBUG] Nav element:', nav);
-      console.log('[NAV DEBUG] display:', style.display);
-      console.log('[NAV DEBUG] visibility:', style.visibility);
-      console.log('[NAV DEBUG] opacity:', style.opacity);
-      console.log('[NAV DEBUG] position:', style.position);
-      console.log('[NAV DEBUG] top:', style.top);
-      console.log('[NAV DEBUG] left:', style.left);
-      console.log('[NAV DEBUG] right:', style.right);
-      console.log('[NAV DEBUG] transform:', style.transform);
-    } else {
-      console.log('[NAV DEBUG] Nav element not found!');
-    }
-  }, 0);
-</script>
-
-  <!-- High Contrast Toggle - rendered immediately -->
-  <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode">
-    <span class="toggle-icon">☀️</span>
-    <span class="toggle-text">High Contrast</span>
-  </button>
-
-  <nav class="top-nav" style="display: flex !important; visibility: visible !important; opacity: 1 !important; position: fixed; top: 0; left: 0; right: 0; height: 64px; background: white; z-index: 10000;">
-  <a href="index.html" class="nav-brand" style="display: flex !important; visibility: visible !important;">🌲 Access Nature</a>
-  <div class="nav-auth-indicator" style="display: flex !important; visibility: visible !important;">
-    <div class="auth-status" id="authIndicator" style="display: flex !important; visibility: visible !important;">
+<!-- Navigation -->
+<nav class="top-nav">
+  <a href="index.html" class="nav-brand">🌲 Access Nature</a>
+  <div class="nav-auth-indicator">
+    <div class="auth-status" id="authIndicator">
       <span>👤</span>
       <span id="authStatusText">Guest</span>
     </div>
   </div>
-  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" style="visibility: visible !important;">☰</button>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
   <div class="nav-menu" id="navMenu">
     <a href="index.html" class="nav-link active">🏠 Home</a>
     <a href="tracker.html" class="nav-link">🗺️ Track</a>
     <a href="reports.html" class="nav-link">📋 Reports</a>
+    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;">
+      ♿ Mobility Profile
+    </button>
     <div class="nav-auth">
       <button id="navAuthBtn" class="btn">Sign In</button>
     </div>
   </div>
 </nav>
+
+<!-- High Contrast Toggle -->
+<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode">
+  <span class="toggle-icon">☀️</span>
+  <span class="toggle-text">High Contrast</span>
+</button>
 
   <!-- Hero Section -->
   <div class="hero-section">
@@ -541,6 +483,15 @@ async function makeGuidesPublic() {
           <span class="stat-big" id="totalUsers">0</span>
           <span class="stat-desc">Contributors</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Challenges Section -->
+  <div class="challenges-section" style="padding: 20px 0; background: #f9fafb;">
+    <div class="challenges-container" style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+      <div id="communityChallengesPanel">
+        <!-- Challenges will be dynamically inserted here -->
       </div>
     </div>
   </div>

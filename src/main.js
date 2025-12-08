@@ -8,6 +8,7 @@ import { CompassController } from './ui/compass.js';
 import { offlineIndicator } from './ui/offlineIndicator.js';
 import { loadingStates } from './ui/loadingStates.js';
 import { gamificationUI } from './ui/gamificationUI.js';
+import { mobilityProfileUI } from './ui/mobilityProfileUI.js';
 import { accessibilityRating } from './features/accessibilityRating.js';
 import { trailSearch } from './features/trailSearch.js';
 import { AccessibilityFormV2Quick } from './features/accessibilityFormV2Quick.js';
@@ -658,6 +659,7 @@ window.deleteTrailGuide = (guideId) => app?.getController('auth')?.deleteTrailGu
 window.offlineIndicator = offlineIndicator;
 window.loadingStates = loadingStates;
 window.gamificationUI = gamificationUI;
+window.mobilityProfileUI = mobilityProfileUI;
 window.accessibilityRating = accessibilityRating;
 window.trailSearch = trailSearch;
 window.showError = showError;
@@ -665,6 +667,9 @@ window.getErrorMessage = getErrorMessage;
 
 // Setup badge notification popups
 gamificationUI.setupBadgeNotifications();
+
+// Initialize mobility profile UI
+mobilityProfileUI.initialize();
 
 // Connect offlineMapsUI to the map when available
 setTimeout(() => {
@@ -675,4 +680,4 @@ setTimeout(() => {
   }
 }, 2000);
 
-export { AccessNatureApp, offlineIndicator, loadingStates, gamificationUI, accessibilityRating, trailSearch, showError, getErrorMessage };
+export { AccessNatureApp, offlineIndicator, loadingStates, gamificationUI, mobilityProfileUI, accessibilityRating, trailSearch, showError, getErrorMessage };

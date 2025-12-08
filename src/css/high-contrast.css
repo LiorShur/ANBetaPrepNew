@@ -304,8 +304,8 @@
 /* ========== High Contrast Toggle Button ========== */
 .high-contrast-toggle {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  bottom: 200px;
+  left: 100px;
   z-index: 9999;
   padding: 12px 16px;
   background: #000;
