@@ -409,11 +409,14 @@ class TrailAlerts {
   /**
    * Start monitoring (call when tracking starts)
    */
-  startMonitoring() {
+  async startMonitoring() {
     if (this.isTracking) return;
     
     this.isTracking = true;
     this.alertedHazards.clear();
+    
+    // Load hazards from Firebase
+    await this.loadHazardsFromFirebase();
     
     // Check periodically
     this.checkIntervalId = setInterval(() => {
@@ -423,6 +426,54 @@ class TrailAlerts {
     }, ALERT_CONFIG.checkInterval);
     
     console.log('⚠️ Trail alerts monitoring started');
+  }
+
+  /**
+   * Load hazards from trail_conditions collection
+   */
+  async loadHazardsFromFirebase() {
+    try {
+      const { db } = await import('../../firebase-setup.js');
+      const { collection, getDocs, query, where } = await import(
+        'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+      );
+
+      const now = new Date().toISOString();
+      
+      // Get non-expired conditions
+      const q = query(
+        collection(db, 'trail_conditions'),
+        where('expiresAt', '>', now)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      const hazards = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.location && data.location.lat && data.location.lng) {
+          // Convert trail condition to hazard format
+          hazards.push({
+            id: doc.id,
+            lat: data.location.lat,
+            lng: data.location.lng,
+            title: data.trailName || 'Trail Condition',
+            issueType: data.conditions?.[0]?.value || 'trail_obstacle',
+            severity: data.maxSeverity || 3,
+            description: data.notes || data.conditions?.map(c => c.label).join(', ') || '',
+            timestamp: data.timestamp,
+            ...data
+          });
+        }
+      });
+      
+      this.hazards = hazards;
+      console.log(`⚠️ Loaded ${hazards.length} hazards from Firebase`);
+      
+    } catch (error) {
+      console.error('Failed to load hazards:', error);
+      this.hazards = [];
+    }
   }
 
   /**
