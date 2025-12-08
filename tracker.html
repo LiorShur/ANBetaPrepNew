@@ -440,6 +440,9 @@
     <button onclick="safetyFeatures?.startLifeline()">📡 Start Lifeline</button>
     <button onclick="safetyFeatures?.manageContacts()">👥 Emergency Contacts</button>
     <button onclick="safetyFeatures?.showCurrentWeather('weatherContainer')">🌤️ Check Weather</button>
+    <button onclick="trailConditions?.quickReportCondition()">🚧 Report Conditions</button>
+    <button onclick="trailConditions?.showNearbyConditions()">📍 Nearby Conditions</button>
+    <button onclick="trailAlerts?.showSettingsModal()">⚠️ Alert Settings</button>
     <button onclick="offlineMapsUI?.openModal()">📥 Offline Maps</button>
   </div>
 
@@ -542,10 +545,10 @@
   <script type="module" src="src/features/auth.js"></script>
   <script type="module" src="src/ui/displayPreferences.js"></script>
   <script type="module" src="src/features/safetyFeatures.js"></script>
-  <script type="module" src="src/pwa/pwaManager.js"></script>
-  <script type="module" src="src/pwa/offlineMapsUI.js"></script>
   <script type="module" src="src/features/trailConditions.js"></script>
   <script type="module" src="src/features/trailAlerts.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
+  <script type="module" src="src/pwa/offlineMapsUI.js"></script>
 
   <script type="module">
   // Check if redirected for sign-in
