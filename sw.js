@@ -9,7 +9,7 @@
  * - Images: Cache First
  */
 
-const CACHE_VERSION = 'v2.1.0-clean';
+const CACHE_VERSION = 'v2.2.0-stable';
 const APP_CACHE = `access-nature-app-${CACHE_VERSION}`;
 const DATA_CACHE = `access-nature-data-${CACHE_VERSION}`;
 const MAP_CACHE = `access-nature-maps-${CACHE_VERSION}`;
@@ -47,6 +47,7 @@ const APP_SHELL = [
   '/src/features/media.js',
   '/src/features/safetyFeatures.js',
   '/src/features/trailConditions.js',
+  '/src/features/trailAlerts.js',
   '/src/features/trailSearch.js',
   '/src/features/accessibilityRating.js',
   '/src/features/accessibilityFormV2Quick.js',
@@ -62,6 +63,11 @@ const APP_SHELL = [
   '/src/ui/loadingStates.js',
   '/src/ui/gamificationUI.js',
   '/src/ui/displayPreferences.js',
+  '/src/ui/mobilityProfileUI.js',
+  
+  // PWA
+  '/src/pwa/pwaManager.js',
+  '/src/pwa/offlineMapsUI.js',
   
   // Services & Config
   '/src/services/userService.js',
@@ -105,8 +111,9 @@ self.addEventListener('install', (event) => {
         );
       })
       .then(() => {
-        console.log('[SW] App Shell cached successfully');
-        return self.skipWaiting(); // Activate immediately
+        console.log('[SW] App Shell cached - waiting for activation');
+        // DON'T call skipWaiting() here - this was causing infinite update loops
+        // The SW will wait until all tabs are closed, or user explicitly triggers update
       })
   );
 });
