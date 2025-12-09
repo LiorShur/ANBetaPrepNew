@@ -430,6 +430,7 @@
   <div id="summaryPanel" class="bottom-popup hidden">
     <button id="loadCloudRoutesBtn" class="cloud-load-btn">☁️ Load My Routes</button>
   <button id="loadMyGuidesBtn" class="cloud-load-btn">🌐 Load My Guides</button>
+  <button onclick="offlineSync?.showPendingUploadsModal()">📦 Local Storage</button>
   <button id="clearAllSessionsBtn">🗑️ Clear Routes</button>
   <button id="clearAllAppDataBtn">🧹 Clear Everything</button>
   </div>
@@ -547,6 +548,7 @@
   <script type="module" src="src/features/safetyFeatures.js"></script>
   <script type="module" src="src/features/trailConditions.js"></script>
   <script type="module" src="src/features/trailAlerts.js"></script>
+  <script type="module" src="src/features/offlineSync.js"></script>
   <script type="module" src="src/pwa/pwaManager.js"></script>
   <script type="module" src="src/pwa/offlineMapsUI.js"></script>
 

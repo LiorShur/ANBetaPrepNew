@@ -35,6 +35,8 @@ async start() {
   // Starting fresh - clear any previous route data and set start time
   this.appState.clearRouteData();
   this.appState.setStartTime(Date.now());
+  // Clear restore handled flag for future sessions
+  sessionStorage.removeItem('restore_handled');
 } else {
   // FIXED: Resuming - use more precise timing calculation
   const currentTime = Date.now();

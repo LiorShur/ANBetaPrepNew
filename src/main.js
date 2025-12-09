@@ -89,9 +89,25 @@ async handleUnsavedRoute() {
     // IMPORTANT: Wait for state controller to be ready
     await this.waitForStateController();
     
+    // Skip if we're already tracking (page might have refreshed during tracking)
+    if (this.controllers.state?.isTracking) {
+      console.log('⚡ Skipping restore check - tracking is active');
+      return;
+    }
+    
+    // Skip if we already handled restore this session
+    const sessionHandled = sessionStorage.getItem('restore_handled');
+    if (sessionHandled) {
+      console.log('⚡ Skipping restore check - already handled this session');
+      return;
+    }
+    
     const backupData = await this.controllers.state.checkForUnsavedRoute();
     
     if (backupData) {
+      // Mark as handled for this session (prevent re-prompting on page interactions)
+      sessionStorage.setItem('restore_handled', 'true');
+      
       const success = await this.showRestoreDialog(backupData);
       
       if (success) {

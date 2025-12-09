@@ -48,6 +48,7 @@ const APP_SHELL = [
   '/src/features/safetyFeatures.js',
   '/src/features/trailConditions.js',
   '/src/features/trailAlerts.js',
+  '/src/features/offlineSync.js',
   '/src/features/trailSearch.js',
   '/src/features/accessibilityRating.js',
   '/src/features/accessibilityFormV2Quick.js',
