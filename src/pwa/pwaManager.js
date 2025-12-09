@@ -57,32 +57,19 @@ class PWAManager {
   // ==================== Service Worker ====================
 
   /**
-   * Register service worker
-   * TEMPORARILY DISABLED to fix infinite update loop
+   * Register service worker with proper update handling
    */
   async registerServiceWorker() {
-    // TEMPORARY: Skip service worker registration entirely
-    // This breaks the infinite update loop while we debug
-    console.log('[PWA] Service Worker registration SKIPPED (temporary fix)');
-    
-    // Unregister any existing service workers to clean up
-    if ('serviceWorker' in navigator) {
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
-          console.log('[PWA] Unregistered old service worker');
-        }
-      } catch (e) {
-        console.warn('[PWA] Could not unregister service workers:', e);
-      }
-    }
-    
-    return;
-    
-    /* ORIGINAL CODE - DISABLED
     if (!('serviceWorker' in navigator)) {
       console.warn('[PWA] Service workers not supported');
+      return;
+    }
+
+    // Check if we just reloaded for an update (prevent loop)
+    const updateFlag = sessionStorage.getItem('pwa_update_applied');
+    if (updateFlag) {
+      console.log('[PWA] Update was just applied, skipping re-check');
+      sessionStorage.removeItem('pwa_update_applied');
       return;
     }
 
@@ -93,7 +80,7 @@ class PWAManager {
 
       console.log('[PWA] Service Worker registered:', this.swRegistration.scope);
 
-      // Check for updates
+      // Check for updates on registration
       this.swRegistration.addEventListener('updatefound', () => {
         this.handleUpdateFound();
       });
@@ -101,17 +88,29 @@ class PWAManager {
       // Handle controller change (new SW activated)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         console.log('[PWA] New Service Worker activated');
+        // Only reload if we explicitly requested it
+        if (this._updateRequested) {
+          this._updateRequested = false;
+          sessionStorage.setItem('pwa_update_applied', 'true');
+          window.location.reload();
+        }
       });
 
-      // Check if there's a waiting worker
+      // Check if there's a waiting worker (update available)
       if (this.swRegistration.waiting) {
-        this.promptForUpdate();
+        this.showUpdateAvailable();
       }
+
+      // Periodically check for updates (every 60 minutes)
+      setInterval(() => {
+        this.swRegistration.update().catch(err => {
+          console.warn('[PWA] Update check failed:', err);
+        });
+      }, 60 * 60 * 1000);
 
     } catch (error) {
       console.error('[PWA] Service Worker registration failed:', error);
     }
-    */
   }
 
   /**
@@ -122,20 +121,57 @@ class PWAManager {
     console.log('[PWA] New Service Worker installing...');
 
     newWorker.addEventListener('statechange', () => {
-      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-        // New SW waiting to activate
-        this.promptForUpdate();
+      if (newWorker.state === 'installed') {
+        if (navigator.serviceWorker.controller) {
+          // New SW waiting to activate - show update notification
+          console.log('[PWA] Update available');
+          this.showUpdateAvailable();
+        } else {
+          // First install - no update needed
+          console.log('[PWA] Service Worker installed for first time');
+          toast.success('App ready for offline use!');
+        }
       }
     });
   }
 
   /**
-   * Prompt user to update to new version
+   * Show update available notification (non-intrusive)
    */
-  async promptForUpdate() {
-    console.log('[PWA] New version detected - auto-updating...');
-    // Skip the modal and just apply the update directly
-    this.applyUpdate();
+  showUpdateAvailable() {
+    // Don't spam the user - only show once per session
+    if (this._updateShown) return;
+    this._updateShown = true;
+
+    // Create a subtle update banner instead of blocking modal
+    const banner = document.createElement('div');
+    banner.id = 'pwa-update-banner';
+    banner.innerHTML = `
+      <div style="position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); 
+                  background: #1e40af; color: white; padding: 12px 20px; border-radius: 12px; 
+                  box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10001; 
+                  display: flex; align-items: center; gap: 12px; max-width: 90%;">
+        <span>🔄 Update available</span>
+        <button id="pwa-update-btn" style="background: white; color: #1e40af; border: none; 
+                padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+          Update Now
+        </button>
+        <button id="pwa-dismiss-btn" style="background: transparent; color: white; border: none; 
+                font-size: 18px; cursor: pointer; padding: 0 4px;">×</button>
+      </div>
+    `;
+    
+    document.body.appendChild(banner);
+
+    document.getElementById('pwa-update-btn').addEventListener('click', () => {
+      this.applyUpdate();
+      banner.remove();
+    });
+
+    document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+      banner.remove();
+      toast.info('Update will apply when you close all tabs');
+    });
   }
 
   /**
@@ -143,11 +179,13 @@ class PWAManager {
    */
   applyUpdate() {
     if (this.swRegistration?.waiting) {
+      console.log('[PWA] Applying update...');
+      this._updateRequested = true;
       // Tell SW to skip waiting
       this.swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      
-      // Reload page to use new SW
-      window.location.reload();
+      toast.info('Updating app...');
+    } else {
+      console.warn('[PWA] No waiting worker to activate');
     }
   }
 
