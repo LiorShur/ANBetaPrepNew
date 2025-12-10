@@ -940,14 +940,12 @@
         html += '</ul>';
         
         const win = window.open('', '_blank');
-        win.document.write(`
-          <html>
-          <head><title>All Routes</title>
-          <style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>
-          </head>
-          <body>${html}</body>
-          </html>
-        `);
+        win.document.write(
+          '<html><head><title>All Routes</title>' +
+          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
+          '</head><body>' + html + '</body></html>'
+        );
+        win.document.close();
       } catch (error) {
         alert('Error: ' + error.message);
       }
@@ -971,14 +969,12 @@
         html += '</ul>';
         
         const win = window.open('', '_blank');
-        win.document.write(`
-          <html>
-          <head><title>All Trail Guides</title>
-          <style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>
-          </head>
-          <body>${html}</body>
-          </html>
-        `);
+        win.document.write(
+          '<html><head><title>All Trail Guides</title>' +
+          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
+          '</head><body>' + html + '</body></html>'
+        );
+        win.document.close();
       } catch (error) {
         alert('Error: ' + error.message);
       }
@@ -1002,14 +998,12 @@
         html += '</ul>';
         
         const win = window.open('', '_blank');
-        win.document.write(`
-          <html>
-          <head><title>Trail Conditions</title>
-          <style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>
-          </head>
-          <body>${html}</body>
-          </html>
-        `);
+        win.document.write(
+          '<html><head><title>Trail Conditions</title>' +
+          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
+          '</head><body>' + html + '</body></html>'
+        );
+        win.document.close();
       } catch (error) {
         alert('Error: ' + error.message);
       }
