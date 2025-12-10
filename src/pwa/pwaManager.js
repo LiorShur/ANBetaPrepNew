@@ -74,8 +74,27 @@ class PWAManager {
     }
 
     try {
-      this.swRegistration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
+      // Determine the correct SW path based on the current location
+      // This handles both root deployment and subdirectory deployment (like GitHub Pages)
+      const baseUrl = new URL('./', window.location.href);
+      const swUrl = new URL('sw.js', baseUrl);
+      
+      // Pre-check if sw.js exists to avoid noisy console errors
+      try {
+        const checkResponse = await fetch(swUrl.href, { method: 'HEAD' });
+        if (!checkResponse.ok) {
+          console.log('[PWA] sw.js not found - PWA features disabled. Make sure sw.js is deployed.');
+          return;
+        }
+      } catch (fetchError) {
+        console.log('[PWA] Could not check for sw.js - PWA features disabled');
+        return;
+      }
+      
+      console.log(`[PWA] Registering SW at: ${swUrl.pathname} with scope: ${baseUrl.pathname}`);
+      
+      this.swRegistration = await navigator.serviceWorker.register(swUrl.pathname, {
+        scope: baseUrl.pathname
       });
 
       console.log('[PWA] Service Worker registered:', this.swRegistration.scope);
@@ -109,7 +128,8 @@ class PWAManager {
       }, 60 * 60 * 1000);
 
     } catch (error) {
-      console.error('[PWA] Service Worker registration failed:', error);
+      console.warn('[PWA] Service Worker registration failed:', error.message);
+      // Don't throw - app should continue to work without SW
     }
   }
 
