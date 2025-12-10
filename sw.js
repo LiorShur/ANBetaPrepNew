@@ -9,70 +9,70 @@
  * - Images: Cache First
  */
 
-const CACHE_VERSION = 'v2.2.0-stable';
+const CACHE_VERSION = 'v2.3.1-ghpages';
 const APP_CACHE = `access-nature-app-${CACHE_VERSION}`;
 const DATA_CACHE = `access-nature-data-${CACHE_VERSION}`;
 const MAP_CACHE = `access-nature-maps-${CACHE_VERSION}`;
 const IMAGE_CACHE = `access-nature-images-${CACHE_VERSION}`;
 
-// App Shell - files to cache immediately
+// App Shell - files to cache immediately (relative paths for GitHub Pages compatibility)
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/tracker.html',
-  '/reports.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './tracker.html',
+  './reports.html',
+  './manifest.json',
   
   // CSS
-  '/src/css/base.css',
-  '/src/css/layout.css',
-  '/src/css/components.css',
-  '/src/css/accessibility.css',
-  '/src/css/themes.css',
-  '/src/css/auth.css',
-  '/src/css/landing.css',
-  '/src/css/high-contrast.css',
-  '/src/css/ui-utilities.css',
+  './src/css/base.css',
+  './src/css/layout.css',
+  './src/css/components.css',
+  './src/css/accessibility.css',
+  './src/css/themes.css',
+  './src/css/auth.css',
+  './src/css/landing.css',
+  './src/css/high-contrast.css',
+  './src/css/ui-utilities.css',
   
   // Core JS
-  '/firebase-setup.js',
-  '/src/main.js',
-  '/src/landing.js',
+  './firebase-setup.js',
+  './src/main.js',
+  './src/landing.js',
   
   // Features
-  '/src/features/auth.js',
-  '/src/core/tracking.js',
-  '/src/features/accessibility.js',
-  '/src/features/export.js',
-  '/src/features/media.js',
-  '/src/features/safetyFeatures.js',
-  '/src/features/trailConditions.js',
-  '/src/features/trailAlerts.js',
-  '/src/features/offlineSync.js',
-  '/src/features/trailSearch.js',
-  '/src/features/accessibilityRating.js',
-  '/src/features/accessibilityFormV2Quick.js',
-  '/src/features/trailGuideGeneratorV2.js',
+  './src/features/auth.js',
+  './src/core/tracking.js',
+  './src/features/accessibility.js',
+  './src/features/export.js',
+  './src/features/media.js',
+  './src/features/safetyFeatures.js',
+  './src/features/trailConditions.js',
+  './src/features/trailAlerts.js',
+  './src/features/offlineSync.js',
+  './src/features/trailSearch.js',
+  './src/features/accessibilityRating.js',
+  './src/features/accessibilityFormV2Quick.js',
+  './src/features/trailGuideGeneratorV2.js',
   
   // Utils
-  '/src/utils/modal.js',
-  '/src/utils/toast.js',
-  '/src/utils/errorMessages.js',
+  './src/utils/modal.js',
+  './src/utils/toast.js',
+  './src/utils/errorMessages.js',
   
   // UI
-  '/src/ui/offlineIndicator.js',
-  '/src/ui/loadingStates.js',
-  '/src/ui/gamificationUI.js',
-  '/src/ui/displayPreferences.js',
-  '/src/ui/mobilityProfileUI.js',
+  './src/ui/offlineIndicator.js',
+  './src/ui/loadingStates.js',
+  './src/ui/gamificationUI.js',
+  './src/ui/displayPreferences.js',
+  './src/ui/mobilityProfileUI.js',
   
   // PWA
-  '/src/pwa/pwaManager.js',
-  '/src/pwa/offlineMapsUI.js',
+  './src/pwa/pwaManager.js',
+  './src/pwa/offlineMapsUI.js',
   
   // Services & Config
-  '/src/services/userService.js',
-  '/src/config/featureFlags.js',
+  './src/services/userService.js',
+  './src/config/featureFlags.js',
   
   // External Libraries (CDN - will be cached on first use)
   'https://unpkg.com/leaflet@1.9.3/dist/leaflet.css',
@@ -98,17 +98,28 @@ const FIREBASE_PATTERNS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing Service Worker...');
   
+  // Get the base URL from the service worker's location
+  // This handles subdirectory deployments like GitHub Pages
+  const swUrl = new URL(self.location);
+  const baseUrl = swUrl.href.replace(/sw\.js$/, '');
+  
+  console.log('[SW] Base URL:', baseUrl);
+  
   event.waitUntil(
     caches.open(APP_CACHE)
       .then((cache) => {
         console.log('[SW] Caching App Shell');
         // Cache what we can, don't fail on missing files
         return Promise.allSettled(
-          APP_SHELL.map(url => 
-            cache.add(url).catch(err => {
-              console.warn(`[SW] Failed to cache: ${url}`, err);
-            })
-          )
+          APP_SHELL.map(url => {
+            // Resolve relative URLs against the SW's base URL
+            // External URLs (https://) are kept as-is
+            const fullUrl = url.startsWith('http') ? url : new URL(url, baseUrl).href;
+            
+            return cache.add(fullUrl).catch(err => {
+              console.warn(`[SW] Failed to cache: ${fullUrl}`, err.message || err);
+            });
+          })
         );
       })
       .then(() => {
@@ -303,9 +314,24 @@ function isImageRequest(request) {
 }
 
 function isAppShellRequest(url) {
-  // Check if it's a local request (same origin or relative)
-  return url.origin === self.location.origin ||
-         APP_SHELL.some(path => url.pathname === path || url.pathname.endsWith(path));
+  // Check if it's a local request (same origin)
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
+  
+  // Get the base path of the service worker
+  const swBasePath = self.location.pathname.replace(/sw\.js$/, '');
+  
+  // Check if the request path is within our app's scope
+  return APP_SHELL.some(path => {
+    // Remove ./ prefix if present
+    const cleanPath = path.replace(/^\.\//, '');
+    const fullPath = swBasePath + cleanPath;
+    
+    return url.pathname === fullPath || 
+           url.pathname === '/' + cleanPath ||
+           url.pathname.endsWith('/' + cleanPath);
+  });
 }
 
 // ==================== Background Sync ====================
