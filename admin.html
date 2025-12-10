@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Access Nature - Admin Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -90,7 +91,6 @@
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
     }
     .login-btn:hover { background: #3d6b41; }
     .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
@@ -124,24 +124,10 @@
       cursor: pointer;
       transition: all 0.2s;
       border: 3px solid transparent;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: #e5e7eb;
-      transition: background 0.2s;
     }
     
     .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     .stat-card.active { border-color: #2c5530; }
-    .stat-card.active::before { background: #2c5530; }
     
     .stat-card .icon { font-size: 36px; margin-bottom: 8px; }
     .stat-card .count { font-size: 2.2em; font-weight: 700; color: #1f2937; }
@@ -156,11 +142,11 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
     
-    .filters-title { font-weight: 600; margin-bottom: 16px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .filters-title { font-weight: 600; margin-bottom: 16px; color: #374151; }
     
     .filters-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 12px;
       align-items: end;
     }
@@ -168,7 +154,7 @@
     .filter-group label { display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px; font-weight: 500; }
     .filter-group input, .filter-group select {
       width: 100%;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-size: 0.9em;
@@ -192,8 +178,7 @@
     .btn-secondary:hover { background: #d1d5db; }
     .btn-danger { background: #ef4444; color: white; }
     .btn-danger:hover { background: #dc2626; }
-    .btn-warning { background: #f59e0b; color: white; }
-    .btn-warning:hover { background: #d97706; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8em; }
     
     /* Data Card */
     .data-card {
@@ -209,14 +194,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
     }
     
-    .data-header h3 { font-size: 1.1em; color: #1f2937; display: flex; align-items: center; gap: 8px; }
-    .data-header .count-badge { background: #e5e7eb; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; color: #6b7280; }
+    .data-header h3 { font-size: 1.1em; color: #1f2937; }
+    .count-badge { background: #e5e7eb; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; color: #6b7280; margin-left: 8px; }
     
-    .data-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .data-actions { display: flex; gap: 8px; }
     
     /* Table */
     .table-container { overflow-x: auto; }
@@ -224,7 +207,7 @@
     .data-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 600px;
+      min-width: 700px;
     }
     
     .data-table th {
@@ -235,22 +218,19 @@
       color: #6b7280;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
       border-bottom: 2px solid #e5e7eb;
-      white-space: nowrap;
     }
     
     .data-table td {
       padding: 14px 16px;
       border-bottom: 1px solid #f3f4f6;
       font-size: 0.9em;
-      vertical-align: middle;
     }
     
     .data-table tr:hover { background: #f9fafb; }
     
-    .data-table .truncate {
-      max-width: 200px;
+    .truncate {
+      max-width: 180px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -261,9 +241,8 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.8em;
+      font-size: 0.85em;
       margin-right: 4px;
-      transition: opacity 0.2s;
     }
     
     .action-btn:hover { opacity: 0.8; }
@@ -271,51 +250,20 @@
     .action-btn.edit { background: #fef3c7; color: #92400e; }
     .action-btn.delete { background: #fee2e2; color: #991b1b; }
     
-    /* Tags */
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75em;
-      font-weight: 600;
-    }
+    /* Owner Cell */
+    .owner-cell { display: flex; flex-direction: column; gap: 2px; }
+    .owner-name { font-weight: 600; color: #1f2937; }
+    .owner-email { font-size: 0.8em; color: #6b7280; }
+    .owner-id { font-size: 0.7em; color: #9ca3af; font-family: monospace; }
     
+    /* Tags */
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600; }
     .tag-public { background: #d1fae5; color: #065f46; }
     .tag-private { background: #fee2e2; color: #991b1b; }
-    .tag-condition { background: #fef3c7; color: #92400e; }
-    
-    /* Owner Cell */
-    .owner-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    
-    .owner-name {
-      font-weight: 600;
-      color: #1f2937;
-    }
-    
-    .owner-email {
-      font-size: 0.8em;
-      color: #6b7280;
-    }
-    
-    .owner-id {
-      font-size: 0.7em;
-      color: #9ca3af;
-      font-family: monospace;
-    }
     
     /* Empty State */
-    .empty-state {
-      padding: 60px 20px;
-      text-align: center;
-      color: #6b7280;
-    }
-    
+    .empty-state { padding: 60px 20px; text-align: center; color: #6b7280; }
     .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-    .empty-state p { font-size: 1.1em; }
     
     /* Loading */
     .loading { padding: 40px; text-align: center; color: #6b7280; }
@@ -328,7 +276,6 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-    
     @keyframes spin { to { transform: rotate(360deg); } }
     
     /* Modal */
@@ -340,10 +287,11 @@
       bottom: 0;
       background: rgba(0,0,0,0.6);
       display: none;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       z-index: 1000;
       padding: 20px;
+      overflow-y: auto;
       backdrop-filter: blur(4px);
     }
     
@@ -353,11 +301,10 @@
       background: white;
       border-radius: 16px;
       width: 100%;
-      max-width: 700px;
-      max-height: 90vh;
+      max-width: 900px;
+      margin: 20px auto;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
     }
     
     .modal-header {
@@ -366,22 +313,28 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #f9fafb;
+      background: linear-gradient(135deg, #2c5530, #4a7c59);
+      color: white;
     }
     
-    .modal-header h3 { font-size: 1.2em; display: flex; align-items: center; gap: 10px; }
+    .modal-header h3 { font-size: 1.2em; }
     
     .modal-close {
-      background: none;
+      background: rgba(255,255,255,0.2);
       border: none;
-      font-size: 28px;
+      font-size: 24px;
       cursor: pointer;
-      color: #6b7280;
-      line-height: 1;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .modal-close:hover { color: #1f2937; }
+    .modal-close:hover { background: rgba(255,255,255,0.3); }
     
-    .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+    .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
     
     .modal-footer {
       padding: 16px 24px;
@@ -392,12 +345,36 @@
       background: #f9fafb;
     }
     
+    /* Tabs inside modal */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 20px;
+    }
+    
+    .modal-tab {
+      padding: 12px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    
+    .modal-tab:hover { color: #2c5530; }
+    .modal-tab.active { color: #2c5530; border-bottom-color: #2c5530; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
     /* Form Fields */
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
     
     .form-field { margin-bottom: 16px; }
-    .form-field label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; }
+    .form-field label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.9em; }
     .form-field input, .form-field textarea, .form-field select {
       width: 100%;
       padding: 10px 12px;
@@ -409,8 +386,216 @@
       outline: none;
       border-color: #2c5530;
     }
-    .form-field textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+    .form-field textarea { min-height: 80px; resize: vertical; font-family: inherit; }
     .form-field .help-text { font-size: 0.8em; color: #6b7280; margin-top: 4px; }
+    
+    /* Section Headers in Edit */
+    .section-header {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 20px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .section-header:hover { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+    .section-header .icon { font-size: 1.5em; }
+    .section-header .title { font-weight: 600; color: #166534; }
+    .section-header .arrow { margin-left: auto; color: #166534; transition: transform 0.2s; }
+    .section-header.collapsed .arrow { transform: rotate(-90deg); }
+    
+    .section-content { display: block; padding-left: 8px; }
+    .section-content.collapsed { display: none; }
+    
+    /* Card Selection Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    
+    .select-card {
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .select-card:hover { border-color: #4a7c59; background: #f0fdf4; }
+    .select-card.selected { border-color: #2c5530; background: #2c5530; color: white; }
+    .select-card .card-icon { font-size: 1.5em; display: block; margin-bottom: 4px; }
+    .select-card .card-label { font-size: 0.8em; font-weight: 600; }
+    
+    /* Chip Selection */
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .chip {
+      padding: 8px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      font-size: 0.85em;
+    }
+    
+    .chip:hover { border-color: #4a7c59; }
+    .chip.selected { border-color: #2c5530; background: #2c5530; color: white; }
+    
+    /* Checkbox styled */
+    .styled-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .styled-checkbox:hover { border-color: #4a7c59; }
+    .styled-checkbox.checked { border-color: #2c5530; background: #f0fdf4; }
+    .styled-checkbox .check-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: transparent;
+    }
+    .styled-checkbox.checked .check-box { background: #2c5530; border-color: #2c5530; color: white; }
+    
+    /* Photos Grid */
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .photo-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #f3f4f6;
+    }
+    
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .photo-card .photo-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+    }
+    
+    .photo-card .photo-btn {
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .photo-card .photo-btn:hover { background: rgba(0,0,0,0.8); }
+    
+    .add-photo-card {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+    }
+    
+    .add-photo-card:hover { border-color: #2c5530; background: #f0fdf4; }
+    .add-photo-card .icon { font-size: 2em; color: #9ca3af; }
+    .add-photo-card .text { font-size: 0.85em; color: #6b7280; margin-top: 8px; }
+    
+    /* Preview Card */
+    .preview-card {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .preview-icon { font-size: 3em; }
+    .preview-title { font-size: 1.3em; font-weight: 700; color: #1e3a2f; }
+    .preview-subtitle { color: #6b7280; font-size: 0.9em; }
+    
+    .preview-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .preview-stat {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .preview-stat .value { font-size: 1.5em; font-weight: 700; color: #2c5530; }
+    .preview-stat .label { font-size: 0.8em; color: #6b7280; }
+    
+    /* Accessibility Banner */
+    .access-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .access-banner.accessible { background: linear-gradient(135deg, #d1fae5, #a7f3d0); }
+    .access-banner.partial { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .access-banner.not-accessible { background: linear-gradient(135deg, #fee2e2, #fecaca); }
+    
+    .access-banner .icon { font-size: 2.5em; }
+    .access-banner .level { font-weight: 700; font-size: 1.1em; }
+    .access-banner .desc { font-size: 0.85em; color: #374151; }
     
     /* JSON View */
     .json-preview {
@@ -419,11 +604,20 @@
       padding: 16px;
       border-radius: 8px;
       font-family: 'Monaco', 'Consolas', monospace;
-      font-size: 0.8em;
+      font-size: 0.75em;
       max-height: 400px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
+    }
+    
+    /* Map Container */
+    .map-container {
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0;
+      border: 2px solid #e5e7eb;
     }
     
     /* Toast */
@@ -443,7 +637,6 @@
     .toast.success { background: #10b981; }
     .toast.error { background: #ef4444; }
     .toast.info { background: #3b82f6; }
-    .toast.warning { background: #f59e0b; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -461,25 +654,30 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
     }
     
     .pagination-info { color: #6b7280; font-size: 0.9em; }
     
-    /* Bulk Actions */
-    .bulk-bar {
-      background: #1e3a2f;
-      color: white;
-      padding: 12px 20px;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
+    /* Owner Info Box */
+    .owner-info-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
     }
     
-    .bulk-bar.active { display: flex; }
-    .bulk-count { font-weight: 600; }
-    .bulk-actions { display: flex; gap: 8px; }
+    .owner-info-box h4 { font-size: 0.9em; color: #64748b; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .owner-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .owner-info-item { }
+    .owner-info-item .label { font-size: 0.8em; color: #94a3b8; }
+    .owner-info-item .value { font-weight: 600; color: #1e293b; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -561,18 +759,6 @@
               <option value="mine">My Items</option>
             </select>
           </div>
-          <div class="filter-group" id="filterLocationGroup">
-            <label>Location</label>
-            <input type="text" id="filterLocation" placeholder="Country, region...">
-          </div>
-          <div class="filter-group" id="filterPublicGroup">
-            <label>Visibility</label>
-            <select id="filterPublic">
-              <option value="all">All</option>
-              <option value="public">Public Only</option>
-              <option value="private">Private Only</option>
-            </select>
-          </div>
           <div class="filter-buttons">
             <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
             <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
@@ -586,12 +772,12 @@
           <div class="data-header">
             <h3>🗺️ Routes <span class="count-badge" id="routesFilteredCount">0</span></h3>
             <div class="data-actions">
-              <button class="btn btn-secondary" onclick="exportSection('routes')">📥 Export</button>
-              <button class="btn btn-primary" onclick="refreshSection('routes')">🔄 Refresh</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('routes')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('routes')">🔄 Refresh</button>
             </div>
           </div>
           <div class="table-container" id="routesTableContainer">
-            <div class="loading"><div class="spinner"></div><p>Loading routes...</p></div>
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
           </div>
         </div>
       </div>
@@ -602,12 +788,12 @@
           <div class="data-header">
             <h3>📚 Trail Guides <span class="count-badge" id="guidesFilteredCount">0</span></h3>
             <div class="data-actions">
-              <button class="btn btn-secondary" onclick="exportSection('guides')">📥 Export</button>
-              <button class="btn btn-primary" onclick="refreshSection('guides')">🔄 Refresh</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('guides')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('guides')">🔄 Refresh</button>
             </div>
           </div>
           <div class="table-container" id="guidesTableContainer">
-            <div class="loading"><div class="spinner"></div><p>Loading guides...</p></div>
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
           </div>
         </div>
       </div>
@@ -618,12 +804,12 @@
           <div class="data-header">
             <h3>🚧 Trail Conditions <span class="count-badge" id="conditionsFilteredCount">0</span></h3>
             <div class="data-actions">
-              <button class="btn btn-secondary" onclick="exportSection('conditions')">📥 Export</button>
-              <button class="btn btn-primary" onclick="refreshSection('conditions')">🔄 Refresh</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('conditions')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('conditions')">🔄 Refresh</button>
             </div>
           </div>
           <div class="table-container" id="conditionsTableContainer">
-            <div class="loading"><div class="spinner"></div><p>Loading conditions...</p></div>
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
           </div>
         </div>
       </div>
@@ -634,45 +820,52 @@
           <div class="data-header">
             <h3>♿ Accessibility Reports <span class="count-badge" id="reportsFilteredCount">0</span></h3>
             <div class="data-actions">
-              <button class="btn btn-secondary" onclick="exportSection('reports')">📥 Export</button>
-              <button class="btn btn-primary" onclick="refreshSection('reports')">🔄 Refresh</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('reports')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('reports')">🔄 Refresh</button>
             </div>
           </div>
           <div class="table-container" id="reportsTableContainer">
-            <div class="loading"><div class="spinner"></div><p>Loading reports...</p></div>
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- View Modal -->
-  <div class="modal-overlay" id="viewModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>👁️ <span id="viewModalTitle">View Item</span></h3>
-        <button class="modal-close" onclick="closeViewModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="json-preview" id="viewJsonContent"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
-        <button class="btn btn-primary" onclick="copyViewJson()">📋 Copy JSON</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Modal -->
+  <!-- View/Edit Modal -->
   <div class="modal-overlay" id="editModal">
     <div class="modal">
       <div class="modal-header">
-        <h3>✏️ <span id="editModalTitle">Edit Item</span></h3>
+        <h3 id="editModalTitle">Edit Item</h3>
         <button class="modal-close" onclick="closeEditModal()">&times;</button>
       </div>
-      <div class="modal-body" id="editModalBody">
-        <!-- Dynamic form -->
+      
+      <!-- Modal Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="preview" onclick="switchModalTab('preview')">👁️ Preview</button>
+        <button class="modal-tab" data-tab="details" onclick="switchModalTab('details')">📝 Details</button>
+        <button class="modal-tab" data-tab="accessibility" onclick="switchModalTab('accessibility')">♿ Accessibility</button>
+        <button class="modal-tab" data-tab="photos" onclick="switchModalTab('photos')">📷 Photos</button>
+        <button class="modal-tab" data-tab="json" onclick="switchModalTab('json')">{ } JSON</button>
       </div>
+      
+      <div class="modal-body">
+        <!-- Preview Tab -->
+        <div class="tab-content active" id="tab-preview"></div>
+        
+        <!-- Details Tab -->
+        <div class="tab-content" id="tab-details"></div>
+        
+        <!-- Accessibility Tab -->
+        <div class="tab-content" id="tab-accessibility"></div>
+        
+        <!-- Photos Tab -->
+        <div class="tab-content" id="tab-photos"></div>
+        
+        <!-- JSON Tab -->
+        <div class="tab-content" id="tab-json"></div>
+      </div>
+      
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
         <button class="btn btn-danger" onclick="deleteCurrentItem()">🗑️ Delete</button>
@@ -689,37 +882,41 @@
         <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <p id="deleteMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
+        <p id="deleteMessage">Are you sure you want to delete this item?</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete Permanently</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button>
       </div>
     </div>
   </div>
 
+  <!-- Hidden file input for photo upload -->
+  <input type="file" id="photoUploadInput" accept="image/*" multiple style="display: none;">
+
   <!-- Firebase & App Logic -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
     import { getFirestore, collection, doc, getDocs, updateDoc, deleteDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js';
 
-    // Firebase config (accessnaturebeta)
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
       authDomain: "accessnaturebeta-821a2.firebaseapp.com",
       projectId: "accessnaturebeta-821a2",
       storageBucket: "accessnaturebeta-821a2.appspot.com",
       messagingSenderId: "670888101781",
-      appId: "1:670888101781:web:b4cf57f58e86182466589c",
-      measurementId: "G-QL82J92CP7"
+      appId: "1:670888101781:web:b4cf57f58e86182466589c"
     };
 
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    // Admin config
     const ADMIN_EMAIL = 'liorshur@gmail.com';
 
     // State
@@ -727,23 +924,111 @@
     let currentSection = 'routes';
     let editingItem = null;
     let editingCollection = null;
-    let deletingItem = null;
-    let deletingCollection = null;
 
     // Data cache
-    const cache = {
-      routes: [],
-      guides: [],
-      conditions: [],
-      reports: []
-    };
+    const cache = { routes: [], guides: [], conditions: [], reports: [] };
 
-    // Collection names
     const COLLECTIONS = {
       routes: 'routes',
       guides: 'trail_guides',
       conditions: 'trail_conditions',
       reports: 'accessibilityReports'
+    };
+
+    // Accessibility Survey Field Definitions
+    const ACCESSIBILITY_FIELDS = {
+      basic: {
+        title: '🗺️ Basic Trail Information',
+        fields: [
+          { name: 'trailName', label: 'Trail Name', type: 'text' },
+          { name: 'location', label: 'Location/Address', type: 'text' },
+          { name: 'trailLength', label: 'Trail Length (km)', type: 'number', step: '0.1' },
+          { name: 'estimatedTime', label: 'Estimated Duration', type: 'select', options: ['', 'Under 30 minutes', '30-60 minutes', '1-2 hours', '2-4 hours', 'Half day', 'Full day'] },
+          { name: 'tripType', label: 'Trip Type', type: 'chips', options: ['🏖️ Beach Promenade', '🌊 Stream Path', '🌳 Park Route', '🌲 Forest Trail', '🏙️ Urban Route', '🚗 Scenic Drive'] },
+          { name: 'routeType', label: 'Route Type', type: 'cards', options: [{ value: 'Circular', icon: '🔄', label: 'Circular Loop' }, { value: 'Round Trip', icon: '↔️', label: 'Round Trip' }] }
+        ]
+      },
+      mobility: {
+        title: '♿ Mobility Accessibility',
+        fields: [
+          { name: 'wheelchairAccess', label: 'Wheelchair Accessibility', type: 'cards', options: [
+            { value: 'Fully accessible', icon: '♿', label: 'Fully Accessible' },
+            { value: 'Partially accessible', icon: '⚠️', label: 'Partially' },
+            { value: 'Accessible with assistance', icon: '🤝', label: 'With Assistance' },
+            { value: 'Not accessible', icon: '🚫', label: 'Not Accessible' }
+          ]},
+          { name: 'disabledParking', label: 'Disabled Parking Available', type: 'checkbox' },
+          { name: 'parkingSpaces', label: 'Number of Accessible Parking Spaces', type: 'number' }
+        ]
+      },
+      surface: {
+        title: '🛤️ Trail Surface & Quality',
+        fields: [
+          { name: 'trailSurface', label: 'Surface Types', type: 'chips', multi: true, options: ['🛣️ Asphalt', '⬜ Concrete', '🪨 Stone', '🪵 Wood/Deck', '⚪ Compacted Gravel', '🔀 Mixed', '🌿 Grass'] },
+          { name: 'surfaceQuality', label: 'Surface Quality', type: 'cards', options: [
+            { value: 'Excellent', icon: '✨', label: 'Excellent' },
+            { value: 'Fair', icon: '👍', label: 'Fair' },
+            { value: 'Poor', icon: '⚠️', label: 'Poor' },
+            { value: 'Overgrown', icon: '🌿', label: 'Overgrown' }
+          ]},
+          { name: 'trailSlopes', label: 'Trail Slopes', type: 'cards', options: [
+            { value: 'Flat', icon: '➡️', label: 'Flat (<5%)' },
+            { value: 'Moderate', icon: '📐', label: 'Moderate (5-10%)' },
+            { value: 'Steep', icon: '⛰️', label: 'Steep (>10%)' }
+          ]}
+        ]
+      },
+      visual: {
+        title: '👁️ Visual & Environmental',
+        fields: [
+          { name: 'visualAdaptations', label: 'Visual Impairment Adaptations', type: 'chips', multi: true, options: ['Raised borders', 'Tactile surfaces', 'Color contrast'] },
+          { name: 'shadeCoverage', label: 'Shade Coverage', type: 'cards', options: [
+            { value: 'Plenty of shade', icon: '🌳', label: 'Plenty' },
+            { value: 'Intermittent shade', icon: '⛅', label: 'Intermittent' },
+            { value: 'No shade', icon: '☀️', label: 'No shade' }
+          ]},
+          { name: 'lighting', label: 'Trail is Lit in Darkness', type: 'checkbox' }
+        ]
+      },
+      facilities: {
+        title: '🚰 Facilities & Amenities',
+        fields: [
+          { name: 'waterFountains', label: 'Accessible Water Fountains', type: 'cards', options: [
+            { value: 'None', icon: '🚫', label: 'None' },
+            { value: 'One', icon: '🚰', label: 'One' },
+            { value: 'Multiple', icon: '🚰🚰', label: 'Multiple' }
+          ]},
+          { name: 'seating', label: 'Accessible Seating', type: 'chips', multi: true, options: ['No benches', 'One bench', 'Multiple benches', 'Without handrails'] },
+          { name: 'picnicAreas', label: 'Accessible Picnic Areas', type: 'checkbox' },
+          { name: 'picnicCount', label: 'Number of Picnic Areas', type: 'number' },
+          { name: 'accessibleViewpoint', label: 'Accessible Viewpoint', type: 'checkbox' },
+          { name: 'restrooms', label: 'Accessible Restrooms', type: 'cards', options: [
+            { value: 'None', icon: '🚫', label: 'None' },
+            { value: 'Unisex', icon: '🚻', label: 'Unisex' },
+            { value: 'Separate', icon: '🚹🚺', label: 'Separate M/F' }
+          ]}
+        ]
+      },
+      signage: {
+        title: '🪧 Signage & Navigation',
+        fields: [
+          { name: 'signage', label: 'Available Signage', type: 'chips', multi: true, options: ['🗺️ Route map', '➡️ Directional signs', '📖 Simple language', '🔤 High contrast', '🔊 Audio/T-mode'] },
+          { name: 'qrCode', label: 'QR Code with Site Info', type: 'checkbox' }
+        ]
+      },
+      additional: {
+        title: '📝 Additional Information',
+        fields: [
+          { name: 'additionalNotes', label: 'Additional Notes', type: 'textarea' },
+          { name: 'surveyorName', label: 'Surveyor Name', type: 'text' },
+          { name: 'surveyDate', label: 'Survey Date', type: 'date' },
+          { name: 'accessibilitySummary', label: 'Overall Accessibility', type: 'cards', options: [
+            { value: 'Accessible', icon: '✅', label: 'Accessible' },
+            { value: 'Partially accessible', icon: '⚠️', label: 'Partial' },
+            { value: 'Not accessible', icon: '❌', label: 'Not Accessible' }
+          ]}
+        ]
+      }
     };
 
     // ==================== AUTH ====================
@@ -754,18 +1039,15 @@
 
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
-      
       if (user) {
         if (!isAdmin(user)) {
           showToast('Access denied - Admin only', 'error');
           await signOut(auth);
           return;
         }
-        
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userInfo').textContent = user.email;
-        
         await loadAllData();
       } else {
         document.getElementById('loginSection').style.display = 'flex';
@@ -773,7 +1055,6 @@
       }
     });
 
-    // Login form
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     document.getElementById('loginPassword').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleLogin();
@@ -795,15 +1076,10 @@
         btn.textContent = 'Signing in...';
         btn.disabled = true;
         errorEl.style.display = 'none';
-        
         await signInWithEmailAndPassword(auth, email, password);
       } catch (error) {
-        console.error('Login error:', error);
         let msg = 'Login failed';
         if (error.code === 'auth/invalid-credential') msg = 'Invalid email or password';
-        else if (error.code === 'auth/too-many-requests') msg = 'Too many attempts. Try later.';
-        else if (error.code === 'auth/network-request-failed') msg = 'Network error. Check connection.';
-        
         errorEl.textContent = msg;
         errorEl.style.display = 'block';
       } finally {
@@ -818,7 +1094,6 @@
 
     async function loadAllData() {
       showToast('Loading data...', 'info');
-      
       try {
         await Promise.all([
           loadCollection('routes'),
@@ -826,25 +1101,19 @@
           loadCollection('conditions'),
           loadCollection('reports')
         ]);
-        
         updateAllCounts();
         renderCurrentSection();
-        showToast('Data loaded successfully', 'success');
+        showToast('Data loaded', 'success');
       } catch (error) {
         console.error('Load error:', error);
-        showToast('Failed to load data: ' + error.message, 'error');
+        showToast('Failed to load: ' + error.message, 'error');
       }
     }
 
     async function loadCollection(section) {
       try {
-        const collName = COLLECTIONS[section];
-        const snapshot = await getDocs(collection(db, collName));
-        cache[section] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        console.log(`✅ Loaded ${cache[section].length} ${section}`);
+        const snapshot = await getDocs(collection(db, COLLECTIONS[section]));
+        cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (error) {
         console.error(`Error loading ${section}:`, error);
         cache[section] = [];
@@ -852,90 +1121,42 @@
     }
 
     window.refreshSection = async (section) => {
-      showToast(`Refreshing ${section}...`, 'info');
+      showToast(`Refreshing...`, 'info');
       await loadCollection(section);
       updateAllCounts();
       renderCurrentSection();
-      showToast(`${section} refreshed`, 'success');
+      showToast('Refreshed', 'success');
     };
 
     // ==================== FILTERING ====================
 
     function getFilteredData(section) {
       let data = [...cache[section]];
-      
       const search = document.getElementById('filterSearch').value.toLowerCase().trim();
       const dateFrom = document.getElementById('filterDateFrom').value;
       const dateTo = document.getElementById('filterDateTo').value;
       const owner = document.getElementById('filterOwner').value;
-      const location = document.getElementById('filterLocation').value.toLowerCase().trim();
-      const visibility = document.getElementById('filterPublic').value;
       
-      // Search filter
       if (search) {
         data = data.filter(item => {
-          const searchFields = [
-            item.name,
-            item.title,
-            item.trailName,
-            item.locationName,
-            item.description,
-            item.notes,
-            item.userDisplayName,
-            item.country,
-            item.region,
-            item.municipality
-          ].filter(Boolean).join(' ').toLowerCase();
-          
-          return searchFields.includes(search);
+          const fields = [item.name, item.routeName, item.title, item.trailName, item.locationName, item.description, item.userDisplayName, item.userEmail].filter(Boolean).join(' ').toLowerCase();
+          return fields.includes(search);
         });
       }
       
-      // Date filters
       if (dateFrom) {
-        const fromDate = new Date(dateFrom);
-        fromDate.setHours(0, 0, 0, 0);
-        data = data.filter(item => {
-          const itemDate = getItemDate(item);
-          return itemDate >= fromDate;
-        });
+        const from = new Date(dateFrom);
+        data = data.filter(item => getItemDate(item) >= from);
       }
       
       if (dateTo) {
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999);
-        data = data.filter(item => {
-          const itemDate = getItemDate(item);
-          return itemDate <= toDate;
-        });
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59);
+        data = data.filter(item => getItemDate(item) <= to);
       }
       
-      // Owner filter
       if (owner === 'mine' && currentUser) {
         data = data.filter(item => item.userId === currentUser.uid);
-      }
-      
-      // Location filter
-      if (location) {
-        data = data.filter(item => {
-          const locFields = [
-            item.country,
-            item.region,
-            item.municipality,
-            item.city,
-            item.trailName,
-            item.locationName
-          ].filter(Boolean).join(' ').toLowerCase();
-          
-          return locFields.includes(location);
-        });
-      }
-      
-      // Visibility filter
-      if (visibility === 'public') {
-        data = data.filter(item => item.isPublic === true);
-      } else if (visibility === 'private') {
-        data = data.filter(item => item.isPublic !== true);
       }
       
       return data;
@@ -943,21 +1164,17 @@
 
     function getItemDate(item) {
       if (item.createdAt?.toDate) return item.createdAt.toDate();
-      if (item.timestamp?.toDate) return item.timestamp.toDate();
       if (item.createdAt) return new Date(item.createdAt);
-      if (item.timestamp) return new Date(item.timestamp);
+      if (item.uploadedAt) return new Date(item.uploadedAt);
       return new Date(0);
     }
 
     window.applyFilters = () => renderCurrentSection();
-    
     window.clearFilters = () => {
       document.getElementById('filterSearch').value = '';
       document.getElementById('filterDateFrom').value = '';
       document.getElementById('filterDateTo').value = '';
       document.getElementById('filterOwner').value = 'all';
-      document.getElementById('filterLocation').value = '';
-      document.getElementById('filterPublic').value = 'all';
       renderCurrentSection();
     };
 
@@ -965,17 +1182,12 @@
 
     window.switchSection = (section) => {
       currentSection = section;
-      
-      // Update stat cards
       document.querySelectorAll('.stat-card').forEach(card => {
         card.classList.toggle('active', card.dataset.section === section);
       });
-      
-      // Update sections
       document.querySelectorAll('.section').forEach(sec => {
         sec.classList.toggle('active', sec.id === `${section}Section`);
       });
-      
       renderCurrentSection();
     };
 
@@ -991,417 +1203,134 @@
     function renderCurrentSection() {
       const data = getFilteredData(currentSection);
       document.getElementById(`${currentSection}FilteredCount`).textContent = data.length;
-      
       const container = document.getElementById(`${currentSection}TableContainer`);
       
       if (data.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="icon">${getIcon(currentSection)}</div>
-            <p>No ${currentSection} found</p>
-          </div>
-        `;
+        container.innerHTML = `<div class="empty-state"><div class="icon">${getIcon(currentSection)}</div><p>No ${currentSection} found</p></div>`;
         return;
       }
       
-      switch (currentSection) {
-        case 'routes': renderRoutesTable(data, container); break;
-        case 'guides': renderGuidesTable(data, container); break;
-        case 'conditions': renderConditionsTable(data, container); break;
-        case 'reports': renderReportsTable(data, container); break;
-      }
+      const rows = data.map(item => renderTableRow(item)).join('');
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr>${getTableHeaders()}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="pagination"><div class="pagination-info">Showing ${data.length} of ${cache[currentSection].length}</div></div>
+      `;
     }
 
     function getIcon(section) {
-      const icons = { routes: '🗺️', guides: '📚', conditions: '🚧', reports: '♿' };
-      return icons[section] || '📄';
+      return { routes: '🗺️', guides: '📚', conditions: '🚧', reports: '♿' }[section] || '📄';
     }
 
-    function formatDate(date) {
-      if (!date) return '-';
-      try {
-        const d = date?.toDate?.() || new Date(date);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      } catch {
-        return '-';
+    function getTableHeaders() {
+      switch (currentSection) {
+        case 'routes': return '<th>Name</th><th>Distance</th><th>Photos</th><th>Created By</th><th>Date</th><th>Actions</th>';
+        case 'guides': return '<th>Title</th><th>Trail</th><th>Public</th><th>Created By</th><th>Date</th><th>Actions</th>';
+        case 'conditions': return '<th>Location</th><th>Conditions</th><th>Reported By</th><th>Date</th><th>Actions</th>';
+        case 'reports': return '<th>Location</th><th>Type</th><th>Rating</th><th>Created By</th><th>Date</th><th>Actions</th>';
+      }
+    }
+
+    function renderTableRow(item) {
+      const id = item.id;
+      const owner = formatOwner(item);
+      const date = formatDate(getItemDate(item));
+      const actions = `
+        <button class="action-btn view" onclick="openEditModal('${currentSection}', '${id}')">👁️</button>
+        <button class="action-btn edit" onclick="openEditModal('${currentSection}', '${id}')">✏️</button>
+        <button class="action-btn delete" onclick="promptDelete('${currentSection}', '${id}')">🗑️</button>
+      `;
+      
+      switch (currentSection) {
+        case 'routes':
+          const photos = item.routeData?.filter(p => p.type === 'photo').length || item.stats?.photos || 0;
+          return `<tr>
+            <td class="truncate">${esc(item.routeName || item.name || 'Untitled')}</td>
+            <td>${(item.totalDistance || 0).toFixed(2)} km</td>
+            <td>📷 ${photos}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'guides':
+          return `<tr>
+            <td class="truncate">${esc(item.routeName || item.title || 'Untitled')}</td>
+            <td class="truncate">${esc(item.accessibility?.location || '-')}</td>
+            <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'conditions':
+          const conds = Array.isArray(item.conditions) ? item.conditions.map(c => c.label || c.emoji || c).join(', ') : '-';
+          return `<tr>
+            <td class="truncate">${esc(item.trailName || item.locationName || 'Unknown')}</td>
+            <td class="truncate">${esc(conds)}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'reports':
+          return `<tr>
+            <td class="truncate">${esc(item.locationName || item.trailName || 'Unknown')}</td>
+            <td>${esc(item.reportType || item.type || '-')}</td>
+            <td>${item.accessibilityRating || item.rating || '-'}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
       }
     }
 
     function formatOwner(item) {
-      const name = item.userDisplayName || item.userName || item.displayName || null;
-      const email = item.userEmail || item.email || null;
+      const name = item.userDisplayName || item.userName || null;
+      const email = item.userEmail || null;
       const userId = item.userId || null;
-      
       let html = '<div class="owner-cell">';
-      
-      if (name) {
-        html += `<span class="owner-name">${escapeHtml(name)}</span>`;
-      }
-      
-      if (email) {
-        html += `<span class="owner-email">${escapeHtml(email)}</span>`;
-      } else if (!name && userId) {
-        html += `<span class="owner-name">Unknown User</span>`;
-      }
-      
-      if (userId) {
-        html += `<span class="owner-id" title="${escapeHtml(userId)}">ID: ${userId.substring(0, 12)}...</span>`;
-      }
-      
-      if (!name && !email && !userId) {
-        html += '<span class="owner-name">Anonymous</span>';
-      }
-      
-      html += '</div>';
-      return html;
+      if (name) html += `<span class="owner-name">${esc(name)}</span>`;
+      if (email) html += `<span class="owner-email">${esc(email)}</span>`;
+      else if (!name && userId) html += `<span class="owner-name">Unknown</span>`;
+      if (userId) html += `<span class="owner-id">ID: ${userId.substring(0, 10)}...</span>`;
+      if (!name && !email && !userId) html += '<span class="owner-name">Anonymous</span>';
+      return html + '</div>';
     }
 
-    function renderRoutesTable(data, container) {
-      container.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Distance</th>
-              <th>Duration</th>
-              <th>Created By</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(item => `
-              <tr>
-                <td class="truncate">${escapeHtml(item.name) || '<em>Untitled</em>'}</td>
-                <td>${formatDistance(item.totalDistance)}</td>
-                <td>${formatDuration(item.duration)}</td>
-                <td>${formatOwner(item)}</td>
-                <td>${formatDate(item.createdAt)}</td>
-                <td>
-                  <button class="action-btn view" onclick="viewItem('routes', '${item.id}')">👁️</button>
-                  <button class="action-btn edit" onclick="editItem('routes', '${item.id}')">✏️</button>
-                  <button class="action-btn delete" onclick="promptDelete('routes', '${item.id}')">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="pagination">
-          <div class="pagination-info">Showing ${data.length} of ${cache.routes.length} routes</div>
-        </div>
-      `;
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    function renderGuidesTable(data, container) {
-      container.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Trail</th>
-              <th>Location</th>
-              <th>Visibility</th>
-              <th>Created By</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(item => `
-              <tr>
-                <td class="truncate">${escapeHtml(item.title) || '<em>Untitled</em>'}</td>
-                <td class="truncate">${escapeHtml(item.trailName) || '-'}</td>
-                <td class="truncate">${escapeHtml(item.country || item.region || item.municipality || '-')}</td>
-                <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
-                <td>${formatOwner(item)}</td>
-                <td>${formatDate(item.createdAt)}</td>
-                <td>
-                  <button class="action-btn view" onclick="viewItem('guides', '${item.id}')">👁️</button>
-                  <button class="action-btn edit" onclick="editItem('guides', '${item.id}')">✏️</button>
-                  <button class="action-btn delete" onclick="promptDelete('guides', '${item.id}')">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="pagination">
-          <div class="pagination-info">Showing ${data.length} of ${cache.guides.length} guides</div>
-        </div>
-      `;
-    }
-
-    function renderConditionsTable(data, container) {
-      container.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Trail / Location</th>
-              <th>Conditions</th>
-              <th>Reported By</th>
-              <th>Reported</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(item => `
-              <tr>
-                <td class="truncate">${escapeHtml(item.trailName || item.locationName || 'Unknown')}</td>
-                <td class="truncate">${formatConditions(item.conditions)}</td>
-                <td>${formatOwner(item)}</td>
-                <td>${formatDate(item.createdAt || item.timestamp)}</td>
-                <td>
-                  <button class="action-btn view" onclick="viewItem('conditions', '${item.id}')">👁️</button>
-                  <button class="action-btn edit" onclick="editItem('conditions', '${item.id}')">✏️</button>
-                  <button class="action-btn delete" onclick="promptDelete('conditions', '${item.id}')">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="pagination">
-          <div class="pagination-info">Showing ${data.length} of ${cache.conditions.length} conditions</div>
-        </div>
-      `;
-    }
-
-    function renderReportsTable(data, container) {
-      container.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Location</th>
-              <th>Type</th>
-              <th>Rating</th>
-              <th>Visibility</th>
-              <th>Reported By</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(item => `
-              <tr>
-                <td class="truncate">${escapeHtml(item.locationName || item.trailName || 'Unknown')}</td>
-                <td>${escapeHtml(item.reportType || item.type || '-')}</td>
-                <td>${formatRating(item.accessibilityRating || item.rating)}</td>
-                <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
-                <td>${formatOwner(item)}</td>
-                <td>${formatDate(item.createdAt)}</td>
-                <td>
-                  <button class="action-btn view" onclick="viewItem('reports', '${item.id}')">👁️</button>
-                  <button class="action-btn edit" onclick="editItem('reports', '${item.id}')">✏️</button>
-                  <button class="action-btn delete" onclick="promptDelete('reports', '${item.id}')">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="pagination">
-          <div class="pagination-info">Showing ${data.length} of ${cache.reports.length} reports</div>
-        </div>
-      `;
-    }
-
-    // ==================== HELPERS ====================
-
-    function escapeHtml(text) {
+    function esc(text) {
       if (!text) return '';
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
     }
 
-    function formatDistance(dist) {
-      if (!dist && dist !== 0) return '-';
-      return `${parseFloat(dist).toFixed(2)} km`;
-    }
-
-    function formatDuration(dur) {
-      if (!dur) return '-';
-      const mins = Math.floor(dur / 60000);
-      if (mins < 60) return `${mins}m`;
-      const hrs = Math.floor(mins / 60);
-      const remainMins = mins % 60;
-      return `${hrs}h ${remainMins}m`;
-    }
-
-    function formatConditions(conditions) {
-      if (!conditions || !Array.isArray(conditions)) return '-';
-      return conditions.map(c => c.label || c.emoji || c).join(', ');
-    }
-
-    function formatRating(rating) {
-      if (!rating && rating !== 0) return '-';
-      const r = parseFloat(rating);
-      if (r >= 4) return `⭐ ${r.toFixed(1)}`;
-      if (r >= 2.5) return `${r.toFixed(1)}`;
-      return `⚠️ ${r.toFixed(1)}`;
-    }
-
-    // ==================== VIEW MODAL ====================
-
-    window.viewItem = (section, id) => {
-      const item = cache[section].find(i => i.id === id);
-      if (!item) return;
-      
-      document.getElementById('viewModalTitle').textContent = item.name || item.title || item.trailName || 'Item Details';
-      document.getElementById('viewJsonContent').textContent = JSON.stringify(item, null, 2);
-      document.getElementById('viewModal').classList.add('active');
-    };
-
-    window.closeViewModal = () => {
-      document.getElementById('viewModal').classList.remove('active');
-    };
-
-    window.copyViewJson = () => {
-      const json = document.getElementById('viewJsonContent').textContent;
-      navigator.clipboard.writeText(json);
-      showToast('JSON copied to clipboard', 'success');
-    };
-
     // ==================== EDIT MODAL ====================
 
-    window.editItem = (section, id) => {
+    window.openEditModal = (section, id) => {
       const item = cache[section].find(i => i.id === id);
       if (!item) return;
       
-      editingItem = { ...item };
+      editingItem = JSON.parse(JSON.stringify(item)); // Deep clone
       editingCollection = COLLECTIONS[section];
+      currentSection = section;
       
-      document.getElementById('editModalTitle').textContent = `Edit ${section.slice(0, -1).charAt(0).toUpperCase() + section.slice(1, -1)}`;
+      document.getElementById('editModalTitle').textContent = `${getIcon(section)} Edit ${section.slice(0, -1)}`;
       
-      let formHtml = '';
+      // Render all tabs
+      renderPreviewTab();
+      renderDetailsTab();
+      renderAccessibilityTab();
+      renderPhotosTab();
+      renderJsonTab();
       
-      switch (section) {
-        case 'routes':
-          formHtml = `
-            <div class="form-row">
-              <div class="form-field">
-                <label>Name</label>
-                <input type="text" id="editName" value="${escapeHtml(item.name || '')}">
-              </div>
-              <div class="form-field">
-                <label>Distance (km)</label>
-                <input type="number" id="editDistance" value="${item.totalDistance || 0}" step="0.01">
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Description</label>
-              <textarea id="editDescription">${escapeHtml(item.description || '')}</textarea>
-            </div>
-          `;
-          break;
-          
-        case 'guides':
-          formHtml = `
-            <div class="form-row">
-              <div class="form-field">
-                <label>Title</label>
-                <input type="text" id="editTitle" value="${escapeHtml(item.title || '')}">
-              </div>
-              <div class="form-field">
-                <label>Trail Name</label>
-                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>Country</label>
-                <input type="text" id="editCountry" value="${escapeHtml(item.country || '')}">
-              </div>
-              <div class="form-field">
-                <label>Region</label>
-                <input type="text" id="editRegion" value="${escapeHtml(item.region || '')}">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>Municipality</label>
-                <input type="text" id="editMunicipality" value="${escapeHtml(item.municipality || '')}">
-              </div>
-              <div class="form-field">
-                <label>Visibility</label>
-                <select id="editPublic">
-                  <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
-                  <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Description</label>
-              <textarea id="editDescription">${escapeHtml(item.description || '')}</textarea>
-            </div>
-          `;
-          break;
-          
-        case 'conditions':
-          formHtml = `
-            <div class="form-row">
-              <div class="form-field">
-                <label>Trail Name</label>
-                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
-              </div>
-              <div class="form-field">
-                <label>Location Name</label>
-                <input type="text" id="editLocationName" value="${escapeHtml(item.locationName || '')}">
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Conditions (comma-separated)</label>
-              <input type="text" id="editConditions" value="${formatConditions(item.conditions)}">
-              <div class="help-text">e.g., Path Blocked, Wildlife Activity</div>
-            </div>
-            <div class="form-field">
-              <label>Notes</label>
-              <textarea id="editNotes">${escapeHtml(item.notes || '')}</textarea>
-            </div>
-          `;
-          break;
-          
-        case 'reports':
-          formHtml = `
-            <div class="form-row">
-              <div class="form-field">
-                <label>Location Name</label>
-                <input type="text" id="editLocationName" value="${escapeHtml(item.locationName || '')}">
-              </div>
-              <div class="form-field">
-                <label>Trail Name</label>
-                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>Report Type</label>
-                <input type="text" id="editReportType" value="${escapeHtml(item.reportType || item.type || '')}">
-              </div>
-              <div class="form-field">
-                <label>Accessibility Rating (0-5)</label>
-                <input type="number" id="editRating" value="${item.accessibilityRating || item.rating || 0}" min="0" max="5" step="0.1">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>Country</label>
-                <input type="text" id="editCountry" value="${escapeHtml(item.country || '')}">
-              </div>
-              <div class="form-field">
-                <label>Visibility</label>
-                <select id="editPublic">
-                  <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
-                  <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Description / Notes</label>
-              <textarea id="editDescription">${escapeHtml(item.description || item.notes || '')}</textarea>
-            </div>
-          `;
-          break;
-      }
+      // Reset to preview tab
+      switchModalTab('preview');
       
-      document.getElementById('editModalBody').innerHTML = formHtml;
       document.getElementById('editModal').classList.add('active');
     };
 
@@ -1411,50 +1340,564 @@
       editingCollection = null;
     };
 
+    window.switchModalTab = (tabId) => {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+    };
+
+    // ==================== PREVIEW TAB ====================
+
+    function renderPreviewTab() {
+      const item = editingItem;
+      const container = document.getElementById('tab-preview');
+      
+      // Owner info box
+      let ownerHtml = `
+        <div class="owner-info-box">
+          <h4>📋 Item Information</h4>
+          <div class="owner-info-grid">
+            <div class="owner-info-item"><div class="label">Created By</div><div class="value">${esc(item.userDisplayName || item.userName || 'Unknown')}</div></div>
+            <div class="owner-info-item"><div class="label">Email</div><div class="value">${esc(item.userEmail || '-')}</div></div>
+            <div class="owner-info-item"><div class="label">User ID</div><div class="value">${esc(item.userId || '-')}</div></div>
+            <div class="owner-info-item"><div class="label">Created</div><div class="value">${formatDate(getItemDate(item))}</div></div>
+            <div class="owner-info-item"><div class="label">Document ID</div><div class="value">${esc(item.id)}</div></div>
+          </div>
+        </div>
+      `;
+      
+      let previewHtml = '';
+      
+      if (currentSection === 'routes') {
+        const access = item.accessibilityData || {};
+        const accessLevel = getAccessLevel(access);
+        const photos = item.routeData?.filter(p => p.type === 'photo') || [];
+        const notes = item.routeData?.filter(p => p.type === 'text') || [];
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">🗺️</div>
+              <div>
+                <div class="preview-title">${esc(item.routeName || item.name || 'Untitled Route')}</div>
+                <div class="preview-subtitle">${esc(access.location || 'Location not specified')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${(item.totalDistance || 0).toFixed(2)}</div><div class="label">km Distance</div></div>
+              <div class="preview-stat"><div class="value">${formatDuration(item.elapsedTime)}</div><div class="label">Duration</div></div>
+              <div class="preview-stat"><div class="value">${photos.length}</div><div class="label">Photos</div></div>
+              <div class="preview-stat"><div class="value">${notes.length}</div><div class="label">Notes</div></div>
+            </div>
+          </div>
+          <div class="access-banner ${accessLevel.class}">
+            <div class="icon">${accessLevel.icon}</div>
+            <div><div class="level">${accessLevel.label}</div><div class="desc">${accessLevel.desc}</div></div>
+          </div>
+          <div class="map-container" id="previewMap"></div>
+        `;
+      } else if (currentSection === 'guides') {
+        const meta = item.metadata || {};
+        const access = item.accessibility || {};
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">📚</div>
+              <div>
+                <div class="preview-title">${esc(item.routeName || item.title || 'Untitled Guide')}</div>
+                <div class="preview-subtitle">${esc(access.location || 'Location not specified')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${(meta.totalDistance || 0).toFixed(2)}</div><div class="label">km</div></div>
+              <div class="preview-stat"><div class="value">${meta.photoCount || 0}</div><div class="label">Photos</div></div>
+              <div class="preview-stat"><div class="value">${meta.noteCount || 0}</div><div class="label">Notes</div></div>
+              <div class="preview-stat"><div class="value">${item.isPublic ? '✅' : '🔒'}</div><div class="label">${item.isPublic ? 'Public' : 'Private'}</div></div>
+            </div>
+          </div>
+        `;
+      } else if (currentSection === 'conditions') {
+        const conds = Array.isArray(item.conditions) ? item.conditions : [];
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">🚧</div>
+              <div>
+                <div class="preview-title">${esc(item.trailName || 'Trail Condition Report')}</div>
+                <div class="preview-subtitle">${esc(item.locationName || 'Unknown location')}</div>
+              </div>
+            </div>
+          </div>
+          <h4>Reported Conditions:</h4>
+          <div class="chip-grid" style="margin-top:10px;">
+            ${conds.map(c => `<span class="chip selected">${c.emoji || ''} ${c.label || c}</span>`).join('')}
+          </div>
+          ${item.notes ? `<div style="margin-top:20px;"><h4>Notes:</h4><p style="margin-top:8px;">${esc(item.notes)}</p></div>` : ''}
+        `;
+      } else if (currentSection === 'reports') {
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">♿</div>
+              <div>
+                <div class="preview-title">${esc(item.locationName || item.trailName || 'Accessibility Report')}</div>
+                <div class="preview-subtitle">Type: ${esc(item.reportType || item.type || 'General')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${item.accessibilityRating || item.rating || '-'}</div><div class="label">Rating</div></div>
+              <div class="preview-stat"><div class="value">${item.isPublic ? '✅' : '🔒'}</div><div class="label">${item.isPublic ? 'Public' : 'Private'}</div></div>
+              <div class="preview-stat"><div class="value">${item.upvotes || 0}</div><div class="label">Upvotes</div></div>
+            </div>
+          </div>
+          ${item.description || item.notes ? `<div style="margin-top:20px;"><h4>Description:</h4><p style="margin-top:8px;">${esc(item.description || item.notes)}</p></div>` : ''}
+        `;
+      }
+      
+      container.innerHTML = previewHtml;
+      
+      // Initialize map if route
+      if (currentSection === 'routes') {
+        setTimeout(() => initPreviewMap(), 100);
+      }
+    }
+
+    function getAccessLevel(data) {
+      const summary = data?.accessibilitySummary || data?.wheelchairAccess || '';
+      if (summary.toLowerCase().includes('not')) return { class: 'not-accessible', icon: '❌', label: 'Not Accessible', desc: 'This trail has significant accessibility barriers' };
+      if (summary.toLowerCase().includes('partial')) return { class: 'partial', icon: '⚠️', label: 'Partially Accessible', desc: 'Some sections may have accessibility challenges' };
+      if (summary.toLowerCase().includes('fully') || summary.toLowerCase().includes('accessible')) return { class: 'accessible', icon: '✅', label: 'Fully Accessible', desc: 'Trail is accessible for most mobility aids' };
+      return { class: 'partial', icon: '❔', label: 'Accessibility Unknown', desc: 'No accessibility information available' };
+    }
+
+    function formatDuration(ms) {
+      if (!ms) return '-';
+      const mins = Math.floor(ms / 60000);
+      if (mins < 60) return `${mins}m`;
+      return `${Math.floor(mins/60)}h ${mins%60}m`;
+    }
+
+    function initPreviewMap() {
+      const mapEl = document.getElementById('previewMap');
+      if (!mapEl || !editingItem?.routeData) return;
+      
+      const locations = editingItem.routeData.filter(p => p.type === 'location' && p.coords);
+      if (locations.length === 0) {
+        mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No location data available</div>';
+        return;
+      }
+      
+      const map = L.map(mapEl).setView([locations[0].coords.lat, locations[0].coords.lng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      
+      const coords = locations.map(p => [p.coords.lat, p.coords.lng]);
+      L.polyline(coords, { color: '#2c5530', weight: 4 }).addTo(map);
+      
+      L.marker(coords[0], { title: 'Start' }).addTo(map);
+      if (coords.length > 1) L.marker(coords[coords.length-1], { title: 'End' }).addTo(map);
+      
+      map.fitBounds(coords);
+    }
+
+    // ==================== DETAILS TAB ====================
+
+    function renderDetailsTab() {
+      const item = editingItem;
+      const container = document.getElementById('tab-details');
+      
+      let html = '';
+      
+      if (currentSection === 'routes') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Route Name</label>
+              <input type="text" id="edit_routeName" value="${esc(item.routeName || item.name || '')}">
+            </div>
+            <div class="form-field">
+              <label>Total Distance (km)</label>
+              <input type="number" id="edit_totalDistance" value="${item.totalDistance || 0}" step="0.01">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Description</label>
+            <textarea id="edit_description">${esc(item.description || '')}</textarea>
+          </div>
+        `;
+      } else if (currentSection === 'guides') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Title</label>
+              <input type="text" id="edit_routeName" value="${esc(item.routeName || item.title || '')}">
+            </div>
+            <div class="form-field">
+              <label>Public</label>
+              <select id="edit_isPublic">
+                <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+                <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+              </select>
+            </div>
+          </div>
+        `;
+      } else if (currentSection === 'conditions') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Trail Name</label>
+              <input type="text" id="edit_trailName" value="${esc(item.trailName || '')}">
+            </div>
+            <div class="form-field">
+              <label>Location Name</label>
+              <input type="text" id="edit_locationName" value="${esc(item.locationName || '')}">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Notes</label>
+            <textarea id="edit_notes">${esc(item.notes || '')}</textarea>
+          </div>
+        `;
+      } else if (currentSection === 'reports') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Location Name</label>
+              <input type="text" id="edit_locationName" value="${esc(item.locationName || '')}">
+            </div>
+            <div class="form-field">
+              <label>Trail Name</label>
+              <input type="text" id="edit_trailName" value="${esc(item.trailName || '')}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Report Type</label>
+              <input type="text" id="edit_reportType" value="${esc(item.reportType || item.type || '')}">
+            </div>
+            <div class="form-field">
+              <label>Accessibility Rating (0-5)</label>
+              <input type="number" id="edit_accessibilityRating" value="${item.accessibilityRating || item.rating || 0}" min="0" max="5" step="0.1">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Public</label>
+            <select id="edit_isPublic">
+              <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+              <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Description</label>
+            <textarea id="edit_description">${esc(item.description || item.notes || '')}</textarea>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+    }
+
+    // ==================== ACCESSIBILITY TAB ====================
+
+    function renderAccessibilityTab() {
+      const container = document.getElementById('tab-accessibility');
+      const item = editingItem;
+      
+      // Get accessibility data from appropriate location
+      let accessData = {};
+      if (currentSection === 'routes') {
+        accessData = item.accessibilityData || {};
+      } else if (currentSection === 'guides') {
+        accessData = item.accessibility || {};
+      } else {
+        container.innerHTML = '<div class="empty-state"><p>Accessibility survey not applicable for this item type</p></div>';
+        return;
+      }
+      
+      let html = '<p style="margin-bottom:20px;color:#6b7280;">Complete the accessibility survey for this trail. All fields are optional.</p>';
+      
+      // Render each section
+      Object.entries(ACCESSIBILITY_FIELDS).forEach(([sectionKey, section]) => {
+        html += `
+          <div class="section-header" onclick="toggleAccessSection('${sectionKey}')">
+            <span class="icon">${section.title.split(' ')[0]}</span>
+            <span class="title">${section.title.substring(2)}</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content" id="access-section-${sectionKey}">
+        `;
+        
+        section.fields.forEach(field => {
+          const value = accessData[field.name] || '';
+          html += renderAccessibilityField(field, value);
+        });
+        
+        html += '</div>';
+      });
+      
+      container.innerHTML = html;
+      
+      // Setup event listeners for cards, chips, checkboxes
+      setupAccessibilityListeners();
+    }
+
+    function renderAccessibilityField(field, value) {
+      let html = `<div class="form-field"><label>${field.label}</label>`;
+      
+      switch (field.type) {
+        case 'text':
+          html += `<input type="text" id="access_${field.name}" value="${esc(value)}">`;
+          break;
+        case 'number':
+          html += `<input type="number" id="access_${field.name}" value="${value || 0}" step="${field.step || '1'}">`;
+          break;
+        case 'date':
+          html += `<input type="date" id="access_${field.name}" value="${value}">`;
+          break;
+        case 'textarea':
+          html += `<textarea id="access_${field.name}">${esc(value)}</textarea>`;
+          break;
+        case 'select':
+          html += `<select id="access_${field.name}">${field.options.map(o => `<option value="${o}" ${value === o ? 'selected' : ''}>${o || 'Select...'}</option>`).join('')}</select>`;
+          break;
+        case 'checkbox':
+          html += `<div class="styled-checkbox ${value ? 'checked' : ''}" data-field="${field.name}"><span class="check-box">✓</span><span>${field.label}</span></div>`;
+          break;
+        case 'chips':
+          const selectedChips = Array.isArray(value) ? value : (value ? [value] : []);
+          html += `<div class="chip-grid" data-field="${field.name}" data-multi="${field.multi || false}">${field.options.map(o => `<div class="chip ${selectedChips.includes(o) ? 'selected' : ''}" data-value="${o}">${o}</div>`).join('')}</div>`;
+          break;
+        case 'cards':
+          html += `<div class="card-grid" data-field="${field.name}">${field.options.map(o => `<div class="select-card ${value === o.value ? 'selected' : ''}" data-value="${o.value}"><span class="card-icon">${o.icon}</span><span class="card-label">${o.label}</span></div>`).join('')}</div>`;
+          break;
+      }
+      
+      html += '</div>';
+      return html;
+    }
+
+    window.toggleAccessSection = (sectionKey) => {
+      const header = event.target.closest('.section-header');
+      const content = document.getElementById(`access-section-${sectionKey}`);
+      header.classList.toggle('collapsed');
+      content.classList.toggle('collapsed');
+    };
+
+    function setupAccessibilityListeners() {
+      // Card clicks
+      document.querySelectorAll('#tab-accessibility .select-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const grid = card.closest('.card-grid');
+          grid.querySelectorAll('.select-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+        });
+      });
+      
+      // Chip clicks
+      document.querySelectorAll('#tab-accessibility .chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const grid = chip.closest('.chip-grid');
+          const multi = grid.dataset.multi === 'true';
+          if (!multi) grid.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.toggle('selected');
+        });
+      });
+      
+      // Checkbox clicks
+      document.querySelectorAll('#tab-accessibility .styled-checkbox').forEach(cb => {
+        cb.addEventListener('click', () => cb.classList.toggle('checked'));
+      });
+    }
+
+    // ==================== PHOTOS TAB ====================
+
+    function renderPhotosTab() {
+      const container = document.getElementById('tab-photos');
+      
+      let photos = [];
+      if (currentSection === 'routes' && editingItem.routeData) {
+        photos = editingItem.routeData.filter(p => p.type === 'photo');
+      }
+      
+      let html = '<h4 style="margin-bottom:16px;">📷 Photos</h4>';
+      html += '<div class="photos-grid">';
+      
+      photos.forEach((photo, idx) => {
+        const src = photo.dataUrl || photo.url || '';
+        html += `
+          <div class="photo-card">
+            <img src="${src}" alt="Photo ${idx+1}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
+            <div class="photo-actions">
+              <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `
+        <div class="add-photo-card" onclick="triggerPhotoUpload()">
+          <div class="icon">➕</div>
+          <div class="text">Add Photo</div>
+        </div>
+      `;
+      
+      html += '</div>';
+      
+      // Notes section
+      let notes = [];
+      if (currentSection === 'routes' && editingItem.routeData) {
+        notes = editingItem.routeData.filter(p => p.type === 'text');
+      }
+      
+      html += '<h4 style="margin:24px 0 16px;">📝 Notes</h4>';
+      
+      notes.forEach((note, idx) => {
+        html += `
+          <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;gap:12px;">
+            <textarea style="flex:1;min-height:60px;border:1px solid #e5e7eb;border-radius:6px;padding:8px;" onchange="updateNote(${idx}, this.value)">${esc(note.text || note.content || '')}</textarea>
+            <button class="btn btn-danger btn-sm" onclick="removeNote(${idx})">🗑️</button>
+          </div>
+        `;
+      });
+      
+      html += `<button class="btn btn-secondary" onclick="addNote()" style="margin-top:8px;">➕ Add Note</button>`;
+      
+      container.innerHTML = html;
+    }
+
+    window.triggerPhotoUpload = () => {
+      document.getElementById('photoUploadInput').click();
+    };
+
+    document.getElementById('photoUploadInput').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files.length) return;
+      
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          if (!editingItem.routeData) editingItem.routeData = [];
+          editingItem.routeData.push({
+            type: 'photo',
+            dataUrl: evt.target.result,
+            timestamp: Date.now(),
+            fileName: file.name
+          });
+          renderPhotosTab();
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    });
+
+    window.removePhoto = (idx) => {
+      if (!editingItem.routeData) return;
+      const photos = editingItem.routeData.filter(p => p.type === 'photo');
+      const photoToRemove = photos[idx];
+      editingItem.routeData = editingItem.routeData.filter(p => p !== photoToRemove);
+      renderPhotosTab();
+    };
+
+    window.addNote = () => {
+      if (!editingItem.routeData) editingItem.routeData = [];
+      editingItem.routeData.push({
+        type: 'text',
+        text: '',
+        timestamp: Date.now()
+      });
+      renderPhotosTab();
+    };
+
+    window.updateNote = (idx, value) => {
+      if (!editingItem.routeData) return;
+      const notes = editingItem.routeData.filter(p => p.type === 'text');
+      if (notes[idx]) notes[idx].text = value;
+    };
+
+    window.removeNote = (idx) => {
+      if (!editingItem.routeData) return;
+      const notes = editingItem.routeData.filter(p => p.type === 'text');
+      const noteToRemove = notes[idx];
+      editingItem.routeData = editingItem.routeData.filter(p => p !== noteToRemove);
+      renderPhotosTab();
+    };
+
+    // ==================== JSON TAB ====================
+
+    function renderJsonTab() {
+      const container = document.getElementById('tab-json');
+      container.innerHTML = `
+        <div style="margin-bottom:12px;display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyJson()">📋 Copy JSON</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadJson()">📥 Download</button>
+        </div>
+        <div class="json-preview">${JSON.stringify(editingItem, null, 2)}</div>
+      `;
+    }
+
+    window.copyJson = () => {
+      navigator.clipboard.writeText(JSON.stringify(editingItem, null, 2));
+      showToast('Copied to clipboard', 'success');
+    };
+
+    window.downloadJson = () => {
+      const blob = new Blob([JSON.stringify(editingItem, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentSection}-${editingItem.id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // ==================== SAVE ====================
+
     window.saveCurrentItem = async () => {
       if (!editingItem || !editingCollection) return;
       
       try {
-        const updates = { updatedAt: Timestamp.now() };
+        // Collect updates from Details tab
+        const updates = { updatedAt: Timestamp.now(), updatedBy: currentUser.uid };
         
-        // Gather updates based on section
-        switch (currentSection) {
-          case 'routes':
-            updates.name = document.getElementById('editName')?.value || '';
-            updates.totalDistance = parseFloat(document.getElementById('editDistance')?.value) || 0;
-            updates.description = document.getElementById('editDescription')?.value || '';
-            break;
-            
-          case 'guides':
-            updates.title = document.getElementById('editTitle')?.value || '';
-            updates.trailName = document.getElementById('editTrailName')?.value || '';
-            updates.country = document.getElementById('editCountry')?.value || '';
-            updates.region = document.getElementById('editRegion')?.value || '';
-            updates.municipality = document.getElementById('editMunicipality')?.value || '';
-            updates.isPublic = document.getElementById('editPublic')?.value === 'true';
-            updates.description = document.getElementById('editDescription')?.value || '';
-            break;
-            
-          case 'conditions':
-            updates.trailName = document.getElementById('editTrailName')?.value || '';
-            updates.locationName = document.getElementById('editLocationName')?.value || '';
-            updates.notes = document.getElementById('editNotes')?.value || '';
-            // Parse conditions back to array
-            const condStr = document.getElementById('editConditions')?.value || '';
-            if (condStr) {
-              updates.conditions = condStr.split(',').map(c => c.trim()).filter(Boolean);
-            }
-            break;
-            
-          case 'reports':
-            updates.locationName = document.getElementById('editLocationName')?.value || '';
-            updates.trailName = document.getElementById('editTrailName')?.value || '';
-            updates.reportType = document.getElementById('editReportType')?.value || '';
-            updates.accessibilityRating = parseFloat(document.getElementById('editRating')?.value) || 0;
-            updates.country = document.getElementById('editCountry')?.value || '';
-            updates.isPublic = document.getElementById('editPublic')?.value === 'true';
-            updates.description = document.getElementById('editDescription')?.value || '';
-            break;
+        // Basic fields
+        ['routeName', 'name', 'title', 'trailName', 'locationName', 'reportType', 'description', 'notes'].forEach(field => {
+          const el = document.getElementById(`edit_${field}`);
+          if (el) updates[field] = el.value;
+        });
+        
+        // Number fields
+        ['totalDistance', 'accessibilityRating'].forEach(field => {
+          const el = document.getElementById(`edit_${field}`);
+          if (el) updates[field] = parseFloat(el.value) || 0;
+        });
+        
+        // Boolean fields
+        const isPublicEl = document.getElementById('edit_isPublic');
+        if (isPublicEl) updates.isPublic = isPublicEl.value === 'true';
+        
+        // Collect accessibility data
+        if (currentSection === 'routes' || currentSection === 'guides') {
+          const accessData = collectAccessibilityData();
+          if (currentSection === 'routes') {
+            updates.accessibilityData = accessData;
+          } else {
+            updates.accessibility = accessData;
+          }
+        }
+        
+        // Route data (photos, notes)
+        if (currentSection === 'routes' && editingItem.routeData) {
+          updates.routeData = editingItem.routeData;
+          updates.stats = {
+            locationPoints: editingItem.routeData.filter(p => p.type === 'location').length,
+            photos: editingItem.routeData.filter(p => p.type === 'photo').length,
+            notes: editingItem.routeData.filter(p => p.type === 'text').length,
+            totalDataPoints: editingItem.routeData.length
+          };
         }
         
         // Save to Firestore
@@ -1463,13 +1906,11 @@
         
         // Update cache
         const cacheItem = cache[currentSection].find(i => i.id === editingItem.id);
-        if (cacheItem) {
-          Object.assign(cacheItem, updates);
-        }
+        if (cacheItem) Object.assign(cacheItem, updates);
         
         closeEditModal();
         renderCurrentSection();
-        showToast('Item saved to cloud successfully', 'success');
+        showToast('Saved to cloud successfully!', 'success');
         
       } catch (error) {
         console.error('Save error:', error);
@@ -1477,104 +1918,107 @@
       }
     };
 
+    function collectAccessibilityData() {
+      const data = {};
+      
+      // Text, number, date, textarea, select inputs
+      document.querySelectorAll('#tab-accessibility input, #tab-accessibility textarea, #tab-accessibility select').forEach(el => {
+        if (el.id.startsWith('access_')) {
+          const field = el.id.replace('access_', '');
+          data[field] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+        }
+      });
+      
+      // Cards (single select)
+      document.querySelectorAll('#tab-accessibility .card-grid').forEach(grid => {
+        const field = grid.dataset.field;
+        const selected = grid.querySelector('.select-card.selected');
+        if (selected) data[field] = selected.dataset.value;
+      });
+      
+      // Chips
+      document.querySelectorAll('#tab-accessibility .chip-grid').forEach(grid => {
+        const field = grid.dataset.field;
+        const multi = grid.dataset.multi === 'true';
+        const selected = [...grid.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
+        data[field] = multi ? selected : (selected[0] || '');
+      });
+      
+      // Checkboxes
+      document.querySelectorAll('#tab-accessibility .styled-checkbox').forEach(cb => {
+        const field = cb.dataset.field;
+        data[field] = cb.classList.contains('checked');
+      });
+      
+      return data;
+    }
+
     // ==================== DELETE ====================
 
     window.promptDelete = (section, id) => {
       const item = cache[section].find(i => i.id === id);
       if (!item) return;
+      editingItem = item;
+      editingCollection = COLLECTIONS[section];
+      currentSection = section;
       
-      deletingItem = item;
-      deletingCollection = COLLECTIONS[section];
-      
-      const name = item.name || item.title || item.trailName || item.locationName || 'this item';
-      document.getElementById('deleteMessage').innerHTML = `
-        Are you sure you want to delete <strong>"${escapeHtml(name)}"</strong>?<br><br>
-        This action cannot be undone.
-      `;
-      
+      document.getElementById('deleteMessage').innerHTML = `Delete "<strong>${esc(item.routeName || item.name || item.title || item.trailName || 'this item')}</strong>"?<br><br>This cannot be undone.`;
       document.getElementById('deleteModal').classList.add('active');
     };
 
     window.closeDeleteModal = () => {
       document.getElementById('deleteModal').classList.remove('active');
-      deletingItem = null;
-      deletingCollection = null;
-    };
-
-    window.confirmDelete = async () => {
-      if (!deletingItem || !deletingCollection) return;
-      
-      try {
-        const docRef = doc(db, deletingCollection, deletingItem.id);
-        await deleteDoc(docRef);
-        
-        // Remove from cache
-        const index = cache[currentSection].findIndex(i => i.id === deletingItem.id);
-        if (index > -1) {
-          cache[currentSection].splice(index, 1);
-        }
-        
-        closeDeleteModal();
-        closeEditModal(); // In case delete was triggered from edit modal
-        updateAllCounts();
-        renderCurrentSection();
-        showToast('Item deleted successfully', 'success');
-        
-      } catch (error) {
-        console.error('Delete error:', error);
-        showToast('Failed to delete: ' + error.message, 'error');
-      }
     };
 
     window.deleteCurrentItem = () => {
       if (!editingItem) return;
-      deletingItem = editingItem;
-      deletingCollection = editingCollection;
-      
-      const name = editingItem.name || editingItem.title || editingItem.trailName || 'this item';
-      document.getElementById('deleteMessage').innerHTML = `
-        Are you sure you want to delete <strong>"${escapeHtml(name)}"</strong>?<br><br>
-        This action cannot be undone.
-      `;
-      
+      document.getElementById('deleteMessage').innerHTML = `Delete "<strong>${esc(editingItem.routeName || editingItem.name || editingItem.title || 'this item')}</strong>"?<br><br>This cannot be undone.`;
       document.getElementById('deleteModal').classList.add('active');
+    };
+
+    window.confirmDelete = async () => {
+      if (!editingItem || !editingCollection) return;
+      
+      try {
+        await deleteDoc(doc(db, editingCollection, editingItem.id));
+        
+        const idx = cache[currentSection].findIndex(i => i.id === editingItem.id);
+        if (idx > -1) cache[currentSection].splice(idx, 1);
+        
+        closeDeleteModal();
+        closeEditModal();
+        updateAllCounts();
+        renderCurrentSection();
+        showToast('Deleted successfully', 'success');
+      } catch (error) {
+        showToast('Failed to delete: ' + error.message, 'error');
+      }
     };
 
     // ==================== EXPORT ====================
 
     window.exportSection = (section) => {
       const data = getFilteredData(section);
-      if (data.length === 0) {
-        showToast('No data to export', 'warning');
-        return;
-      }
+      if (!data.length) { showToast('No data to export', 'info'); return; }
       
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      
       const a = document.createElement('a');
       a.href = url;
       a.download = `access-nature-${section}-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      showToast(`Exported ${data.length} ${section}`, 'success');
+      showToast(`Exported ${data.length} items`, 'success');
     };
 
     // ==================== TOAST ====================
 
     function showToast(message, type = 'info') {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
+      document.querySelectorAll('.toast').forEach(t => t.remove());
       const toast = document.createElement('div');
       toast.className = `toast ${type}`;
       toast.textContent = message;
       document.body.appendChild(toast);
-      
       setTimeout(() => toast.remove(), 3000);
     }
   </script>
