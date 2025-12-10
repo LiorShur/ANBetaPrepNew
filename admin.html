@@ -481,7 +481,7 @@
     
     // Firebase config (same as main app)
     const firebaseConfig = {
-      apiKey: "AIzaSyDMnMVWBR2MxhG9IF_FD4xaHtOZ4-aJq1Y",
+      apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
       authDomain: "access-nature-1a7b2.firebaseapp.com",
       projectId: "access-nature-1a7b2",
       storageBucket: "access-nature-1a7b2.appspot.com",
@@ -526,10 +526,26 @@
       return getSettings().adminEmails || DEFAULT_SETTINGS.adminEmails;
     }
     
+    // Hardcoded owner email - always has admin access (cannot be removed via settings)
+    const OWNER_EMAIL = 'liorshur@gmail.com';
+    
     // Admin user IDs (add your UID here)
     const ADMIN_UIDS = [
       // Add admin UIDs here
     ];
+    
+    // Check if user is admin
+    function isAdmin(user) {
+      if (!user) return false;
+      const email = user.email?.toLowerCase();
+      // Owner always has access
+      if (email === OWNER_EMAIL) return true;
+      // Check UIDs
+      if (ADMIN_UIDS.includes(user.uid)) return true;
+      // Check settings-based admin emails
+      const adminEmails = getAdminEmails();
+      return adminEmails.includes(email);
+    }
     
     let currentUser = null;
     let pendingUploads = [];
@@ -582,10 +598,9 @@
         
         // Re-check admin status
         if (currentUser) {
-          const isAdmin = ADMIN_UIDS.includes(currentUser.uid) || 
-                         settings.adminEmails.includes(currentUser.email?.toLowerCase());
+          const userIsAdmin = isAdmin(currentUser);
           document.getElementById('authText').textContent = 
-            `Signed in as ${currentUser.displayName || currentUser.email}${isAdmin ? ' (Admin)' : ''}`;
+            `Signed in as ${currentUser.displayName || currentUser.email}${userIsAdmin ? ' (Admin)' : ''}`;
         }
       } catch (e) {
         showSettingsStatus('error', 'Failed to save settings: ' + e.message);
@@ -709,15 +724,14 @@
       const loginForm = document.getElementById('loginForm');
       
       if (user) {
-        const adminEmails = getAdminEmails();
-        const isAdmin = ADMIN_UIDS.includes(user.uid) || adminEmails.includes(user.email?.toLowerCase());
+        const userIsAdmin = isAdmin(user);
         
         statusEl.classList.add('signed-in');
-        textEl.textContent = `Signed in as ${user.displayName || user.email}${isAdmin ? ' (Admin)' : ''}`;
+        textEl.textContent = `Signed in as ${user.displayName || user.email}${userIsAdmin ? ' (Admin)' : ''}`;
         signOutBtn.style.display = 'block';
         loginForm.style.display = 'none';
         
-        if (!isAdmin) {
+        if (!userIsAdmin) {
           showStatus('warning', 'You are not an admin. Some features may be restricted.');
         }
       } else {
