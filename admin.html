@@ -410,6 +410,12 @@
           <div class="label">Back to App</div>
           <div class="desc">Return to tracker</div>
         </div>
+        
+        <div class="admin-action-btn" onclick="resetFirestoreConnection()">
+          <div class="icon">🔄</div>
+          <div class="label">Reset Connection</div>
+          <div class="desc">Fix offline mode issues</div>
+        </div>
       </div>
     </div>
     
@@ -477,16 +483,17 @@
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     
-    // Firebase config (same as main app)
+    // Firebase config (same as main app - accessnaturebeta)
     const firebaseConfig = {
       apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
-      authDomain: "access-nature-1a7b2.firebaseapp.com",
-      projectId: "access-nature-1a7b2",
-      storageBucket: "access-nature-1a7b2.appspot.com",
-      messagingSenderId: "571935887857",
-      appId: "1:571935887857:web:39ebb0e7c8e29d87af8f4a"
+      authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+      projectId: "accessnaturebeta-821a2",
+      storageBucket: "accessnaturebeta-821a2.appspot.com",
+      messagingSenderId: "670888101781",
+      appId: "1:670888101781:web:b4cf57f58e86182466589c",
+      measurementId: "G-QL82J92CP7"
     };
     
     // Initialize Firebase
@@ -1083,6 +1090,34 @@
     
     window.goToTracker = () => {
       window.location.href = 'tracker.html';
+    };
+    
+    window.resetFirestoreConnection = async () => {
+      console.log('🔄 Resetting Firestore connection...');
+      
+      try {
+        // Disable network to clear pending operations
+        await disableNetwork(db);
+        console.log('📴 Network disabled');
+        
+        // Wait a moment
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Re-enable network
+        await enableNetwork(db);
+        console.log('🌐 Network re-enabled');
+        
+        alert('Connection reset! Try the queries again.');
+      } catch (error) {
+        console.error('Reset failed:', error);
+        
+        // If that fails, try clearing IndexedDB
+        const dbNames = await indexedDB.databases?.() || [];
+        console.log('IndexedDB databases:', dbNames);
+        
+        alert('Connection reset attempted. Please refresh the page and try again.');
+        location.reload();
+      }
     };
   </script>
 </body>
