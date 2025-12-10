@@ -3,489 +3,708 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Access Nature - Admin</title>
-  
+  <title>Access Nature - Admin Dashboard</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f3f4f6;
       min-height: 100vh;
-      padding: 20px;
     }
     
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    
-    header {
-      background: linear-gradient(135deg, #2c5530, #4a7c59);
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3a2f, #2c5530);
       color: white;
-      padding: 24px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .header h1 { font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .user-info { font-size: 0.85em; opacity: 0.9; }
+    .admin-badge { background: #fbbf24; color: #1e3a2f; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 700; }
+    
+    .header-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.25); }
+    
+    /* Container */
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    
+    /* Login */
+    .login-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e3a2f, #2c5530);
+    }
+    
+    .login-card {
+      background: white;
       border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .login-card h2 { text-align: center; color: #1e3a2f; margin-bottom: 8px; }
+    .login-subtitle { text-align: center; color: #6b7280; margin-bottom: 24px; font-size: 0.9em; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.9em; }
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: #2c5530; }
+    
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #2c5530;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #3d6b41; }
+    .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    
+    .login-error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 0.9em;
+      display: none;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
       margin-bottom: 24px;
-      text-align: center;
     }
     
-    header h1 {
-      font-size: 1.5em;
-      margin-bottom: 8px;
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+    
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 3px solid transparent;
+      position: relative;
+      overflow: hidden;
     }
     
-    header p {
-      opacity: 0.9;
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #e5e7eb;
+      transition: background 0.2s;
+    }
+    
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .stat-card.active { border-color: #2c5530; }
+    .stat-card.active::before { background: #2c5530; }
+    
+    .stat-card .icon { font-size: 36px; margin-bottom: 8px; }
+    .stat-card .count { font-size: 2.2em; font-weight: 700; color: #1f2937; }
+    .stat-card .label { color: #6b7280; font-size: 0.95em; margin-top: 4px; }
+    
+    /* Filters Card */
+    .filters-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .filters-title { font-weight: 600; margin-bottom: 16px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    
+    .filter-group label { display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px; font-weight: 500; }
+    .filter-group input, .filter-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
       font-size: 0.9em;
     }
     
-    .card {
+    .filter-buttons { display: flex; gap: 8px; }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary { background: #2c5530; color: white; }
+    .btn-primary:hover { background: #3d6b41; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-warning:hover { background: #d97706; }
+    
+    /* Data Card */
+    .data-card {
       background: white;
       border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      overflow: hidden;
     }
     
-    .card h2 {
-      font-size: 1.1em;
-      color: #374151;
-      margin-bottom: 16px;
+    .data-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
       display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .auth-status {
-      display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .data-header h3 { font-size: 1.1em; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+    .data-header .count-badge { background: #e5e7eb; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; color: #6b7280; }
+    
+    .data-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    
+    /* Table */
+    .table-container { overflow-x: auto; }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+    
+    .data-table th {
+      text-align: left;
       padding: 12px 16px;
       background: #f9fafb;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .auth-status.signed-in {
-      background: #dcfce7;
-    }
-    
-    .upload-zone {
-      border: 2px dashed #d1d5db;
-      border-radius: 12px;
-      padding: 40px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .upload-zone:hover, .upload-zone.dragover {
-      border-color: #3b82f6;
-      background: #eff6ff;
-    }
-    
-    .upload-zone input {
-      display: none;
-    }
-    
-    .upload-zone .icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-    
-    .upload-zone p {
+      font-size: 0.8em;
       color: #6b7280;
-    }
-    
-    .upload-zone .hint {
-      font-size: 0.85em;
-      color: #9ca3af;
-      margin-top: 8px;
-    }
-    
-    .preview-list {
-      margin-top: 20px;
-    }
-    
-    .preview-item {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-    
-    .preview-item.route {
-      border-left: 4px solid #3b82f6;
-    }
-    
-    .preview-item.guide {
-      border-left: 4px solid #10b981;
-    }
-    
-    .preview-item h3 {
-      font-size: 1em;
-      margin-bottom: 8px;
-    }
-    
-    .preview-item .meta {
-      font-size: 0.85em;
-      color: #6b7280;
-      margin-bottom: 12px;
-    }
-    
-    .preview-item .actions {
-      display: flex;
-      gap: 8px;
-    }
-    
-    button {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 8px;
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e5e7eb;
+      white-space: nowrap;
+    }
+    
+    .data-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.9em;
+      vertical-align: middle;
+    }
+    
+    .data-table tr:hover { background: #f9fafb; }
+    
+    .data-table .truncate {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .action-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s;
+      font-size: 0.8em;
+      margin-right: 4px;
+      transition: opacity 0.2s;
     }
     
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .action-btn:hover { opacity: 0.8; }
+    .action-btn.view { background: #dbeafe; color: #1e40af; }
+    .action-btn.edit { background: #fef3c7; color: #92400e; }
+    .action-btn.delete { background: #fee2e2; color: #991b1b; }
+    
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 600;
     }
     
-    .btn-primary {
-      background: #3b82f6;
-      color: white;
+    .tag-public { background: #d1fae5; color: #065f46; }
+    .tag-private { background: #fee2e2; color: #991b1b; }
+    .tag-condition { background: #fef3c7; color: #92400e; }
+    
+    /* Owner Cell */
+    .owner-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
     
-    .btn-primary:hover:not(:disabled) {
-      background: #2563eb;
+    .owner-name {
+      font-weight: 600;
+      color: #1f2937;
     }
     
-    .btn-success {
-      background: #10b981;
-      color: white;
+    .owner-email {
+      font-size: 0.8em;
+      color: #6b7280;
     }
     
-    .btn-success:hover:not(:disabled) {
-      background: #059669;
+    .owner-id {
+      font-size: 0.7em;
+      color: #9ca3af;
+      font-family: monospace;
     }
     
-    .btn-secondary {
-      background: #6b7280;
-      color: white;
+    /* Empty State */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #6b7280;
     }
     
-    .btn-danger {
-      background: #ef4444;
-      color: white;
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state p { font-size: 1.1em; }
+    
+    /* Loading */
+    .loading { padding: 40px; text-align: center; color: #6b7280; }
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2c5530;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
     
-    .status-message {
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-top: 16px;
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
       display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      backdrop-filter: blur(4px);
     }
     
-    .status-message.success {
-      display: block;
-      background: #dcfce7;
-      color: #166534;
+    .modal-overlay.active { display: flex; }
+    
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     
-    .status-message.error {
-      display: block;
-      background: #fee2e2;
-      color: #991b1b;
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9fafb;
     }
     
-    .status-message.info {
-      display: block;
-      background: #dbeafe;
-      color: #1e40af;
+    .modal-header h3 { font-size: 1.2em; display: flex; align-items: center; gap: 10px; }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #6b7280;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #1f2937; }
+    
+    .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+    
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: #f9fafb;
     }
     
+    /* Form Fields */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+    
+    .form-field { margin-bottom: 16px; }
+    .form-field label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; }
+    .form-field input, .form-field textarea, .form-field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+    .form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+      outline: none;
+      border-color: #2c5530;
+    }
+    .form-field textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+    .form-field .help-text { font-size: 0.8em; color: #6b7280; margin-top: 4px; }
+    
+    /* JSON View */
     .json-preview {
       background: #1f2937;
       color: #10b981;
-      padding: 12px;
+      padding: 16px;
       border-radius: 8px;
-      font-family: monospace;
+      font-family: 'Monaco', 'Consolas', monospace;
       font-size: 0.8em;
-      max-height: 200px;
+      max-height: 400px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
-      margin-top: 12px;
-      display: none;
     }
     
-    .json-preview.visible {
-      display: block;
-    }
-    
-    .text-paste {
-      width: 100%;
-      height: 200px;
-      padding: 12px;
-      border: 1px solid #d1d5db;
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 24px;
       border-radius: 8px;
-      font-family: monospace;
-      font-size: 0.85em;
-      resize: vertical;
+      color: white;
+      font-weight: 500;
+      z-index: 1001;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
     
-    .section-divider {
-      text-align: center;
-      color: #9ca3af;
-      margin: 20px 0;
-      position: relative;
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
+    .toast.info { background: #3b82f6; }
+    .toast.warning { background: #f59e0b; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
     
-    .section-divider::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      width: 45%;
-      height: 1px;
-      background: #e5e7eb;
-    }
+    /* Section visibility */
+    .section { display: none; }
+    .section.active { display: block; }
     
-    .section-divider::after {
-      content: '';
-      position: absolute;
-      right: 0;
-      top: 50%;
-      width: 45%;
-      height: 1px;
-      background: #e5e7eb;
-    }
-    
-    .admin-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    /* Pagination */
+    .pagination {
+      padding: 16px 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 12px;
-      margin-top: 16px;
     }
     
-    .admin-action-btn {
-      padding: 16px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
+    .pagination-info { color: #6b7280; font-size: 0.9em; }
+    
+    /* Bulk Actions */
+    .bulk-bar {
+      background: #1e3a2f;
+      color: white;
+      padding: 12px 20px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
     }
     
-    .admin-action-btn:hover {
-      background: #f3f4f6;
-      border-color: #d1d5db;
-    }
-    
-    .admin-action-btn .icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-    
-    .admin-action-btn .label {
-      font-weight: 600;
-      color: #374151;
-    }
-    
-    .admin-action-btn .desc {
-      font-size: 0.8em;
-      color: #6b7280;
-      margin-top: 4px;
-    }
-    
-    @media (max-width: 600px) {
-      body {
-        padding: 12px;
-      }
-      
-      .card {
-        padding: 16px;
-      }
-    }
+    .bulk-bar.active { display: flex; }
+    .bulk-count { font-weight: 600; }
+    .bulk-actions { display: flex; gap: 8px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>🔐 Access Nature Admin</h1>
-      <p>Upload routes and trail guides from email backups</p>
-    </header>
-    
-    <!-- Auth Status -->
-    <div class="card" id="authCard">
-      <div class="auth-status" id="authStatus">
-        <span id="authText">Checking authentication...</span>
-        <button id="signOutBtn" class="btn-secondary" style="display: none;">Sign Out</button>
+  <!-- Login Section -->
+  <div class="login-section" id="loginSection">
+    <div class="login-card">
+      <h2>🔐 Admin Dashboard</h2>
+      <p class="login-subtitle">Access Nature Management Console</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="admin@example.com">
       </div>
-      
-      <!-- Login Form (shown when not logged in) -->
-      <div id="loginForm" style="display: none; margin-top: 16px;">
-        <h3 style="margin: 0 0 16px; font-size: 1.1em;">Sign In to Admin</h3>
-        
-        <div style="margin-bottom: 12px;">
-          <input type="email" id="loginEmail" placeholder="Email address" 
-                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1em;">
-        </div>
-        
-        <div style="margin-bottom: 16px;">
-          <input type="password" id="loginPassword" placeholder="Password" 
-                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1em;">
-        </div>
-        
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <button id="emailSignInBtn" class="btn-primary" style="flex: 1; min-width: 140px;">
-            📧 Sign In with Email
-          </button>
-          <button id="googleSignInBtn" class="btn-secondary" style="flex: 1; min-width: 140px;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                 style="width: 18px; height: 18px; vertical-align: middle; margin-right: 8px;">
-            Google
-          </button>
-        </div>
-        
-        <div id="loginError" style="display: none; margin-top: 12px; padding: 10px; 
-             background: #fee2e2; color: #991b1b; border-radius: 6px; font-size: 0.9em;"></div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
       </div>
-    </div>
-    
-    <!-- Upload Section -->
-    <div class="card">
-      <h2>📤 Upload Backup Data</h2>
-      
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept=".json" multiple>
-        <div class="icon">📁</div>
-        <p>Drop JSON files here or click to browse</p>
-        <p class="hint">Supports route and trail guide backup files</p>
-      </div>
-      
-      <div class="section-divider">or</div>
-      
-      <h3 style="font-size: 0.95em; margin-bottom: 12px; color: #374151;">Paste JSON Data</h3>
-      <textarea class="text-paste" id="jsonPaste" placeholder="Paste JSON data from email..."></textarea>
-      <button class="btn-secondary" id="parseJsonBtn" style="margin-top: 12px;">Parse JSON</button>
-      
-      <div class="preview-list" id="previewList"></div>
-      
-      <div class="status-message" id="statusMessage"></div>
-    </div>
-    
-    <!-- Admin Actions -->
-    <div class="card">
-      <h2>⚙️ Admin Actions</h2>
-      
-      <div class="admin-actions">
-        <div class="admin-action-btn" onclick="viewAllRoutes()">
-          <div class="icon">🗺️</div>
-          <div class="label">View Routes</div>
-          <div class="desc">Browse all cloud routes</div>
-        </div>
-        
-        <div class="admin-action-btn" onclick="viewAllGuides()">
-          <div class="icon">📚</div>
-          <div class="label">View Guides</div>
-          <div class="desc">Browse all trail guides</div>
-        </div>
-        
-        <div class="admin-action-btn" onclick="viewConditions()">
-          <div class="icon">🚧</div>
-          <div class="label">Trail Conditions</div>
-          <div class="desc">Manage condition reports</div>
-        </div>
-        
-        <div class="admin-action-btn" onclick="goToTracker()">
-          <div class="icon">🏠</div>
-          <div class="label">Back to App</div>
-          <div class="desc">Return to tracker</div>
-        </div>
-        
-        <div class="admin-action-btn" onclick="resetFirestoreConnection()">
-          <div class="icon">🔄</div>
-          <div class="label">Reset Connection</div>
-          <div class="desc">Fix offline mode issues</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Settings -->
-    <div class="card">
-      <h2>⚙️ Admin Settings</h2>
-      
-      <div style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">
-          Admin Email Addresses
-        </label>
-        <p style="font-size: 0.85em; color: #6b7280; margin-bottom: 12px;">
-          Users with these emails will have admin access. One email per line.
-        </p>
-        <textarea id="adminEmailsInput" 
-                  style="width: 100%; height: 100px; padding: 12px; border: 1px solid #d1d5db; 
-                         border-radius: 8px; font-family: monospace; font-size: 0.9em; resize: vertical;"
-                  placeholder="admin@example.com"></textarea>
-      </div>
-      
-      <div style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">
-          Email Backup Recipient
-        </label>
-        <p style="font-size: 0.85em; color: #6b7280; margin-bottom: 12px;">
-          Email address to receive route/guide backups (requires EmailJS setup)
-        </p>
-        <input type="email" id="backupEmailInput" 
-               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; 
-                      border-radius: 8px; font-size: 0.9em;"
-               placeholder="backup@example.com">
-      </div>
-      
-      <div style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">
-          EmailJS Configuration (optional)
-        </label>
-        <p style="font-size: 0.85em; color: #6b7280; margin-bottom: 12px;">
-          For automatic email backups. Get credentials at <a href="https://www.emailjs.com" target="_blank">emailjs.com</a>
-        </p>
-        <div style="display: grid; gap: 12px;">
-          <input type="text" id="emailjsServiceId" 
-                 style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9em;"
-                 placeholder="Service ID (e.g., service_xxxxx)">
-          <input type="text" id="emailjsTemplateId" 
-                 style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9em;"
-                 placeholder="Template ID (e.g., template_xxxxx)">
-          <input type="text" id="emailjsPublicKey" 
-                 style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9em;"
-                 placeholder="Public Key">
-        </div>
-      </div>
-      
-      <div style="display: flex; gap: 12px;">
-        <button class="btn-success" onclick="saveSettings()">💾 Save Settings</button>
-        <button class="btn-secondary" onclick="loadSettings()">🔄 Reset</button>
-        <button class="btn-danger" onclick="clearSettings()">🗑️ Clear All</button>
-      </div>
-      
-      <div class="status-message" id="settingsStatus"></div>
+      <button class="login-btn" id="loginBtn">Sign In</button>
+      <div class="login-error" id="loginError"></div>
     </div>
   </div>
-  
-  <!-- Firebase -->
+
+  <!-- Main App -->
+  <div id="mainApp" style="display: none;">
+    <!-- Header -->
+    <div class="header">
+      <h1>🌲 Access Nature <span class="admin-badge">ADMIN</span></h1>
+      <div class="header-actions">
+        <span class="user-info" id="userInfo"></span>
+        <button class="header-btn" onclick="window.location.href='tracker.html'">🗺️ Tracker</button>
+        <button class="header-btn" onclick="signOutUser()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card active" data-section="routes" onclick="switchSection('routes')">
+          <div class="icon">🗺️</div>
+          <div class="count" id="routesCount">-</div>
+          <div class="label">Routes</div>
+        </div>
+        <div class="stat-card" data-section="guides" onclick="switchSection('guides')">
+          <div class="icon">📚</div>
+          <div class="count" id="guidesCount">-</div>
+          <div class="label">Trail Guides</div>
+        </div>
+        <div class="stat-card" data-section="conditions" onclick="switchSection('conditions')">
+          <div class="icon">🚧</div>
+          <div class="count" id="conditionsCount">-</div>
+          <div class="label">Trail Conditions</div>
+        </div>
+        <div class="stat-card" data-section="reports" onclick="switchSection('reports')">
+          <div class="icon">♿</div>
+          <div class="count" id="reportsCount">-</div>
+          <div class="label">Accessibility Reports</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-card">
+        <div class="filters-title">🔍 Search & Filter</div>
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="filterSearch" placeholder="Name, trail, location...">
+          </div>
+          <div class="filter-group">
+            <label>Date From</label>
+            <input type="date" id="filterDateFrom">
+          </div>
+          <div class="filter-group">
+            <label>Date To</label>
+            <input type="date" id="filterDateTo">
+          </div>
+          <div class="filter-group">
+            <label>Owner</label>
+            <select id="filterOwner">
+              <option value="all">All Users</option>
+              <option value="mine">My Items</option>
+            </select>
+          </div>
+          <div class="filter-group" id="filterLocationGroup">
+            <label>Location</label>
+            <input type="text" id="filterLocation" placeholder="Country, region...">
+          </div>
+          <div class="filter-group" id="filterPublicGroup">
+            <label>Visibility</label>
+            <select id="filterPublic">
+              <option value="all">All</option>
+              <option value="public">Public Only</option>
+              <option value="private">Private Only</option>
+            </select>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
+            <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Routes Section -->
+      <div class="section active" id="routesSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>🗺️ Routes <span class="count-badge" id="routesFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary" onclick="exportSection('routes')">📥 Export</button>
+              <button class="btn btn-primary" onclick="refreshSection('routes')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="routesTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading routes...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guides Section -->
+      <div class="section" id="guidesSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>📚 Trail Guides <span class="count-badge" id="guidesFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary" onclick="exportSection('guides')">📥 Export</button>
+              <button class="btn btn-primary" onclick="refreshSection('guides')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="guidesTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading guides...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conditions Section -->
+      <div class="section" id="conditionsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>🚧 Trail Conditions <span class="count-badge" id="conditionsFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary" onclick="exportSection('conditions')">📥 Export</button>
+              <button class="btn btn-primary" onclick="refreshSection('conditions')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="conditionsTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading conditions...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Section -->
+      <div class="section" id="reportsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>♿ Accessibility Reports <span class="count-badge" id="reportsFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary" onclick="exportSection('reports')">📥 Export</button>
+              <button class="btn btn-primary" onclick="refreshSection('reports')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="reportsTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading reports...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Modal -->
+  <div class="modal-overlay" id="viewModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>👁️ <span id="viewModalTitle">View Item</span></h3>
+        <button class="modal-close" onclick="closeViewModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="json-preview" id="viewJsonContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+        <button class="btn btn-primary" onclick="copyViewJson()">📋 Copy JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>✏️ <span id="editModalTitle">Edit Item</span></h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="editModalBody">
+        <!-- Dynamic form -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="deleteCurrentItem()">🗑️ Delete</button>
+        <button class="btn btn-primary" onclick="saveCurrentItem()">💾 Save to Cloud</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3>⚠️ Confirm Delete</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase & App Logic -->
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
-    
-    // Firebase config (same as main app - accessnaturebeta)
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { getFirestore, collection, doc, getDocs, updateDoc, deleteDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+
+    // Firebase config (accessnaturebeta)
     const firebaseConfig = {
       apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
       authDomain: "accessnaturebeta-821a2.firebaseapp.com",
@@ -495,630 +714,869 @@
       appId: "1:670888101781:web:b4cf57f58e86182466589c",
       measurementId: "G-QL82J92CP7"
     };
-    
-    // Initialize Firebase
+
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    
-    // Settings storage key
-    const SETTINGS_KEY = 'accessNature_adminSettings';
-    
-    // Default settings
-    const DEFAULT_SETTINGS = {
-      adminEmails: ['liorshur@gmail.com'],
-      backupEmail: 'liorshur@gmail.com',
-      emailjs: {
-        serviceId: '',
-        templateId: '',
-        publicKey: ''
-      }
-    };
-    
-    // Load settings from localStorage
-    function getSettings() {
-      try {
-        const saved = localStorage.getItem(SETTINGS_KEY);
-        if (saved) {
-          return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-        }
-      } catch (e) {
-        console.warn('Failed to load settings:', e);
-      }
-      return DEFAULT_SETTINGS;
-    }
-    
-    // Get admin emails (dynamic)
-    function getAdminEmails() {
-      return getSettings().adminEmails || DEFAULT_SETTINGS.adminEmails;
-    }
-    
-    // Hardcoded owner email - always has admin access (cannot be removed via settings)
-    const OWNER_EMAIL = 'liorshur@gmail.com';
-    
-    // Admin user IDs (add your UID here)
-    const ADMIN_UIDS = [
-      // Add admin UIDs here
-    ];
-    
-    // Check if user is admin
-    function isAdmin(user) {
-      if (!user) return false;
-      const email = user.email?.toLowerCase();
-      // Owner always has access
-      if (email === OWNER_EMAIL) return true;
-      // Check UIDs
-      if (ADMIN_UIDS.includes(user.uid)) return true;
-      // Check settings-based admin emails
-      const adminEmails = getAdminEmails();
-      return adminEmails.includes(email);
-    }
-    
+
+    // Admin config
+    const ADMIN_EMAIL = 'liorshur@gmail.com';
+
+    // State
     let currentUser = null;
-    let pendingUploads = [];
-    
-    // Load settings into form on page load
-    function loadSettings() {
-      const settings = getSettings();
-      
-      document.getElementById('adminEmailsInput').value = settings.adminEmails.join('\n');
-      document.getElementById('backupEmailInput').value = settings.backupEmail || '';
-      document.getElementById('emailjsServiceId').value = settings.emailjs?.serviceId || '';
-      document.getElementById('emailjsTemplateId').value = settings.emailjs?.templateId || '';
-      document.getElementById('emailjsPublicKey').value = settings.emailjs?.publicKey || '';
-      
-      showSettingsStatus('info', 'Settings loaded');
-    }
-    
-    // Save settings
-    window.saveSettings = function() {
-      const adminEmailsRaw = document.getElementById('adminEmailsInput').value;
-      const adminEmails = adminEmailsRaw
-        .split('\n')
-        .map(e => e.trim().toLowerCase())
-        .filter(e => e && e.includes('@'));
-      
-      if (adminEmails.length === 0) {
-        showSettingsStatus('error', 'Please enter at least one admin email');
-        return;
-      }
-      
-      const settings = {
-        adminEmails,
-        backupEmail: document.getElementById('backupEmailInput').value.trim(),
-        emailjs: {
-          serviceId: document.getElementById('emailjsServiceId').value.trim(),
-          templateId: document.getElementById('emailjsTemplateId').value.trim(),
-          publicKey: document.getElementById('emailjsPublicKey').value.trim()
-        }
-      };
-      
-      try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        
-        // Also update offlineSync settings if it exists
-        if (window.opener && window.opener.offlineSync) {
-          // Update parent window
-        }
-        
-        showSettingsStatus('success', 'Settings saved successfully!');
-        
-        // Re-check admin status
-        if (currentUser) {
-          const userIsAdmin = isAdmin(currentUser);
-          document.getElementById('authText').textContent = 
-            `Signed in as ${currentUser.displayName || currentUser.email}${userIsAdmin ? ' (Admin)' : ''}`;
-        }
-      } catch (e) {
-        showSettingsStatus('error', 'Failed to save settings: ' + e.message);
-      }
+    let currentSection = 'routes';
+    let editingItem = null;
+    let editingCollection = null;
+    let deletingItem = null;
+    let deletingCollection = null;
+
+    // Data cache
+    const cache = {
+      routes: [],
+      guides: [],
+      conditions: [],
+      reports: []
     };
-    
-    window.loadSettings = loadSettings;
-    
-    window.clearSettings = function() {
-      if (!confirm('Clear all admin settings and reset to defaults?')) return;
-      
-      localStorage.removeItem(SETTINGS_KEY);
-      loadSettings();
-      showSettingsStatus('info', 'Settings reset to defaults');
+
+    // Collection names
+    const COLLECTIONS = {
+      routes: 'routes',
+      guides: 'trail_guides',
+      conditions: 'trail_conditions',
+      reports: 'accessibilityReports'
     };
+
+    // ==================== AUTH ====================
     
-    function showSettingsStatus(type, message) {
-      const el = document.getElementById('settingsStatus');
-      el.className = `status-message ${type}`;
-      el.textContent = message;
-      
-      setTimeout(() => {
-        el.className = 'status-message';
-      }, 3000);
+    function isAdmin(user) {
+      return user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
     }
-    
-    // Initialize settings on load
-    document.addEventListener('DOMContentLoaded', () => {
-      loadSettings();
-      setupAuthHandlers();
-    });
-    
-    // Setup auth button handlers
-    function setupAuthHandlers() {
-      // Email sign in
-      document.getElementById('emailSignInBtn')?.addEventListener('click', async () => {
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        
-        if (!email || !password) {
-          showLoginError('Please enter email and password');
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      
+      if (user) {
+        if (!isAdmin(user)) {
+          showToast('Access denied - Admin only', 'error');
+          await signOut(auth);
           return;
         }
         
-        try {
-          document.getElementById('emailSignInBtn').disabled = true;
-          document.getElementById('emailSignInBtn').textContent = 'Signing in...';
-          
-          await signInWithEmailAndPassword(auth, email, password);
-          hideLoginError();
-        } catch (error) {
-          console.error('Sign in error:', error);
-          showLoginError(getAuthErrorMessage(error.code));
-        } finally {
-          document.getElementById('emailSignInBtn').disabled = false;
-          document.getElementById('emailSignInBtn').textContent = '📧 Sign In with Email';
-        }
-      });
-      
-      // Google sign in
-      document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
-        try {
-          await signInWithPopup(auth, new GoogleAuthProvider());
-        } catch (error) {
-          console.error('Google sign in error:', error);
-          if (error.code !== 'auth/popup-closed-by-user') {
-            showLoginError(getAuthErrorMessage(error.code));
-          }
-        }
-      });
-      
-      // Sign out
-      document.getElementById('signOutBtn')?.addEventListener('click', () => {
-        signOut(auth);
-      });
-      
-      // Enter key on password field
-      document.getElementById('loginPassword')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          document.getElementById('emailSignInBtn')?.click();
-        }
-      });
-    }
-    
-    function showLoginError(message) {
-      const errorEl = document.getElementById('loginError');
-      if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.style.display = 'block';
-      }
-    }
-    
-    function hideLoginError() {
-      const errorEl = document.getElementById('loginError');
-      if (errorEl) {
-        errorEl.style.display = 'none';
-      }
-    }
-    
-    function getAuthErrorMessage(code) {
-      const messages = {
-        'auth/invalid-email': 'Invalid email address',
-        'auth/user-disabled': 'This account has been disabled',
-        'auth/user-not-found': 'No account found with this email',
-        'auth/wrong-password': 'Incorrect password',
-        'auth/invalid-credential': 'Invalid email or password',
-        'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
-        'auth/network-request-failed': 'Network error. Check your connection.',
-        'auth/popup-blocked': 'Popup was blocked. Please allow popups for this site.',
-        'auth/popup-closed-by-user': 'Sign-in cancelled'
-      };
-      return messages[code] || 'Sign in failed. Please try again.';
-    }
-    
-    // Auth state
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
-      const statusEl = document.getElementById('authStatus');
-      const textEl = document.getElementById('authText');
-      const signOutBtn = document.getElementById('signOutBtn');
-      const loginForm = document.getElementById('loginForm');
-      
-      if (user) {
-        const userIsAdmin = isAdmin(user);
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userInfo').textContent = user.email;
         
-        statusEl.classList.add('signed-in');
-        textEl.textContent = `Signed in as ${user.displayName || user.email}${userIsAdmin ? ' (Admin)' : ''}`;
-        signOutBtn.style.display = 'block';
-        loginForm.style.display = 'none';
-        
-        if (!userIsAdmin) {
-          showStatus('warning', 'You are not an admin. Some features may be restricted.');
-        }
+        await loadAllData();
       } else {
-        statusEl.classList.remove('signed-in');
-        textEl.textContent = 'Not signed in';
-        signOutBtn.style.display = 'none';
-        loginForm.style.display = 'block';
-        hideLoginError();
+        document.getElementById('loginSection').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
       }
     });
-    
-    // File upload handling
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    
-    uploadZone.addEventListener('click', () => fileInput.click());
-    
-    uploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadZone.classList.add('dragover');
+
+    // Login form
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleLogin();
     });
-    
-    uploadZone.addEventListener('dragleave', () => {
-      uploadZone.classList.remove('dragover');
-    });
-    
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      handleFiles(e.dataTransfer.files);
-    });
-    
-    fileInput.addEventListener('change', (e) => {
-      handleFiles(e.target.files);
-    });
-    
-    // Parse JSON button
-    document.getElementById('parseJsonBtn').addEventListener('click', () => {
-      const jsonText = document.getElementById('jsonPaste').value.trim();
-      if (!jsonText) {
-        showStatus('error', 'Please paste JSON data first');
+
+    async function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const errorEl = document.getElementById('loginError');
+      
+      if (!email || !password) {
+        errorEl.textContent = 'Please enter email and password';
+        errorEl.style.display = 'block';
         return;
       }
       
       try {
-        const data = JSON.parse(jsonText);
-        parseAndPreview(data, 'pasted-data');
-      } catch (error) {
-        showStatus('error', 'Invalid JSON: ' + error.message);
-      }
-    });
-    
-    function handleFiles(files) {
-      for (const file of files) {
-        if (!file.name.endsWith('.json')) {
-          showStatus('error', `Skipping ${file.name} - only JSON files accepted`);
-          continue;
-        }
+        btn.textContent = 'Signing in...';
+        btn.disabled = true;
+        errorEl.style.display = 'none';
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = JSON.parse(e.target.result);
-            parseAndPreview(data, file.name);
-          } catch (error) {
-            showStatus('error', `Failed to parse ${file.name}: ${error.message}`);
-          }
-        };
-        reader.readAsText(file);
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        console.error('Login error:', error);
+        let msg = 'Login failed';
+        if (error.code === 'auth/invalid-credential') msg = 'Invalid email or password';
+        else if (error.code === 'auth/too-many-requests') msg = 'Too many attempts. Try later.';
+        else if (error.code === 'auth/network-request-failed') msg = 'Network error. Check connection.';
+        
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
       }
     }
-    
-    function parseAndPreview(data, source) {
-      // Determine type
-      let type = 'unknown';
-      let name = 'Unknown';
-      let meta = '';
+
+    window.signOutUser = () => signOut(auth);
+
+    // ==================== DATA LOADING ====================
+
+    async function loadAllData() {
+      showToast('Loading data...', 'info');
       
-      // Check if it's wrapped in our pending format
-      const actualData = data.data || data;
+      try {
+        await Promise.all([
+          loadCollection('routes'),
+          loadCollection('guides'),
+          loadCollection('conditions'),
+          loadCollection('reports')
+        ]);
+        
+        updateAllCounts();
+        renderCurrentSection();
+        showToast('Data loaded successfully', 'success');
+      } catch (error) {
+        console.error('Load error:', error);
+        showToast('Failed to load data: ' + error.message, 'error');
+      }
+    }
+
+    async function loadCollection(section) {
+      try {
+        const collName = COLLECTIONS[section];
+        const snapshot = await getDocs(collection(db, collName));
+        cache[section] = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        console.log(`✅ Loaded ${cache[section].length} ${section}`);
+      } catch (error) {
+        console.error(`Error loading ${section}:`, error);
+        cache[section] = [];
+      }
+    }
+
+    window.refreshSection = async (section) => {
+      showToast(`Refreshing ${section}...`, 'info');
+      await loadCollection(section);
+      updateAllCounts();
+      renderCurrentSection();
+      showToast(`${section} refreshed`, 'success');
+    };
+
+    // ==================== FILTERING ====================
+
+    function getFilteredData(section) {
+      let data = [...cache[section]];
       
-      if (actualData.routeData || actualData.totalDistance !== undefined) {
-        type = 'route';
-        name = actualData.name || actualData.routeName || 'Untitled Route';
-        meta = `${(actualData.totalDistance || 0).toFixed(2)} km`;
-        if (actualData.routeData) {
-          meta += ` • ${actualData.routeData.length} points`;
-        }
-      } else if (actualData.sections || actualData.trailName || actualData.accessibilityScore !== undefined) {
-        type = 'guide';
-        name = actualData.title || actualData.trailName || actualData.name || 'Untitled Guide';
-        meta = actualData.sections ? `${actualData.sections.length} sections` : '';
-        if (actualData.accessibilityScore !== undefined) {
-          meta += ` • Score: ${actualData.accessibilityScore}`;
-        }
+      const search = document.getElementById('filterSearch').value.toLowerCase().trim();
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+      const owner = document.getElementById('filterOwner').value;
+      const location = document.getElementById('filterLocation').value.toLowerCase().trim();
+      const visibility = document.getElementById('filterPublic').value;
+      
+      // Search filter
+      if (search) {
+        data = data.filter(item => {
+          const searchFields = [
+            item.name,
+            item.title,
+            item.trailName,
+            item.locationName,
+            item.description,
+            item.notes,
+            item.userDisplayName,
+            item.country,
+            item.region,
+            item.municipality
+          ].filter(Boolean).join(' ').toLowerCase();
+          
+          return searchFields.includes(search);
+        });
       }
       
-      const item = {
-        id: Date.now() + Math.random(),
-        type,
-        name,
-        meta,
-        data: actualData,
-        source,
-        userId: data.userId || actualData.userId,
-        userName: data.userName || actualData.userName || actualData.userDisplayName || 'Unknown'
-      };
+      // Date filters
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate >= fromDate;
+        });
+      }
       
-      pendingUploads.push(item);
-      renderPreviewList();
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate <= toDate;
+        });
+      }
+      
+      // Owner filter
+      if (owner === 'mine' && currentUser) {
+        data = data.filter(item => item.userId === currentUser.uid);
+      }
+      
+      // Location filter
+      if (location) {
+        data = data.filter(item => {
+          const locFields = [
+            item.country,
+            item.region,
+            item.municipality,
+            item.city,
+            item.trailName,
+            item.locationName
+          ].filter(Boolean).join(' ').toLowerCase();
+          
+          return locFields.includes(location);
+        });
+      }
+      
+      // Visibility filter
+      if (visibility === 'public') {
+        data = data.filter(item => item.isPublic === true);
+      } else if (visibility === 'private') {
+        data = data.filter(item => item.isPublic !== true);
+      }
+      
+      return data;
     }
+
+    function getItemDate(item) {
+      if (item.createdAt?.toDate) return item.createdAt.toDate();
+      if (item.timestamp?.toDate) return item.timestamp.toDate();
+      if (item.createdAt) return new Date(item.createdAt);
+      if (item.timestamp) return new Date(item.timestamp);
+      return new Date(0);
+    }
+
+    window.applyFilters = () => renderCurrentSection();
     
-    function renderPreviewList() {
-      const container = document.getElementById('previewList');
+    window.clearFilters = () => {
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      document.getElementById('filterOwner').value = 'all';
+      document.getElementById('filterLocation').value = '';
+      document.getElementById('filterPublic').value = 'all';
+      renderCurrentSection();
+    };
+
+    // ==================== SECTION SWITCHING ====================
+
+    window.switchSection = (section) => {
+      currentSection = section;
       
-      if (pendingUploads.length === 0) {
-        container.innerHTML = '';
+      // Update stat cards
+      document.querySelectorAll('.stat-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.section === section);
+      });
+      
+      // Update sections
+      document.querySelectorAll('.section').forEach(sec => {
+        sec.classList.toggle('active', sec.id === `${section}Section`);
+      });
+      
+      renderCurrentSection();
+    };
+
+    // ==================== RENDERING ====================
+
+    function updateAllCounts() {
+      document.getElementById('routesCount').textContent = cache.routes.length;
+      document.getElementById('guidesCount').textContent = cache.guides.length;
+      document.getElementById('conditionsCount').textContent = cache.conditions.length;
+      document.getElementById('reportsCount').textContent = cache.reports.length;
+    }
+
+    function renderCurrentSection() {
+      const data = getFilteredData(currentSection);
+      document.getElementById(`${currentSection}FilteredCount`).textContent = data.length;
+      
+      const container = document.getElementById(`${currentSection}TableContainer`);
+      
+      if (data.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">${getIcon(currentSection)}</div>
+            <p>No ${currentSection} found</p>
+          </div>
+        `;
         return;
       }
       
-      container.innerHTML = pendingUploads.map(item => `
-        <div class="preview-item ${item.type}">
-          <h3>${item.type === 'route' ? '🗺️' : '📚'} ${item.name}</h3>
-          <div class="meta">
-            ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} 
-            ${item.meta ? `• ${item.meta}` : ''} 
-            • From: ${item.userName}
-          </div>
-          <div class="actions">
-            <button class="btn-success" onclick="uploadItem('${item.id}')">
-              ☁️ Upload to Cloud
-            </button>
-            <button class="btn-secondary" onclick="togglePreview('${item.id}')">
-              👁️ Preview JSON
-            </button>
-            <button class="btn-danger" onclick="removeItem('${item.id}')">
-              🗑️
-            </button>
-          </div>
-          <pre class="json-preview" id="preview-${item.id}">${JSON.stringify(item.data, null, 2)}</pre>
+      switch (currentSection) {
+        case 'routes': renderRoutesTable(data, container); break;
+        case 'guides': renderGuidesTable(data, container); break;
+        case 'conditions': renderConditionsTable(data, container); break;
+        case 'reports': renderReportsTable(data, container); break;
+      }
+    }
+
+    function getIcon(section) {
+      const icons = { routes: '🗺️', guides: '📚', conditions: '🚧', reports: '♿' };
+      return icons[section] || '📄';
+    }
+
+    function formatDate(date) {
+      if (!date) return '-';
+      try {
+        const d = date?.toDate?.() || new Date(date);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch {
+        return '-';
+      }
+    }
+
+    function formatOwner(item) {
+      const name = item.userDisplayName || item.userName || item.displayName || null;
+      const email = item.userEmail || item.email || null;
+      const userId = item.userId || null;
+      
+      let html = '<div class="owner-cell">';
+      
+      if (name) {
+        html += `<span class="owner-name">${escapeHtml(name)}</span>`;
+      }
+      
+      if (email) {
+        html += `<span class="owner-email">${escapeHtml(email)}</span>`;
+      } else if (!name && userId) {
+        html += `<span class="owner-name">Unknown User</span>`;
+      }
+      
+      if (userId) {
+        html += `<span class="owner-id" title="${escapeHtml(userId)}">ID: ${userId.substring(0, 12)}...</span>`;
+      }
+      
+      if (!name && !email && !userId) {
+        html += '<span class="owner-name">Anonymous</span>';
+      }
+      
+      html += '</div>';
+      return html;
+    }
+
+    function renderRoutesTable(data, container) {
+      container.innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Distance</th>
+              <th>Duration</th>
+              <th>Created By</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => `
+              <tr>
+                <td class="truncate">${escapeHtml(item.name) || '<em>Untitled</em>'}</td>
+                <td>${formatDistance(item.totalDistance)}</td>
+                <td>${formatDuration(item.duration)}</td>
+                <td>${formatOwner(item)}</td>
+                <td>${formatDate(item.createdAt)}</td>
+                <td>
+                  <button class="action-btn view" onclick="viewItem('routes', '${item.id}')">👁️</button>
+                  <button class="action-btn edit" onclick="editItem('routes', '${item.id}')">✏️</button>
+                  <button class="action-btn delete" onclick="promptDelete('routes', '${item.id}')">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">Showing ${data.length} of ${cache.routes.length} routes</div>
         </div>
-      `).join('');
+      `;
     }
-    
-    window.togglePreview = (id) => {
-      const el = document.getElementById(`preview-${id}`);
-      el.classList.toggle('visible');
-    };
-    
-    window.removeItem = (id) => {
-      pendingUploads = pendingUploads.filter(i => i.id.toString() !== id);
-      renderPreviewList();
-    };
-    
-    window.uploadItem = async (id) => {
-      if (!currentUser) {
-        showStatus('error', 'Please sign in first');
-        return;
-      }
-      
-      const item = pendingUploads.find(i => i.id.toString() === id);
+
+    function renderGuidesTable(data, container) {
+      container.innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Trail</th>
+              <th>Location</th>
+              <th>Visibility</th>
+              <th>Created By</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => `
+              <tr>
+                <td class="truncate">${escapeHtml(item.title) || '<em>Untitled</em>'}</td>
+                <td class="truncate">${escapeHtml(item.trailName) || '-'}</td>
+                <td class="truncate">${escapeHtml(item.country || item.region || item.municipality || '-')}</td>
+                <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
+                <td>${formatOwner(item)}</td>
+                <td>${formatDate(item.createdAt)}</td>
+                <td>
+                  <button class="action-btn view" onclick="viewItem('guides', '${item.id}')">👁️</button>
+                  <button class="action-btn edit" onclick="editItem('guides', '${item.id}')">✏️</button>
+                  <button class="action-btn delete" onclick="promptDelete('guides', '${item.id}')">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">Showing ${data.length} of ${cache.guides.length} guides</div>
+        </div>
+      `;
+    }
+
+    function renderConditionsTable(data, container) {
+      container.innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Trail / Location</th>
+              <th>Conditions</th>
+              <th>Reported By</th>
+              <th>Reported</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => `
+              <tr>
+                <td class="truncate">${escapeHtml(item.trailName || item.locationName || 'Unknown')}</td>
+                <td class="truncate">${formatConditions(item.conditions)}</td>
+                <td>${formatOwner(item)}</td>
+                <td>${formatDate(item.createdAt || item.timestamp)}</td>
+                <td>
+                  <button class="action-btn view" onclick="viewItem('conditions', '${item.id}')">👁️</button>
+                  <button class="action-btn edit" onclick="editItem('conditions', '${item.id}')">✏️</button>
+                  <button class="action-btn delete" onclick="promptDelete('conditions', '${item.id}')">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">Showing ${data.length} of ${cache.conditions.length} conditions</div>
+        </div>
+      `;
+    }
+
+    function renderReportsTable(data, container) {
+      container.innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Type</th>
+              <th>Rating</th>
+              <th>Visibility</th>
+              <th>Reported By</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => `
+              <tr>
+                <td class="truncate">${escapeHtml(item.locationName || item.trailName || 'Unknown')}</td>
+                <td>${escapeHtml(item.reportType || item.type || '-')}</td>
+                <td>${formatRating(item.accessibilityRating || item.rating)}</td>
+                <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
+                <td>${formatOwner(item)}</td>
+                <td>${formatDate(item.createdAt)}</td>
+                <td>
+                  <button class="action-btn view" onclick="viewItem('reports', '${item.id}')">👁️</button>
+                  <button class="action-btn edit" onclick="editItem('reports', '${item.id}')">✏️</button>
+                  <button class="action-btn delete" onclick="promptDelete('reports', '${item.id}')">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">Showing ${data.length} of ${cache.reports.length} reports</div>
+        </div>
+      `;
+    }
+
+    // ==================== HELPERS ====================
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDistance(dist) {
+      if (!dist && dist !== 0) return '-';
+      return `${parseFloat(dist).toFixed(2)} km`;
+    }
+
+    function formatDuration(dur) {
+      if (!dur) return '-';
+      const mins = Math.floor(dur / 60000);
+      if (mins < 60) return `${mins}m`;
+      const hrs = Math.floor(mins / 60);
+      const remainMins = mins % 60;
+      return `${hrs}h ${remainMins}m`;
+    }
+
+    function formatConditions(conditions) {
+      if (!conditions || !Array.isArray(conditions)) return '-';
+      return conditions.map(c => c.label || c.emoji || c).join(', ');
+    }
+
+    function formatRating(rating) {
+      if (!rating && rating !== 0) return '-';
+      const r = parseFloat(rating);
+      if (r >= 4) return `⭐ ${r.toFixed(1)}`;
+      if (r >= 2.5) return `${r.toFixed(1)}`;
+      return `⚠️ ${r.toFixed(1)}`;
+    }
+
+    // ==================== VIEW MODAL ====================
+
+    window.viewItem = (section, id) => {
+      const item = cache[section].find(i => i.id === id);
       if (!item) return;
       
+      document.getElementById('viewModalTitle').textContent = item.name || item.title || item.trailName || 'Item Details';
+      document.getElementById('viewJsonContent').textContent = JSON.stringify(item, null, 2);
+      document.getElementById('viewModal').classList.add('active');
+    };
+
+    window.closeViewModal = () => {
+      document.getElementById('viewModal').classList.remove('active');
+    };
+
+    window.copyViewJson = () => {
+      const json = document.getElementById('viewJsonContent').textContent;
+      navigator.clipboard.writeText(json);
+      showToast('JSON copied to clipboard', 'success');
+    };
+
+    // ==================== EDIT MODAL ====================
+
+    window.editItem = (section, id) => {
+      const item = cache[section].find(i => i.id === id);
+      if (!item) return;
+      
+      editingItem = { ...item };
+      editingCollection = COLLECTIONS[section];
+      
+      document.getElementById('editModalTitle').textContent = `Edit ${section.slice(0, -1).charAt(0).toUpperCase() + section.slice(1, -1)}`;
+      
+      let formHtml = '';
+      
+      switch (section) {
+        case 'routes':
+          formHtml = `
+            <div class="form-row">
+              <div class="form-field">
+                <label>Name</label>
+                <input type="text" id="editName" value="${escapeHtml(item.name || '')}">
+              </div>
+              <div class="form-field">
+                <label>Distance (km)</label>
+                <input type="number" id="editDistance" value="${item.totalDistance || 0}" step="0.01">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Description</label>
+              <textarea id="editDescription">${escapeHtml(item.description || '')}</textarea>
+            </div>
+          `;
+          break;
+          
+        case 'guides':
+          formHtml = `
+            <div class="form-row">
+              <div class="form-field">
+                <label>Title</label>
+                <input type="text" id="editTitle" value="${escapeHtml(item.title || '')}">
+              </div>
+              <div class="form-field">
+                <label>Trail Name</label>
+                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Country</label>
+                <input type="text" id="editCountry" value="${escapeHtml(item.country || '')}">
+              </div>
+              <div class="form-field">
+                <label>Region</label>
+                <input type="text" id="editRegion" value="${escapeHtml(item.region || '')}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Municipality</label>
+                <input type="text" id="editMunicipality" value="${escapeHtml(item.municipality || '')}">
+              </div>
+              <div class="form-field">
+                <label>Visibility</label>
+                <select id="editPublic">
+                  <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+                  <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Description</label>
+              <textarea id="editDescription">${escapeHtml(item.description || '')}</textarea>
+            </div>
+          `;
+          break;
+          
+        case 'conditions':
+          formHtml = `
+            <div class="form-row">
+              <div class="form-field">
+                <label>Trail Name</label>
+                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
+              </div>
+              <div class="form-field">
+                <label>Location Name</label>
+                <input type="text" id="editLocationName" value="${escapeHtml(item.locationName || '')}">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Conditions (comma-separated)</label>
+              <input type="text" id="editConditions" value="${formatConditions(item.conditions)}">
+              <div class="help-text">e.g., Path Blocked, Wildlife Activity</div>
+            </div>
+            <div class="form-field">
+              <label>Notes</label>
+              <textarea id="editNotes">${escapeHtml(item.notes || '')}</textarea>
+            </div>
+          `;
+          break;
+          
+        case 'reports':
+          formHtml = `
+            <div class="form-row">
+              <div class="form-field">
+                <label>Location Name</label>
+                <input type="text" id="editLocationName" value="${escapeHtml(item.locationName || '')}">
+              </div>
+              <div class="form-field">
+                <label>Trail Name</label>
+                <input type="text" id="editTrailName" value="${escapeHtml(item.trailName || '')}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Report Type</label>
+                <input type="text" id="editReportType" value="${escapeHtml(item.reportType || item.type || '')}">
+              </div>
+              <div class="form-field">
+                <label>Accessibility Rating (0-5)</label>
+                <input type="number" id="editRating" value="${item.accessibilityRating || item.rating || 0}" min="0" max="5" step="0.1">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label>Country</label>
+                <input type="text" id="editCountry" value="${escapeHtml(item.country || '')}">
+              </div>
+              <div class="form-field">
+                <label>Visibility</label>
+                <select id="editPublic">
+                  <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+                  <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Description / Notes</label>
+              <textarea id="editDescription">${escapeHtml(item.description || item.notes || '')}</textarea>
+            </div>
+          `;
+          break;
+      }
+      
+      document.getElementById('editModalBody').innerHTML = formHtml;
+      document.getElementById('editModal').classList.add('active');
+    };
+
+    window.closeEditModal = () => {
+      document.getElementById('editModal').classList.remove('active');
+      editingItem = null;
+      editingCollection = null;
+    };
+
+    window.saveCurrentItem = async () => {
+      if (!editingItem || !editingCollection) return;
+      
       try {
-        showStatus('info', 'Uploading...');
+        const updates = { updatedAt: Timestamp.now() };
         
-        const collectionName = item.type === 'route' ? 'routes' : 'trail_guides';
+        // Gather updates based on section
+        switch (currentSection) {
+          case 'routes':
+            updates.name = document.getElementById('editName')?.value || '';
+            updates.totalDistance = parseFloat(document.getElementById('editDistance')?.value) || 0;
+            updates.description = document.getElementById('editDescription')?.value || '';
+            break;
+            
+          case 'guides':
+            updates.title = document.getElementById('editTitle')?.value || '';
+            updates.trailName = document.getElementById('editTrailName')?.value || '';
+            updates.country = document.getElementById('editCountry')?.value || '';
+            updates.region = document.getElementById('editRegion')?.value || '';
+            updates.municipality = document.getElementById('editMunicipality')?.value || '';
+            updates.isPublic = document.getElementById('editPublic')?.value === 'true';
+            updates.description = document.getElementById('editDescription')?.value || '';
+            break;
+            
+          case 'conditions':
+            updates.trailName = document.getElementById('editTrailName')?.value || '';
+            updates.locationName = document.getElementById('editLocationName')?.value || '';
+            updates.notes = document.getElementById('editNotes')?.value || '';
+            // Parse conditions back to array
+            const condStr = document.getElementById('editConditions')?.value || '';
+            if (condStr) {
+              updates.conditions = condStr.split(',').map(c => c.trim()).filter(Boolean);
+            }
+            break;
+            
+          case 'reports':
+            updates.locationName = document.getElementById('editLocationName')?.value || '';
+            updates.trailName = document.getElementById('editTrailName')?.value || '';
+            updates.reportType = document.getElementById('editReportType')?.value || '';
+            updates.accessibilityRating = parseFloat(document.getElementById('editRating')?.value) || 0;
+            updates.country = document.getElementById('editCountry')?.value || '';
+            updates.isPublic = document.getElementById('editPublic')?.value === 'true';
+            updates.description = document.getElementById('editDescription')?.value || '';
+            break;
+        }
         
-        const docData = {
-          ...item.data,
-          userId: item.userId || currentUser.uid,
-          uploadedBy: currentUser.uid,
-          uploadedByName: currentUser.displayName || currentUser.email,
-          uploadedAt: serverTimestamp(),
-          source: 'admin_upload'
-        };
+        // Save to Firestore
+        const docRef = doc(db, editingCollection, editingItem.id);
+        await updateDoc(docRef, updates);
         
-        const docRef = await addDoc(collection(db, collectionName), docData);
+        // Update cache
+        const cacheItem = cache[currentSection].find(i => i.id === editingItem.id);
+        if (cacheItem) {
+          Object.assign(cacheItem, updates);
+        }
         
-        showStatus('success', `Uploaded successfully! ID: ${docRef.id}`);
-        
-        // Remove from pending
-        pendingUploads = pendingUploads.filter(i => i.id.toString() !== id);
-        renderPreviewList();
+        closeEditModal();
+        renderCurrentSection();
+        showToast('Item saved to cloud successfully', 'success');
         
       } catch (error) {
-        console.error('Upload failed:', error);
-        showStatus('error', 'Upload failed: ' + error.message);
+        console.error('Save error:', error);
+        showToast('Failed to save: ' + error.message, 'error');
       }
     };
-    
-    function showStatus(type, message) {
-      const el = document.getElementById('statusMessage');
-      el.className = `status-message ${type}`;
-      el.textContent = message;
+
+    // ==================== DELETE ====================
+
+    window.promptDelete = (section, id) => {
+      const item = cache[section].find(i => i.id === id);
+      if (!item) return;
       
-      if (type === 'success' || type === 'info') {
-        setTimeout(() => {
-          el.className = 'status-message';
-        }, 5000);
+      deletingItem = item;
+      deletingCollection = COLLECTIONS[section];
+      
+      const name = item.name || item.title || item.trailName || item.locationName || 'this item';
+      document.getElementById('deleteMessage').innerHTML = `
+        Are you sure you want to delete <strong>"${escapeHtml(name)}"</strong>?<br><br>
+        This action cannot be undone.
+      `;
+      
+      document.getElementById('deleteModal').classList.add('active');
+    };
+
+    window.closeDeleteModal = () => {
+      document.getElementById('deleteModal').classList.remove('active');
+      deletingItem = null;
+      deletingCollection = null;
+    };
+
+    window.confirmDelete = async () => {
+      if (!deletingItem || !deletingCollection) return;
+      
+      try {
+        const docRef = doc(db, deletingCollection, deletingItem.id);
+        await deleteDoc(docRef);
+        
+        // Remove from cache
+        const index = cache[currentSection].findIndex(i => i.id === deletingItem.id);
+        if (index > -1) {
+          cache[currentSection].splice(index, 1);
+        }
+        
+        closeDeleteModal();
+        closeEditModal(); // In case delete was triggered from edit modal
+        updateAllCounts();
+        renderCurrentSection();
+        showToast('Item deleted successfully', 'success');
+        
+      } catch (error) {
+        console.error('Delete error:', error);
+        showToast('Failed to delete: ' + error.message, 'error');
       }
+    };
+
+    window.deleteCurrentItem = () => {
+      if (!editingItem) return;
+      deletingItem = editingItem;
+      deletingCollection = editingCollection;
+      
+      const name = editingItem.name || editingItem.title || editingItem.trailName || 'this item';
+      document.getElementById('deleteMessage').innerHTML = `
+        Are you sure you want to delete <strong>"${escapeHtml(name)}"</strong>?<br><br>
+        This action cannot be undone.
+      `;
+      
+      document.getElementById('deleteModal').classList.add('active');
+    };
+
+    // ==================== EXPORT ====================
+
+    window.exportSection = (section) => {
+      const data = getFilteredData(section);
+      if (data.length === 0) {
+        showToast('No data to export', 'warning');
+        return;
+      }
+      
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `access-nature-${section}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showToast(`Exported ${data.length} ${section}`, 'success');
+    };
+
+    // ==================== TOAST ====================
+
+    function showToast(message, type = 'info') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
     }
-    
-    // Admin actions
-    window.viewAllRoutes = async () => {
-      if (!currentUser) {
-        alert('Please sign in first');
-        return;
-      }
-      
-      console.log('🔍 Querying routes for user:', currentUser.uid, currentUser.email);
-      
-      try {
-        let q;
-        const userIsAdmin = isAdmin(currentUser);
-        
-        if (userIsAdmin) {
-          // Admin can see all routes (no filter)
-          console.log('👑 Admin query - fetching all routes');
-          q = query(collection(db, 'routes'));
-        } else {
-          // Regular users see only their own
-          console.log('👤 User query - fetching own routes');
-          q = query(
-            collection(db, 'routes'), 
-            where('userId', '==', currentUser.uid)
-          );
-        }
-        
-        const snapshot = await getDocs(q);
-        console.log('✅ Query successful, found:', snapshot.size, 'routes');
-        
-        let html = userIsAdmin ? '<h2>All Routes (Admin View)</h2><ul>' : '<h2>My Routes</h2><ul>';
-        if (snapshot.empty) {
-          html += '<li>No routes found</li>';
-        }
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const owner = userIsAdmin ? ` - ${data.userDisplayName || data.userId || 'Unknown'}` : '';
-          html += `<li>${data.name || 'Untitled'} - ${(data.totalDistance || 0).toFixed(2)} km${owner}</li>`;
-        });
-        html += '</ul>';
-        
-        const win = window.open('', '_blank');
-        win.document.write(
-          '<html><head><title>Routes</title>' +
-          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
-          '</head><body>' + html + '</body></html>'
-        );
-        win.document.close();
-      } catch (error) {
-        console.error('❌ Query error:', error);
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        alert('Error: ' + error.message + '\n\nCheck console for details.');
-      }
-    };
-    
-    window.viewAllGuides = async () => {
-      if (!currentUser) {
-        alert('Please sign in first');
-        return;
-      }
-      
-      console.log('🔍 Querying trail guides for user:', currentUser.uid, currentUser.email);
-      
-      try {
-        let q;
-        const userIsAdmin = isAdmin(currentUser);
-        
-        if (userIsAdmin) {
-          // Admin can see all guides
-          console.log('👑 Admin query - fetching all guides');
-          q = query(collection(db, 'trail_guides'));
-        } else {
-          // Regular users see only their own
-          console.log('👤 User query - fetching own guides');
-          q = query(
-            collection(db, 'trail_guides'), 
-            where('userId', '==', currentUser.uid)
-          );
-        }
-        
-        const snapshot = await getDocs(q);
-        console.log('✅ Query successful, found:', snapshot.size, 'guides');
-        
-        let html = userIsAdmin ? '<h2>All Trail Guides (Admin View)</h2><ul>' : '<h2>My Trail Guides</h2><ul>';
-        if (snapshot.empty) {
-          html += '<li>No trail guides found</li>';
-        }
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const owner = userIsAdmin ? ` - ${data.userDisplayName || 'Unknown'}` : '';
-          html += `<li>${data.title || data.trailName || 'Untitled'}${owner}</li>`;
-        });
-        html += '</ul>';
-        
-        const win = window.open('', '_blank');
-        win.document.write(
-          '<html><head><title>Trail Guides</title>' +
-          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
-          '</head><body>' + html + '</body></html>'
-        );
-        win.document.close();
-      } catch (error) {
-        console.error('❌ Query error:', error);
-        console.error('Error code:', error.code);
-        alert('Error: ' + error.message + '\n\nCheck console for details.');
-      }
-    };
-    
-    window.viewConditions = async () => {
-      if (!currentUser) {
-        alert('Please sign in first');
-        return;
-      }
-      
-      console.log('🔍 Querying trail conditions');
-      
-      try {
-        // Trail conditions are public read, so we can fetch all
-        const snapshot = await getDocs(collection(db, 'trail_conditions'));
-        console.log('✅ Query successful, found:', snapshot.size, 'conditions');
-        
-        let html = '<h2>All Trail Condition Reports</h2><ul>';
-        if (snapshot.empty) {
-          html += '<li>No condition reports found</li>';
-        }
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const conditions = data.conditions?.map(c => c.label).join(', ') || 'Unknown';
-          html += `<li>${data.trailName || 'Location'}: ${conditions} - ${data.userDisplayName || 'Anonymous'}</li>`;
-        });
-        html += '</ul>';
-        
-        const win = window.open('', '_blank');
-        win.document.write(
-          '<html><head><title>Trail Conditions</title>' +
-          '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
-          '</head><body>' + html + '</body></html>'
-        );
-        win.document.close();
-      } catch (error) {
-        console.error('❌ Query error:', error);
-        console.error('Error code:', error.code);
-        alert('Error: ' + error.message + '\n\nCheck console for details.');
-      }
-    };
-    
-    window.goToTracker = () => {
-      window.location.href = 'tracker.html';
-    };
-    
-    window.resetFirestoreConnection = async () => {
-      console.log('🔄 Resetting Firestore connection...');
-      
-      try {
-        // Disable network to clear pending operations
-        await disableNetwork(db);
-        console.log('📴 Network disabled');
-        
-        // Wait a moment
-        await new Promise(r => setTimeout(r, 1000));
-        
-        // Re-enable network
-        await enableNetwork(db);
-        console.log('🌐 Network re-enabled');
-        
-        alert('Connection reset! Try the queries again.');
-      } catch (error) {
-        console.error('Reset failed:', error);
-        
-        // If that fails, try clearing IndexedDB
-        const dbNames = await indexedDB.databases?.() || [];
-        console.log('IndexedDB databases:', dbNames);
-        
-        alert('Connection reset attempted. Please refresh the page and try again.');
-        location.reload();
-      }
-    };
   </script>
 </body>
 </html>
