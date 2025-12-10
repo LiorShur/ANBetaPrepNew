@@ -324,10 +324,39 @@
     </header>
     
     <!-- Auth Status -->
-    <div class="card">
+    <div class="card" id="authCard">
       <div class="auth-status" id="authStatus">
         <span id="authText">Checking authentication...</span>
-        <button id="authBtn" class="btn-primary" style="display: none;">Sign In</button>
+        <button id="signOutBtn" class="btn-secondary" style="display: none;">Sign Out</button>
+      </div>
+      
+      <!-- Login Form (shown when not logged in) -->
+      <div id="loginForm" style="display: none; margin-top: 16px;">
+        <h3 style="margin: 0 0 16px; font-size: 1.1em;">Sign In to Admin</h3>
+        
+        <div style="margin-bottom: 12px;">
+          <input type="email" id="loginEmail" placeholder="Email address" 
+                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1em;">
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <input type="password" id="loginPassword" placeholder="Password" 
+                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1em;">
+        </div>
+        
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button id="emailSignInBtn" class="btn-primary" style="flex: 1; min-width: 140px;">
+            📧 Sign In with Email
+          </button>
+          <button id="googleSignInBtn" class="btn-secondary" style="flex: 1; min-width: 140px;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                 style="width: 18px; height: 18px; vertical-align: middle; margin-right: 8px;">
+            Google
+          </button>
+        </div>
+        
+        <div id="loginError" style="display: none; margin-top: 12px; padding: 10px; 
+             background: #fee2e2; color: #991b1b; border-radius: 6px; font-size: 0.9em;"></div>
       </div>
     </div>
     
@@ -447,7 +476,7 @@
   <!-- Firebase -->
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { getAuth, onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
     import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     
     // Firebase config (same as main app)
@@ -584,14 +613,100 @@
     }
     
     // Initialize settings on load
-    document.addEventListener('DOMContentLoaded', loadSettings);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      setupAuthHandlers();
+    });
+    
+    // Setup auth button handlers
+    function setupAuthHandlers() {
+      // Email sign in
+      document.getElementById('emailSignInBtn')?.addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        
+        if (!email || !password) {
+          showLoginError('Please enter email and password');
+          return;
+        }
+        
+        try {
+          document.getElementById('emailSignInBtn').disabled = true;
+          document.getElementById('emailSignInBtn').textContent = 'Signing in...';
+          
+          await signInWithEmailAndPassword(auth, email, password);
+          hideLoginError();
+        } catch (error) {
+          console.error('Sign in error:', error);
+          showLoginError(getAuthErrorMessage(error.code));
+        } finally {
+          document.getElementById('emailSignInBtn').disabled = false;
+          document.getElementById('emailSignInBtn').textContent = '📧 Sign In with Email';
+        }
+      });
+      
+      // Google sign in
+      document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
+        try {
+          await signInWithPopup(auth, new GoogleAuthProvider());
+        } catch (error) {
+          console.error('Google sign in error:', error);
+          if (error.code !== 'auth/popup-closed-by-user') {
+            showLoginError(getAuthErrorMessage(error.code));
+          }
+        }
+      });
+      
+      // Sign out
+      document.getElementById('signOutBtn')?.addEventListener('click', () => {
+        signOut(auth);
+      });
+      
+      // Enter key on password field
+      document.getElementById('loginPassword')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          document.getElementById('emailSignInBtn')?.click();
+        }
+      });
+    }
+    
+    function showLoginError(message) {
+      const errorEl = document.getElementById('loginError');
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    function hideLoginError() {
+      const errorEl = document.getElementById('loginError');
+      if (errorEl) {
+        errorEl.style.display = 'none';
+      }
+    }
+    
+    function getAuthErrorMessage(code) {
+      const messages = {
+        'auth/invalid-email': 'Invalid email address',
+        'auth/user-disabled': 'This account has been disabled',
+        'auth/user-not-found': 'No account found with this email',
+        'auth/wrong-password': 'Incorrect password',
+        'auth/invalid-credential': 'Invalid email or password',
+        'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+        'auth/popup-blocked': 'Popup was blocked. Please allow popups for this site.',
+        'auth/popup-closed-by-user': 'Sign-in cancelled'
+      };
+      return messages[code] || 'Sign in failed. Please try again.';
+    }
     
     // Auth state
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       const statusEl = document.getElementById('authStatus');
       const textEl = document.getElementById('authText');
-      const btnEl = document.getElementById('authBtn');
+      const signOutBtn = document.getElementById('signOutBtn');
+      const loginForm = document.getElementById('loginForm');
       
       if (user) {
         const adminEmails = getAdminEmails();
@@ -599,9 +714,8 @@
         
         statusEl.classList.add('signed-in');
         textEl.textContent = `Signed in as ${user.displayName || user.email}${isAdmin ? ' (Admin)' : ''}`;
-        btnEl.textContent = 'Sign Out';
-        btnEl.style.display = 'block';
-        btnEl.onclick = () => signOut(auth);
+        signOutBtn.style.display = 'block';
+        loginForm.style.display = 'none';
         
         if (!isAdmin) {
           showStatus('warning', 'You are not an admin. Some features may be restricted.');
@@ -609,9 +723,9 @@
       } else {
         statusEl.classList.remove('signed-in');
         textEl.textContent = 'Not signed in';
-        btnEl.textContent = 'Sign In with Google';
-        btnEl.style.display = 'block';
-        btnEl.onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+        signOutBtn.style.display = 'none';
+        loginForm.style.display = 'block';
+        hideLoginError();
       }
     });
     
