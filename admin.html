@@ -942,26 +942,51 @@
         return;
       }
       
+      console.log('🔍 Querying routes for user:', currentUser.uid, currentUser.email);
+      
       try {
-        const q = query(collection(db, 'routes'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
+        let q;
+        const userIsAdmin = isAdmin(currentUser);
         
-        let html = '<h2>All Routes</h2><ul>';
+        if (userIsAdmin) {
+          // Admin can see all routes (no filter)
+          console.log('👑 Admin query - fetching all routes');
+          q = query(collection(db, 'routes'));
+        } else {
+          // Regular users see only their own
+          console.log('👤 User query - fetching own routes');
+          q = query(
+            collection(db, 'routes'), 
+            where('userId', '==', currentUser.uid)
+          );
+        }
+        
+        const snapshot = await getDocs(q);
+        console.log('✅ Query successful, found:', snapshot.size, 'routes');
+        
+        let html = userIsAdmin ? '<h2>All Routes (Admin View)</h2><ul>' : '<h2>My Routes</h2><ul>';
+        if (snapshot.empty) {
+          html += '<li>No routes found</li>';
+        }
         snapshot.forEach(doc => {
           const data = doc.data();
-          html += `<li>${data.name || 'Untitled'} - ${(data.totalDistance || 0).toFixed(2)} km - ${data.userDisplayName || 'Unknown'}</li>`;
+          const owner = userIsAdmin ? ` - ${data.userDisplayName || data.userId || 'Unknown'}` : '';
+          html += `<li>${data.name || 'Untitled'} - ${(data.totalDistance || 0).toFixed(2)} km${owner}</li>`;
         });
         html += '</ul>';
         
         const win = window.open('', '_blank');
         win.document.write(
-          '<html><head><title>All Routes</title>' +
+          '<html><head><title>Routes</title>' +
           '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
           '</head><body>' + html + '</body></html>'
         );
         win.document.close();
       } catch (error) {
-        alert('Error: ' + error.message);
+        console.error('❌ Query error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        alert('Error: ' + error.message + '\n\nCheck console for details.');
       }
     };
     
@@ -971,26 +996,50 @@
         return;
       }
       
+      console.log('🔍 Querying trail guides for user:', currentUser.uid, currentUser.email);
+      
       try {
-        const q = query(collection(db, 'trail_guides'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
+        let q;
+        const userIsAdmin = isAdmin(currentUser);
         
-        let html = '<h2>All Trail Guides</h2><ul>';
+        if (userIsAdmin) {
+          // Admin can see all guides
+          console.log('👑 Admin query - fetching all guides');
+          q = query(collection(db, 'trail_guides'));
+        } else {
+          // Regular users see only their own
+          console.log('👤 User query - fetching own guides');
+          q = query(
+            collection(db, 'trail_guides'), 
+            where('userId', '==', currentUser.uid)
+          );
+        }
+        
+        const snapshot = await getDocs(q);
+        console.log('✅ Query successful, found:', snapshot.size, 'guides');
+        
+        let html = userIsAdmin ? '<h2>All Trail Guides (Admin View)</h2><ul>' : '<h2>My Trail Guides</h2><ul>';
+        if (snapshot.empty) {
+          html += '<li>No trail guides found</li>';
+        }
         snapshot.forEach(doc => {
           const data = doc.data();
-          html += `<li>${data.title || data.trailName || 'Untitled'} - ${data.userDisplayName || 'Unknown'}</li>`;
+          const owner = userIsAdmin ? ` - ${data.userDisplayName || 'Unknown'}` : '';
+          html += `<li>${data.title || data.trailName || 'Untitled'}${owner}</li>`;
         });
         html += '</ul>';
         
         const win = window.open('', '_blank');
         win.document.write(
-          '<html><head><title>All Trail Guides</title>' +
+          '<html><head><title>Trail Guides</title>' +
           '<style>body { font-family: sans-serif; padding: 20px; } li { margin: 8px 0; }</style>' +
           '</head><body>' + html + '</body></html>'
         );
         win.document.close();
       } catch (error) {
-        alert('Error: ' + error.message);
+        console.error('❌ Query error:', error);
+        console.error('Error code:', error.code);
+        alert('Error: ' + error.message + '\n\nCheck console for details.');
       }
     };
     
@@ -1000,10 +1049,17 @@
         return;
       }
       
+      console.log('🔍 Querying trail conditions');
+      
       try {
+        // Trail conditions are public read, so we can fetch all
         const snapshot = await getDocs(collection(db, 'trail_conditions'));
+        console.log('✅ Query successful, found:', snapshot.size, 'conditions');
         
-        let html = '<h2>Trail Conditions</h2><ul>';
+        let html = '<h2>All Trail Condition Reports</h2><ul>';
+        if (snapshot.empty) {
+          html += '<li>No condition reports found</li>';
+        }
         snapshot.forEach(doc => {
           const data = doc.data();
           const conditions = data.conditions?.map(c => c.label).join(', ') || 'Unknown';
@@ -1019,7 +1075,9 @@
         );
         win.document.close();
       } catch (error) {
-        alert('Error: ' + error.message);
+        console.error('❌ Query error:', error);
+        console.error('Error code:', error.code);
+        alert('Error: ' + error.message + '\n\nCheck console for details.');
       }
     };
     
