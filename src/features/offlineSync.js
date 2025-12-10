@@ -182,16 +182,52 @@ class OfflineSync {
    * Setup online/offline listeners
    */
   setupConnectivityListeners() {
-    window.addEventListener('online', () => {
+    window.addEventListener('online', async () => {
       this.isOnline = true;
       console.log('🌐 Connection restored');
-      this.showPendingNotification();
+      
+      // Check for pending items
+      const pendingCount = await this.getPendingCount();
+      
+      if (pendingCount > 0) {
+        // Show notification with auto-sync option
+        this.showPendingNotification(pendingCount);
+        
+        // Auto-sync after short delay (give network time to stabilize)
+        setTimeout(async () => {
+          if (this.isOnline) {
+            console.log('🔄 Auto-syncing pending uploads...');
+            await this.syncAllPending();
+          }
+        }, 3000);
+      }
+      
+      // Process email queue
+      this.processEmailQueue();
     });
 
     window.addEventListener('offline', () => {
       this.isOnline = false;
       console.log('📴 Connection lost - data will be saved locally');
+      toast.warning('Offline - data will sync when connected');
     });
+    
+    // Also check connectivity periodically (some devices don't fire online/offline reliably)
+    setInterval(async () => {
+      const wasOnline = this.isOnline;
+      this.isOnline = navigator.onLine;
+      
+      // If we just came back online
+      if (!wasOnline && this.isOnline) {
+        console.log('🌐 Connection detected via polling');
+        const pendingCount = await this.getPendingCount();
+        if (pendingCount > 0) {
+          this.showPendingNotification(pendingCount);
+          await this.syncAllPending();
+        }
+        this.processEmailQueue();
+      }
+    }, 30000); // Check every 30 seconds
   }
 
   // ==================== Save Methods ====================
@@ -801,7 +837,7 @@ class OfflineSync {
 
   async syncAllPending() {
     if (this.syncInProgress) {
-      toast.info('Sync already in progress...');
+      console.log('⚠️ Sync already in progress...');
       return;
     }
 
@@ -811,7 +847,6 @@ class OfflineSync {
     }
 
     this.syncInProgress = true;
-    toast.info('Syncing pending uploads...');
 
     try {
       // Get current user
@@ -819,57 +854,104 @@ class OfflineSync {
       try {
         const { auth } = await import('../../firebase-setup.js');
         user = auth.currentUser;
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Could not get auth:', e);
+      }
 
       if (!user) {
-        toast.error('Please sign in to sync');
+        console.log('⚠️ No user signed in - skipping auto-sync');
         this.syncInProgress = false;
         return;
       }
 
       const routes = await this.getPendingRoutes();
       const guides = await this.getPendingGuides();
+      const pendingRoutes = routes.filter(r => r.status === 'pending');
+      const pendingGuides = guides.filter(g => g.status === 'pending');
+      
+      const totalPending = pendingRoutes.length + pendingGuides.length;
+      
+      if (totalPending === 0) {
+        console.log('✅ No pending items to sync');
+        this.syncInProgress = false;
+        return;
+      }
+      
+      console.log(`🔄 Syncing ${totalPending} pending items...`);
+      toast.info(`Syncing ${totalPending} item${totalPending !== 1 ? 's' : ''}...`);
       
       let successCount = 0;
       let failCount = 0;
 
       // Upload pending routes
-      for (const route of routes.filter(r => r.status === 'pending')) {
+      for (const route of pendingRoutes) {
         try {
           const cloudId = await this.uploadRouteToCloud(route.data, user);
           await this.markRouteUploaded(route.localId, cloudId);
           successCount++;
+          console.log(`☁️ Route synced: ${route.localId} -> ${cloudId}`);
         } catch (error) {
           console.error('Failed to upload route:', error);
           failCount++;
+          // Increment retry count
+          await this.incrementRetryCount('pending_routes', route.localId);
         }
       }
 
       // Upload pending guides
-      for (const guide of guides.filter(g => g.status === 'pending')) {
+      for (const guide of pendingGuides) {
         try {
           const cloudId = await this.uploadGuideToCloud(guide.data, user);
           await this.markGuideUploaded(guide.localId, cloudId);
           successCount++;
+          console.log(`☁️ Guide synced: ${guide.localId} -> ${cloudId}`);
         } catch (error) {
           console.error('Failed to upload guide:', error);
           failCount++;
+          // Increment retry count
+          await this.incrementRetryCount('pending_guides', guide.localId);
         }
       }
 
+      // Show results
       if (successCount > 0) {
-        toast.success(`Uploaded ${successCount} item${successCount !== 1 ? 's' : ''}`);
+        toast.success(`☁️ Uploaded ${successCount} item${successCount !== 1 ? 's' : ''}`);
       }
       if (failCount > 0) {
-        toast.warning(`${failCount} item${failCount !== 1 ? 's' : ''} failed to upload`);
+        toast.warning(`${failCount} item${failCount !== 1 ? 's' : ''} failed - will retry later`);
       }
+      
+      // Process email queue after sync
+      await this.processEmailQueue();
 
     } catch (error) {
       console.error('Sync error:', error);
       toast.error('Sync failed');
+    } finally {
+      this.syncInProgress = false;
     }
-
-    this.syncInProgress = false;
+  }
+  
+  /**
+   * Increment retry count for failed uploads
+   */
+  async incrementRetryCount(storeName, localId) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const request = store.get(localId);
+      
+      request.onsuccess = () => {
+        const item = request.result;
+        if (item) {
+          item.retryCount = (item.retryCount || 0) + 1;
+          item.lastRetryAt = new Date().toISOString();
+          store.put(item);
+        }
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async uploadSingleRoute(localId) {
