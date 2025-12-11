@@ -1181,7 +1181,7 @@
 
     // ==================== DATA LOADING ====================
 
-    async function loadAllData() {
+    window.loadAllData = async function() {
       const statusEl = document.getElementById('loadStatus');
       statusEl.textContent = 'Loading...';
       statusEl.style.color = '#6b7280';
