@@ -797,8 +797,11 @@
 
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <button class="action-btn" onclick="loadAllData()" title="Reload all data">
+        <button class="action-btn" onclick="loadAllData()" title="Reload all data (tries server first)">
           🔄 Reload All
+        </button>
+        <button class="action-btn" onclick="clearCacheAndReload()" title="Clear local cache and reload from server" style="background:#fef3c7;border-color:#fcd34d;">
+          🗑️ Clear Cache
         </button>
         <span class="load-status" id="loadStatus"></span>
       </div>
@@ -824,6 +827,15 @@
             <select id="filterOwner">
               <option value="all">All Users</option>
               <option value="mine">My Items</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Sort By</label>
+            <select id="filterSortOrder" onchange="applyFilters()">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
             </select>
           </div>
           <div class="filter-buttons">
@@ -966,7 +978,7 @@
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, Timestamp, enableIndexedDbPersistence, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, Timestamp, enableIndexedDbPersistence, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js';
 
     // Firebase config
@@ -1245,9 +1257,12 @@
         showToast('⚠️ No data loaded. You may be offline.', 'error');
         console.warn('⚠️ All collections returned 0 items - possible offline/connection issue');
       } else {
-        statusEl.textContent = `Updated ${timestamp}`;
+        // Check if any loaded from server vs cache
+        const serverLoads = results.filter(r => r.source === 'server').length;
+        const sourceInfo = serverLoads === 4 ? '(server)' : serverLoads > 0 ? '(mixed)' : '(cache)';
+        statusEl.textContent = `Updated ${timestamp} ${sourceInfo}`;
         statusEl.style.color = '#10b981';
-        showToast(`Loaded ${totalItems} items`, 'success');
+        showToast(`Loaded ${totalItems} items from ${serverLoads === 4 ? 'server' : 'cache'}`, 'success');
       }
     }
 
@@ -1261,17 +1276,39 @@
           const collectionRef = collection(db, COLLECTIONS[section]);
           
           // Add timeout to fail faster on slow connections
-          const timeoutMs = 12000; // 12 seconds per attempt
+          const timeoutMs = 15000; // 15 seconds per attempt
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout - connection may be slow')), timeoutMs)
+            setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
           );
           
-          const queryPromise = getDocs(collectionRef);
-          const snapshot = await Promise.race([queryPromise, timeoutPromise]);
+          let snapshot;
+          let source = 'unknown';
+          
+          try {
+            // Try server first to get fresh data (bypass stale cache)
+            console.log(`   Trying server for ${section}...`);
+            const serverPromise = getDocsFromServer(collectionRef);
+            snapshot = await Promise.race([serverPromise, timeoutPromise]);
+            source = 'server';
+          } catch (serverError) {
+            // Fallback to cache if server fails
+            console.log(`   Server failed for ${section}, trying cache...`, serverError.message);
+            const cachePromise = getDocs(collectionRef);
+            snapshot = await Promise.race([cachePromise, timeoutPromise]);
+            source = 'cache';
+          }
           
           cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          console.log(`✅ Loaded ${cache[section].length} ${section}`);
-          return { success: true, section };
+          
+          // Log details for debugging
+          console.log(`✅ Loaded ${cache[section].length} ${section} from ${source}`);
+          if (cache[section].length > 0) {
+            const sample = cache[section][0];
+            console.log(`   Sample ${section} ID: ${sample.id}`);
+            console.log(`   Sample date fields: createdAt=${!!sample.createdAt}, generatedAt=${!!sample.generatedAt}`);
+          }
+          
+          return { success: true, section, source };
           
         } catch (error) {
           lastError = error;
@@ -1291,6 +1328,79 @@
       cache[section] = [];
       return { success: false, section, error: lastError };
     }
+
+    // Debug function - call from console: debugCache()
+    window.debugCache = () => {
+      console.log('=== ADMIN CACHE DEBUG ===');
+      ['routes', 'guides', 'conditions', 'reports'].forEach(section => {
+        console.log(`\n📁 ${section.toUpperCase()} (${cache[section].length} items):`);
+        cache[section].forEach((item, idx) => {
+          const date = getItemDate(item);
+          const name = item.routeName || item.title || item.trailName || item.locationName || 'Unknown';
+          console.log(`  ${idx + 1}. ID: ${item.id}, Name: ${name}`);
+          console.log(`      Date: ${date ? date.toISOString() : 'null'}`);
+          // Show raw date fields for debugging
+          const dateFields = ['createdAt', 'generatedAt', 'uploadedAt', 'timestamp', 'reportedAt'];
+          dateFields.forEach(field => {
+            if (item[field] !== undefined) {
+              const val = item[field];
+              const type = val?.toDate ? 'Timestamp' : val?.seconds !== undefined ? 'TimestampObj' : typeof val;
+              console.log(`      ${field}: ${JSON.stringify(val)} (${type})`);
+            }
+          });
+        });
+      });
+      console.log('\n=== END DEBUG ===');
+    };
+    
+    // Quick debug for just guides dates
+    window.debugGuidesDates = () => {
+      console.log('=== GUIDES DATE DEBUG ===');
+      cache.guides.forEach((guide, idx) => {
+        console.log(`\n${idx + 1}. ${guide.title || guide.trailName || 'Unnamed'}`);
+        console.log('   All fields:', Object.keys(guide).join(', '));
+        console.log('   generatedAt:', guide.generatedAt, typeof guide.generatedAt);
+        console.log('   createdAt:', guide.createdAt, typeof guide.createdAt);
+        console.log('   Parsed date:', getItemDate(guide));
+      });
+    };
+
+    // Clear IndexedDB cache and reload fresh from server
+    window.clearCacheAndReload = async () => {
+      showToast('Clearing cache...', 'info');
+      
+      try {
+        // Clear Firestore persistence cache
+        const databases = await indexedDB.databases();
+        const firestoreDBs = databases.filter(db => db.name && db.name.includes('firestore'));
+        
+        for (const dbInfo of firestoreDBs) {
+          console.log('🗑️ Deleting IndexedDB:', dbInfo.name);
+          await new Promise((resolve, reject) => {
+            const req = indexedDB.deleteDatabase(dbInfo.name);
+            req.onsuccess = resolve;
+            req.onerror = reject;
+          });
+        }
+        
+        // Also clear local app cache
+        cache.routes = [];
+        cache.guides = [];
+        cache.conditions = [];
+        cache.reports = [];
+        
+        showToast('Cache cleared. Reloading...', 'success');
+        
+        // Small delay then reload page to reinitialize Firestore
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        
+      } catch (error) {
+        console.error('Failed to clear cache:', error);
+        showToast('Failed to clear cache: ' + error.message, 'error');
+      }
+    };
 
     async function loadCollection(section) {
       const result = await loadCollectionWithRetry(section, 1);
@@ -1324,6 +1434,7 @@
       const dateFrom = document.getElementById('filterDateFrom').value;
       const dateTo = document.getElementById('filterDateTo').value;
       const owner = document.getElementById('filterOwner').value;
+      const sortOrder = document.getElementById('filterSortOrder').value;
       
       if (search) {
         data = data.filter(item => {
@@ -1334,27 +1445,89 @@
       
       if (dateFrom) {
         const from = new Date(dateFrom);
-        data = data.filter(item => getItemDate(item) >= from);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate && itemDate >= from;
+        });
       }
       
       if (dateTo) {
         const to = new Date(dateTo);
         to.setHours(23, 59, 59);
-        data = data.filter(item => getItemDate(item) <= to);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate && itemDate <= to;
+        });
       }
       
       if (owner === 'mine' && currentUser) {
         data = data.filter(item => item.userId === currentUser.uid);
       }
       
+      // Sort data
+      data.sort((a, b) => {
+        if (sortOrder === 'newest' || sortOrder === 'oldest') {
+          const dateA = getItemDate(a);
+          const dateB = getItemDate(b);
+          // Handle null dates - put them at the end
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        } else if (sortOrder === 'name' || sortOrder === 'name-desc') {
+          const nameA = (a.routeName || a.title || a.trailName || a.locationName || '').toLowerCase();
+          const nameB = (b.routeName || b.title || b.trailName || b.locationName || '').toLowerCase();
+          const compare = nameA.localeCompare(nameB);
+          return sortOrder === 'name' ? compare : -compare;
+        }
+        return 0;
+      });
+      
       return data;
     }
 
     function getItemDate(item) {
-      if (item.createdAt?.toDate) return item.createdAt.toDate();
-      if (item.createdAt) return new Date(item.createdAt);
-      if (item.uploadedAt) return new Date(item.uploadedAt);
-      return new Date(0);
+      // Check various date fields used by different collections
+      const dateFields = ['createdAt', 'generatedAt', 'uploadedAt', 'timestamp', 'reportedAt'];
+      
+      for (const field of dateFields) {
+        if (item[field]) {
+          // Firestore Timestamp object
+          if (item[field].toDate && typeof item[field].toDate === 'function') {
+            return item[field].toDate();
+          }
+          // Firestore Timestamp-like object with seconds
+          if (item[field].seconds !== undefined) {
+            return new Date(item[field].seconds * 1000);
+          }
+          // Already a Date
+          if (item[field] instanceof Date) {
+            return item[field];
+          }
+          // Number (Unix timestamp in ms or seconds)
+          if (typeof item[field] === 'number') {
+            // If less than year 2000 in ms, assume it's seconds
+            if (item[field] < 946684800000) {
+              return new Date(item[field] * 1000);
+            }
+            return new Date(item[field]);
+          }
+          // ISO string or other string format
+          if (typeof item[field] === 'string') {
+            const parsed = new Date(item[field]);
+            if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1971) {
+              return parsed;
+            }
+          }
+        }
+      }
+      
+      // Fallback - return null so we can display "-" instead of 1970
+      return null;
+    }
+      
+      // Fallback - return null so we can display "-" instead of 1970
+      return null;
     }
 
     window.applyFilters = () => renderCurrentSection();
@@ -1363,6 +1536,7 @@
       document.getElementById('filterDateFrom').value = '';
       document.getElementById('filterDateTo').value = '';
       document.getElementById('filterOwner').value = 'all';
+      document.getElementById('filterSortOrder').value = 'newest';
       renderCurrentSection();
     };
 
@@ -1405,6 +1579,9 @@
       const data = getFilteredData(currentSection);
       document.getElementById(`${currentSection}FilteredCount`).textContent = data.length;
       const container = document.getElementById(`${currentSection}TableContainer`);
+      
+      // Debug: Log what we're rendering
+      console.log(`🎨 Rendering ${currentSection}: ${data.length} filtered / ${cache[currentSection].length} total`);
       
       if (data.length === 0) {
         container.innerHTML = `<div class="empty-state"><div class="icon">${getIcon(currentSection)}</div><p>No ${currentSection} found</p></div>`;
@@ -1722,11 +1899,33 @@
       return { class: 'partial', icon: '❔', label: 'Accessibility Unknown', desc: 'No accessibility information available' };
     }
 
-    function formatDuration(ms) {
-      if (!ms) return '-';
-      const mins = Math.floor(ms / 60000);
-      if (mins < 60) return `${mins}m`;
-      return `${Math.floor(mins/60)}h ${mins%60}m`;
+    function formatDuration(value) {
+      if (!value || value === 0) return '-';
+      
+      let ms = value;
+      
+      // If value is unreasonably large (> 30 days in ms), it might be in wrong format
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      
+      // Check if it looks like seconds instead of milliseconds (value < 86400 = 24h in seconds)
+      if (value > 0 && value < 86400) {
+        // Likely stored in seconds, convert to ms
+        ms = value * 1000;
+      }
+      
+      // If still unreasonably large (> 30 days), show as invalid
+      if (ms > thirtyDaysMs) {
+        console.warn('⚠️ Unreasonable duration value:', value);
+        return '⚠️ Invalid';
+      }
+      
+      const totalSeconds = Math.floor(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      
+      if (hours === 0 && mins === 0) return '< 1m';
+      if (hours === 0) return `${mins}m`;
+      return `${hours}h ${mins}m`;
     }
 
     function initPreviewMap() {
