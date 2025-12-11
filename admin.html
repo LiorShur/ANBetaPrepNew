@@ -1121,7 +1121,7 @@
         document.getElementById(`${s}Count`).innerHTML = '<span class="spinner"></span>';
       });
       
-      // Track failures
+      // Track results
       const results = await Promise.all([
         loadCollectionWithRetry('routes'),
         loadCollectionWithRetry('guides'),
@@ -1130,17 +1130,25 @@
       ]);
       
       const failures = results.filter(r => !r.success);
+      const totalItems = cache.routes.length + cache.guides.length + cache.conditions.length + cache.reports.length;
       
       updateAllCounts();
       renderCurrentSection();
       
-      if (failures.length === 0) {
-        showToast('Data loaded successfully', 'success');
-      } else if (failures.length === 4) {
-        showToast('Failed to load data. Check your connection.', 'error');
+      if (failures.length > 0) {
+        // Actual errors occurred
+        if (failures.length === 4) {
+          showToast('Failed to load data. Check your connection.', 'error');
+        } else {
+          const failedSections = failures.map(f => f.section).join(', ');
+          showToast(`Some sections failed to load: ${failedSections}`, 'error');
+        }
+      } else if (totalItems === 0) {
+        // All succeeded but got 0 items - likely connection/offline issue
+        showToast('⚠️ No data loaded. You may be offline or disconnected.', 'error');
+        console.warn('⚠️ All collections returned 0 items - possible offline/connection issue');
       } else {
-        const failedSections = failures.map(f => f.section).join(', ');
-        showToast(`Some sections failed to load: ${failedSections}`, 'error');
+        showToast('Data loaded successfully', 'success');
       }
     }
 
@@ -1188,10 +1196,12 @@
       updateAllCounts();
       renderCurrentSection();
       
-      if (result.success) {
-        showToast(`${section.charAt(0).toUpperCase() + section.slice(1)} refreshed`, 'success');
-      } else {
+      if (!result.success) {
         showToast(`Failed to refresh ${section}`, 'error');
+      } else if (cache[section].length === 0) {
+        showToast(`⚠️ ${section} returned empty. May be offline.`, 'error');
+      } else {
+        showToast(`${section.charAt(0).toUpperCase() + section.slice(1)} refreshed (${cache[section].length} items)`, 'success');
       }
     };
 
@@ -1261,10 +1271,23 @@
     // ==================== RENDERING ====================
 
     function updateAllCounts() {
-      document.getElementById('routesCount').textContent = cache.routes.length;
-      document.getElementById('guidesCount').textContent = cache.guides.length;
-      document.getElementById('conditionsCount').textContent = cache.conditions.length;
-      document.getElementById('reportsCount').textContent = cache.reports.length;
+      const sections = ['routes', 'guides', 'conditions', 'reports'];
+      const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
+      
+      sections.forEach(section => {
+        const countEl = document.getElementById(`${section}Count`);
+        const count = cache[section].length;
+        countEl.textContent = count;
+        
+        // Add warning style if all sections are empty (likely offline)
+        if (totalItems === 0) {
+          countEl.style.color = '#f59e0b';
+          countEl.title = 'May be offline - no data loaded';
+        } else {
+          countEl.style.color = '';
+          countEl.title = '';
+        }
+      });
     }
 
     function renderCurrentSection() {
