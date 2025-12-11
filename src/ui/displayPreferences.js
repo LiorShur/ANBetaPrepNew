@@ -384,8 +384,10 @@ class DisplayPreferences {
     }
     
     // Check if tracking is active
-    const isTracking = window.AccessNatureApp?.getController?.('tracking')?.isTracking?.() ||
-                       window.AccessNatureApp?.getController?.('state')?.isTracking?.() ||
+    const trackingController = window.AccessNatureApp?.getController?.('tracking');
+    const isTracking = trackingController?.isTrackingActive?.() ||
+                       trackingController?.isTracking ||
+                       window.AccessNatureApp?.getController?.('state')?.isTracking ||
                        document.body.classList.contains('tracking-active') ||
                        document.querySelector('.tracking-indicator.active') ||
                        document.querySelector('[data-tracking="true"]');
