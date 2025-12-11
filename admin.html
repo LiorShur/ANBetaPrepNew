@@ -675,7 +675,7 @@
       gap: 12px;
     }
     
-    /* .owner-info-item { } */
+    .owner-info-item { }
     .owner-info-item .label { font-size: 0.8em; color: #94a3b8; }
     .owner-info-item .value { font-weight: 600; color: #1e293b; word-break: break-all; }
   </style>
@@ -899,7 +899,7 @@
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, doc, getDocs, updateDoc, deleteDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js';
 
     // Firebase config
@@ -1094,30 +1094,60 @@
 
     async function loadAllData() {
       showToast('Loading data...', 'info');
+      
+      // Show loading state on all counts
+      ['routes', 'guides', 'conditions', 'reports'].forEach(s => {
+        document.getElementById(`${s}Count`).textContent = '...';
+      });
+      
       try {
         await Promise.all([
-          loadCollection('routes'),
-          loadCollection('guides'),
-          loadCollection('conditions'),
-          loadCollection('reports')
+          loadCollectionWithRetry('routes'),
+          loadCollectionWithRetry('guides'),
+          loadCollectionWithRetry('conditions'),
+          loadCollectionWithRetry('reports')
         ]);
         updateAllCounts();
         renderCurrentSection();
-        showToast('Data loaded', 'success');
+        showToast('Data loaded successfully', 'success');
       } catch (error) {
         console.error('Load error:', error);
-        showToast('Failed to load: ' + error.message, 'error');
+        showToast('Some data failed to load. Try refreshing.', 'error');
+        updateAllCounts();
+        renderCurrentSection();
       }
     }
 
-    async function loadCollection(section) {
-      try {
-        const snapshot = await getDocs(collection(db, COLLECTIONS[section]));
-        cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      } catch (error) {
-        console.error(`Error loading ${section}:`, error);
-        cache[section] = [];
+    async function loadCollectionWithRetry(section, maxRetries = 3) {
+      let lastError = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`📥 Loading ${section} (attempt ${attempt}/${maxRetries})...`);
+          const snapshot = await getDocs(collection(db, COLLECTIONS[section]));
+          cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log(`✅ Loaded ${cache[section].length} ${section}`);
+          return; // Success, exit
+        } catch (error) {
+          lastError = error;
+          console.warn(`⚠️ Attempt ${attempt} failed for ${section}:`, error.message);
+          
+          if (attempt < maxRetries) {
+            // Wait before retrying (exponential backoff)
+            const waitTime = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+            console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+            await new Promise(r => setTimeout(r, waitTime));
+          }
+        }
       }
+      
+      // All retries failed
+      console.error(`❌ Failed to load ${section} after ${maxRetries} attempts:`, lastError);
+      cache[section] = [];
+    }
+
+    async function loadCollection(section) {
+      return loadCollectionWithRetry(section, 1);
     }
 
     window.refreshSection = async (section) => {
@@ -1311,15 +1341,49 @@
 
     // ==================== EDIT MODAL ====================
 
-    window.openEditModal = (section, id) => {
+    let linkedRouteData = null; // Store linked route for guides
+
+    window.openEditModal = async (section, id) => {
       const item = cache[section].find(i => i.id === id);
       if (!item) return;
       
       editingItem = JSON.parse(JSON.stringify(item)); // Deep clone
       editingCollection = COLLECTIONS[section];
       currentSection = section;
+      linkedRouteData = null; // Reset
       
       document.getElementById('editModalTitle').textContent = `${getIcon(section)} Edit ${section.slice(0, -1)}`;
+      
+      // Show modal immediately with loading state
+      document.getElementById('editModal').classList.add('active');
+      switchModalTab('preview');
+      
+      // For guides, try to load the linked route data
+      if (section === 'guides' && editingItem.routeId) {
+        console.log('🔗 Loading linked route for guide:', editingItem.routeId);
+        try {
+          // First check cache
+          linkedRouteData = cache.routes.find(r => r.id === editingItem.routeId);
+          
+          if (!linkedRouteData) {
+            // Load from Firestore
+            const routeDoc = await getDoc(doc(db, 'routes', editingItem.routeId));
+            if (routeDoc.exists()) {
+              linkedRouteData = { id: routeDoc.id, ...routeDoc.data() };
+              console.log('✅ Loaded linked route from Firestore');
+            }
+          } else {
+            console.log('✅ Found linked route in cache');
+          }
+          
+          if (linkedRouteData) {
+            console.log('📷 Linked route has', linkedRouteData.routeData?.filter(p => p.type === 'photo').length || 0, 'photos');
+            console.log('📍 Linked route has', linkedRouteData.routeData?.filter(p => p.type === 'location').length || 0, 'location points');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not load linked route:', error.message);
+        }
+      }
       
       // Render all tabs
       renderPreviewTab();
@@ -1327,11 +1391,6 @@
       renderAccessibilityTab();
       renderPhotosTab();
       renderJsonTab();
-      
-      // Reset to preview tab
-      switchModalTab('preview');
-      
-      document.getElementById('editModal').classList.add('active');
     };
 
     window.closeEditModal = () => {
@@ -1399,6 +1458,12 @@
       } else if (currentSection === 'guides') {
         const meta = item.metadata || {};
         const access = item.accessibility || {};
+        const accessLevel = getAccessLevel(access);
+        
+        // Check if we have linked route info
+        const hasLinkedRoute = linkedRouteData && linkedRouteData.routeData;
+        const linkedPhotos = hasLinkedRoute ? linkedRouteData.routeData.filter(p => p.type === 'photo').length : 0;
+        const linkedNotes = hasLinkedRoute ? linkedRouteData.routeData.filter(p => p.type === 'text').length : 0;
         
         previewHtml = `
           ${ownerHtml}
@@ -1412,11 +1477,22 @@
             </div>
             <div class="preview-stats">
               <div class="preview-stat"><div class="value">${(meta.totalDistance || 0).toFixed(2)}</div><div class="label">km</div></div>
-              <div class="preview-stat"><div class="value">${meta.photoCount || 0}</div><div class="label">Photos</div></div>
-              <div class="preview-stat"><div class="value">${meta.noteCount || 0}</div><div class="label">Notes</div></div>
+              <div class="preview-stat"><div class="value">${hasLinkedRoute ? linkedPhotos : (meta.photoCount || 0)}</div><div class="label">Photos</div></div>
+              <div class="preview-stat"><div class="value">${hasLinkedRoute ? linkedNotes : (meta.noteCount || 0)}</div><div class="label">Notes</div></div>
               <div class="preview-stat"><div class="value">${item.isPublic ? '✅' : '🔒'}</div><div class="label">${item.isPublic ? 'Public' : 'Private'}</div></div>
             </div>
           </div>
+          ${item.routeId ? `
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;">
+              <strong>🔗 Linked Route:</strong> ${linkedRouteData ? esc(linkedRouteData.routeName || linkedRouteData.name || 'Unknown') : '<span style="color:#f59e0b;">Loading...</span>'}
+              <br><small style="color:#6b7280;">ID: ${item.routeId}</small>
+            </div>
+          ` : ''}
+          <div class="access-banner ${accessLevel.class}">
+            <div class="icon">${accessLevel.icon}</div>
+            <div><div class="level">${accessLevel.label}</div><div class="desc">${accessLevel.desc}</div></div>
+          </div>
+          <div class="map-container" id="previewMap"></div>
         `;
       } else if (currentSection === 'conditions') {
         const conds = Array.isArray(item.conditions) ? item.conditions : [];
@@ -1461,8 +1537,8 @@
       
       container.innerHTML = previewHtml;
       
-      // Initialize map if route
-      if (currentSection === 'routes') {
+      // Initialize map if route or guide with linked route
+      if (currentSection === 'routes' || currentSection === 'guides') {
         setTimeout(() => initPreviewMap(), 100);
       }
     }
@@ -1484,13 +1560,33 @@
 
     function initPreviewMap() {
       const mapEl = document.getElementById('previewMap');
-      if (!mapEl || !editingItem?.routeData) return;
+      if (!mapEl) return;
       
-      const locations = editingItem.routeData.filter(p => p.type === 'location' && p.coords);
+      // Get route data - for guides, use linked route
+      let routeData = null;
+      if (currentSection === 'routes') {
+        routeData = editingItem?.routeData;
+      } else if (currentSection === 'guides' && linkedRouteData) {
+        routeData = linkedRouteData.routeData;
+        console.log('🗺️ Using linked route data for map');
+      }
+      
+      if (!routeData) {
+        if (currentSection === 'guides' && editingItem.routeId) {
+          mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#f59e0b;">⚠️ Could not load linked route for map</div>';
+        } else {
+          mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No route data available</div>';
+        }
+        return;
+      }
+      
+      const locations = routeData.filter(p => p.type === 'location' && p.coords);
       if (locations.length === 0) {
         mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No location data available</div>';
         return;
       }
+      
+      console.log('🗺️ Rendering map with', locations.length, 'location points');
       
       const map = L.map(mapEl).setView([locations[0].coords.lat, locations[0].coords.lng], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -1718,56 +1814,300 @@
     function renderPhotosTab() {
       const container = document.getElementById('tab-photos');
       
+      // Get photos based on item type
       let photos = [];
-      if (currentSection === 'routes' && editingItem.routeData) {
-        photos = editingItem.routeData.filter(p => p.type === 'photo');
-      }
-      
-      let html = '<h4 style="margin-bottom:16px;">📷 Photos</h4>';
-      html += '<div class="photos-grid">';
-      
-      photos.forEach((photo, idx) => {
-        const src = photo.dataUrl || photo.url || '';
-        html += `
-          <div class="photo-card">
-            <img src="${src}" alt="Photo ${idx+1}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
-            <div class="photo-actions">
-              <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
-            </div>
-          </div>
-        `;
-      });
-      
-      html += `
-        <div class="add-photo-card" onclick="triggerPhotoUpload()">
-          <div class="icon">➕</div>
-          <div class="text">Add Photo</div>
-        </div>
-      `;
-      
-      html += '</div>';
-      
-      // Notes section
       let notes = [];
-      if (currentSection === 'routes' && editingItem.routeData) {
-        notes = editingItem.routeData.filter(p => p.type === 'text');
+      let canAddPhotos = false;
+      let canAddNotes = false;
+      let fromLinkedRoute = false;
+      
+      if (currentSection === 'routes') {
+        if (editingItem.routeData) {
+          photos = editingItem.routeData.filter(p => p.type === 'photo');
+          notes = editingItem.routeData.filter(p => p.type === 'text');
+        }
+        canAddPhotos = true;
+        canAddNotes = true;
+      } else if (currentSection === 'guides') {
+        // Guides: first try linked route, then guide's own photos
+        if (linkedRouteData && linkedRouteData.routeData) {
+          photos = linkedRouteData.routeData.filter(p => p.type === 'photo');
+          notes = linkedRouteData.routeData.filter(p => p.type === 'text');
+          fromLinkedRoute = true;
+          console.log('📷 Using photos from linked route');
+        } else if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        canAddPhotos = false; // Don't allow adding to linked route
+        canAddNotes = false;
+      } else if (currentSection === 'conditions') {
+        // Conditions might have photos array
+        if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        if (editingItem.imageUrl) {
+          photos.push({ content: editingItem.imageUrl, url: editingItem.imageUrl });
+        }
+        canAddPhotos = true;
+      } else if (currentSection === 'reports') {
+        // Reports might have photos array or individual photo fields
+        if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        if (editingItem.imageUrl) {
+          photos.push({ content: editingItem.imageUrl, url: editingItem.imageUrl });
+        }
+        if (editingItem.photoUrl) {
+          photos.push({ content: editingItem.photoUrl, url: editingItem.photoUrl });
+        }
+        canAddPhotos = true;
       }
       
-      html += '<h4 style="margin:24px 0 16px;">📝 Notes</h4>';
+      // Debug: Log photo data structure
+      console.log(`📷 Photos tab - Section: ${currentSection}, Photos found: ${photos.length}, From linked route: ${fromLinkedRoute}`);
+      if (photos.length > 0) {
+        console.log('📷 First photo structure:', photos[0]);
+        console.log('📷 Photo keys:', typeof photos[0] === 'object' ? Object.keys(photos[0]) : 'string');
+      }
       
-      notes.forEach((note, idx) => {
+      let html = '<h4 style="margin-bottom:8px;">📷 Photos (' + photos.length + ' found)</h4>';
+      
+      if (fromLinkedRoute) {
+        html += `<p style="color:#6b7280;font-size:0.85em;margin-bottom:16px;">
+          📎 Photos from linked route: <strong>${linkedRouteData.routeName || linkedRouteData.name || 'Unknown'}</strong>
+        </p>`;
+      }
+      
+      if (photos.length === 0) {
+        if (currentSection === 'guides' && editingItem.routeId && !linkedRouteData) {
+          html += '<p style="color:#f59e0b;">⚠️ Could not load linked route data. The original route may have been deleted.</p>';
+        } else {
+          html += '<p style="color:#6b7280;">No photos found for this item.</p>';
+        }
+        if (canAddPhotos) {
+          html += '<div class="photos-grid">';
+          html += `
+            <div class="add-photo-card" onclick="triggerPhotoUpload()">
+              <div class="icon">➕</div>
+              <div class="text">Add Photo</div>
+            </div>
+          `;
+          html += '</div>';
+        }
+      } else {
+        html += '<div class="photos-grid">';
+        
+        photos.forEach((photo, idx) => {
+          // Handle different photo data structures
+          let src = '';
+          if (typeof photo === 'string') {
+            src = photo;
+          } else {
+            src = photo.content || photo.dataUrl || photo.url || photo.imageUrl || photo.src || '';
+          }
+          
+          // Debug: Log each photo
+          console.log(`📷 Photo ${idx}:`, { 
+            type: typeof photo, 
+            hasContent: !!photo?.content,
+            hasDataUrl: !!photo?.dataUrl,
+            hasUrl: !!photo?.url,
+            srcLength: src?.length || 0,
+            srcPreview: src?.substring(0, 50) || 'empty'
+          });
+          
+          if (src && src.length > 10) {
+            html += `
+              <div class="photo-card">
+                <img src="${src}" alt="Photo ${idx+1}" 
+                  onload="console.log('✅ Photo ${idx+1} loaded')"
+                  onerror="console.log('❌ Photo ${idx+1} failed to load'); this.style.display='none'; this.parentElement.querySelector('.photo-error').style.display='flex';">
+                <div class="photo-error" style="display:none;position:absolute;inset:0;background:#f3f4f6;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;">
+                  <span style="font-size:2em;">📷</span>
+                  <span style="font-size:0.7em;">Load failed</span>
+                </div>
+                <div class="photo-actions">
+                  <button class="photo-btn" onclick="viewFullPhoto(${idx})" title="View">🔍</button>
+                  <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
+                </div>
+              </div>
+            `;
+          } else {
+            // Show placeholder for photos with missing/invalid data
+            html += `
+              <div class="photo-card">
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fef3c7;color:#92400e;flex-direction:column;padding:8px;text-align:center;">
+                  <span style="font-size:2em;">⚠️</span>
+                  <span style="font-size:0.65em;">No image data</span>
+                  <span style="font-size:0.55em;color:#666;">${typeof photo === 'object' ? Object.keys(photo).join(', ') : 'string'}</span>
+                </div>
+                <div class="photo-actions">
+                  <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
+                </div>
+              </div>
+            `;
+          }
+        });
+        
+        if (canAddPhotos) {
+          html += `
+            <div class="add-photo-card" onclick="triggerPhotoUpload()">
+              <div class="icon">➕</div>
+              <div class="text">Add Photo</div>
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+      }
+      
+      // Notes section (primarily for routes)
+      if (currentSection === 'routes' || notes.length > 0) {
+        html += '<h4 style="margin:24px 0 16px;">📝 Notes</h4>';
+        
+        if (notes.length === 0) {
+          html += '<p style="color:#6b7280;margin-bottom:12px;">No notes yet.</p>';
+        }
+        
+        notes.forEach((note, idx) => {
+          const noteText = note.content || note.text || '';
+          html += `
+            <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;gap:12px;">
+              <textarea style="flex:1;min-height:60px;border:1px solid #e5e7eb;border-radius:6px;padding:8px;" onchange="updateNote(${idx}, this.value)">${esc(noteText)}</textarea>
+              <button class="btn btn-danger btn-sm" onclick="removeNote(${idx})">🗑️</button>
+            </div>
+          `;
+        });
+        
+        if (canAddNotes) {
+          html += `<button class="btn btn-secondary" onclick="addNote()" style="margin-top:8px;">➕ Add Note</button>`;
+        }
+      }
+      
+      // Description/Notes for non-route items
+      if (currentSection !== 'routes') {
+        const desc = editingItem.description || editingItem.notes || '';
         html += `
-          <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;gap:12px;">
-            <textarea style="flex:1;min-height:60px;border:1px solid #e5e7eb;border-radius:6px;padding:8px;" onchange="updateNote(${idx}, this.value)">${esc(note.text || note.content || '')}</textarea>
-            <button class="btn btn-danger btn-sm" onclick="removeNote(${idx})">🗑️</button>
-          </div>
+          <h4 style="margin:24px 0 16px;">📝 Description / Notes</h4>
+          <textarea id="photos_tab_notes" style="width:100%;min-height:100px;border:1px solid #e5e7eb;border-radius:6px;padding:12px;" placeholder="Add notes or description...">${esc(desc)}</textarea>
         `;
-      });
-      
-      html += `<button class="btn btn-secondary" onclick="addNote()" style="margin-top:8px;">➕ Add Note</button>`;
+      }
       
       container.innerHTML = html;
     }
+
+    window.viewFullPhoto = (idx) => {
+      // Get photos array based on section
+      let photos = [];
+      if (currentSection === 'routes' && editingItem.routeData) {
+        photos = editingItem.routeData.filter(p => p.type === 'photo');
+      } else if (currentSection === 'guides' && linkedRouteData && linkedRouteData.routeData) {
+        photos = linkedRouteData.routeData.filter(p => p.type === 'photo');
+      } else if (editingItem.photos) {
+        photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+      }
+      
+      const photo = photos[idx];
+      if (!photo) {
+        console.warn('❌ Photo not found at index', idx);
+        return;
+      }
+      
+      // Get the image source
+      let imgSrc = '';
+      if (typeof photo === 'string') {
+        imgSrc = photo;
+      } else {
+        imgSrc = photo.content || photo.dataUrl || photo.url || photo.imageUrl || photo.src || '';
+      }
+      
+      console.log('🔍 Opening photo:', { idx, srcLength: imgSrc?.length, srcStart: imgSrc?.substring(0, 50) });
+      
+      if (imgSrc && imgSrc.length > 10) {
+        // Create fullscreen overlay instead of new tab (works better for base64)
+        const overlay = document.createElement('div');
+        overlay.id = 'photoOverlay';
+        overlay.style.cssText = `
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          cursor: zoom-out;
+          padding: 20px;
+        `;
+        overlay.onclick = () => overlay.remove();
+        
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.style.cssText = `
+          max-width: 95%;
+          max-height: 95%;
+          object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        `;
+        img.onclick = (e) => e.stopPropagation();
+        
+        // Download button
+        const downloadBtn = document.createElement('button');
+        downloadBtn.innerHTML = '⬇️ Download';
+        downloadBtn.style.cssText = `
+          position: absolute;
+          top: 20px;
+          right: 70px;
+          background: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+        `;
+        downloadBtn.onclick = (e) => {
+          e.stopPropagation();
+          const a = document.createElement('a');
+          a.href = imgSrc;
+          a.download = `photo_${idx + 1}.jpg`;
+          a.click();
+        };
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '✕';
+        closeBtn.style.cssText = `
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: white;
+          border: none;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 20px;
+        `;
+        closeBtn.onclick = () => overlay.remove();
+        
+        overlay.appendChild(img);
+        overlay.appendChild(downloadBtn);
+        overlay.appendChild(closeBtn);
+        document.body.appendChild(overlay);
+        
+        // Close on escape key
+        const handleEsc = (e) => {
+          if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', handleEsc);
+          }
+        };
+        document.addEventListener('keydown', handleEsc);
+      } else {
+        console.warn('❌ No valid image source found');
+        showToast('Could not load photo', 'error');
+      }
+    };
 
     window.triggerPhotoUpload = () => {
       document.getElementById('photoUploadInput').click();
@@ -1780,13 +2120,25 @@
       for (const file of files) {
         const reader = new FileReader();
         reader.onload = (evt) => {
-          if (!editingItem.routeData) editingItem.routeData = [];
-          editingItem.routeData.push({
-            type: 'photo',
-            dataUrl: evt.target.result,
+          const photoData = {
+            content: evt.target.result,
             timestamp: Date.now(),
             fileName: file.name
-          });
+          };
+          
+          if (currentSection === 'routes') {
+            // Routes use routeData array
+            if (!editingItem.routeData) editingItem.routeData = [];
+            editingItem.routeData.push({
+              type: 'photo',
+              ...photoData
+            });
+          } else {
+            // Other sections use photos array
+            if (!editingItem.photos) editingItem.photos = [];
+            editingItem.photos.push(photoData);
+          }
+          
           renderPhotosTab();
         };
         reader.readAsDataURL(file);
@@ -1795,10 +2147,15 @@
     });
 
     window.removePhoto = (idx) => {
-      if (!editingItem.routeData) return;
-      const photos = editingItem.routeData.filter(p => p.type === 'photo');
-      const photoToRemove = photos[idx];
-      editingItem.routeData = editingItem.routeData.filter(p => p !== photoToRemove);
+      if (currentSection === 'routes') {
+        if (!editingItem.routeData) return;
+        const photos = editingItem.routeData.filter(p => p.type === 'photo');
+        const photoToRemove = photos[idx];
+        editingItem.routeData = editingItem.routeData.filter(p => p !== photoToRemove);
+      } else {
+        if (!editingItem.photos) return;
+        editingItem.photos.splice(idx, 1);
+      }
       renderPhotosTab();
     };
 
@@ -1806,7 +2163,7 @@
       if (!editingItem.routeData) editingItem.routeData = [];
       editingItem.routeData.push({
         type: 'text',
-        text: '',
+        content: '',
         timestamp: Date.now()
       });
       renderPhotosTab();
@@ -1815,7 +2172,7 @@
     window.updateNote = (idx, value) => {
       if (!editingItem.routeData) return;
       const notes = editingItem.routeData.filter(p => p.type === 'text');
-      if (notes[idx]) notes[idx].text = value;
+      if (notes[idx]) notes[idx].content = value;
     };
 
     window.removeNote = (idx) => {
@@ -1889,7 +2246,7 @@
           }
         }
         
-        // Route data (photos, notes)
+        // Route data (photos, notes) - for routes
         if (currentSection === 'routes' && editingItem.routeData) {
           updates.routeData = editingItem.routeData;
           updates.stats = {
@@ -1898,6 +2255,22 @@
             notes: editingItem.routeData.filter(p => p.type === 'text').length,
             totalDataPoints: editingItem.routeData.length
           };
+        }
+        
+        // Photos array - for non-route items
+        if (currentSection !== 'routes' && editingItem.photos) {
+          updates.photos = editingItem.photos;
+        }
+        
+        // Notes from photos tab - for non-route items
+        if (currentSection !== 'routes') {
+          const notesTextarea = document.getElementById('photos_tab_notes');
+          if (notesTextarea) {
+            const notesValue = notesTextarea.value;
+            // Save to both description and notes fields for compatibility
+            updates.description = notesValue;
+            updates.notes = notesValue;
+          }
         }
         
         // Save to Firestore
