@@ -335,10 +335,76 @@ class DisplayPreferences {
    * Handle touch start for pull-to-refresh
    */
   handleTouchStart(e) {
+    // Don't enable pull-to-refresh if:
+    // 1. Any modal is open
+    // 2. Tracking is active
+    // 3. Not at top of page
+    
+    if (this.shouldBlockPullToRefresh()) {
+      this.isPulling = false;
+      return;
+    }
+    
     if (window.scrollY === 0) {
       this.pullStartY = e.touches[0].clientY;
       this.isPulling = true;
     }
+  }
+  
+  /**
+   * Check if pull-to-refresh should be blocked
+   */
+  shouldBlockPullToRefresh() {
+    // Check for open modals
+    const modalSelectors = [
+      '.modal-overlay.visible',
+      '.modal-overlay.active',
+      '.modal-backdrop.show',
+      '.survey-modal',
+      '.accessibility-survey-modal',
+      '[data-modal].visible',
+      '[data-modal].active',
+      '.overlay.visible',
+      '#accessibilitySurveyModal.visible',
+      '#accessibilitySurveyModal:not(.hidden)',
+      '.modal:not(.hidden)',
+      '[role="dialog"]:not(.hidden)'
+    ];
+    
+    for (const selector of modalSelectors) {
+      try {
+        const modal = document.querySelector(selector);
+        if (modal && (modal.offsetParent !== null || getComputedStyle(modal).display !== 'none')) {
+          console.log('🚫 Pull-to-refresh blocked: modal open');
+          return true;
+        }
+      } catch (e) {
+        // Invalid selector, skip
+      }
+    }
+    
+    // Check if tracking is active
+    const isTracking = window.AccessNatureApp?.getController?.('tracking')?.isTracking?.() ||
+                       window.AccessNatureApp?.getController?.('state')?.isTracking?.() ||
+                       document.body.classList.contains('tracking-active') ||
+                       document.querySelector('.tracking-indicator.active') ||
+                       document.querySelector('[data-tracking="true"]');
+    
+    if (isTracking) {
+      console.log('🚫 Pull-to-refresh blocked: tracking active');
+      return true;
+    }
+    
+    // Check for any visible overlay or fullscreen element
+    const overlays = document.querySelectorAll('.fullscreen-overlay, .photo-viewer, .guide-viewer');
+    for (const overlay of overlays) {
+      if (overlay.offsetParent !== null) {
+        console.log('🚫 Pull-to-refresh blocked: overlay visible');
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -346,6 +412,14 @@ class DisplayPreferences {
    */
   handleTouchMove(e) {
     if (!this.isPulling) return;
+    
+    // Re-check blocking conditions during move (modal might have opened)
+    if (this.shouldBlockPullToRefresh()) {
+      this.isPulling = false;
+      const indicator = document.getElementById('pullIndicator');
+      indicator?.classList.remove('visible');
+      return;
+    }
     
     const currentY = e.touches[0].clientY;
     const pullDistance = currentY - this.pullStartY;
