@@ -31,6 +31,41 @@
     .header h1 { font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
     .header-actions { display: flex; align-items: center; gap: 12px; }
     .user-info { font-size: 0.85em; opacity: 0.9; }
+    
+    .connection-status {
+      font-size: 0.75em;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.15);
+    }
+    .connection-status.online { color: #86efac; }
+    .connection-status.offline { color: #fca5a5; background: rgba(239,68,68,0.2); }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .action-btn {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #2c5530;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+    .load-status {
+      font-size: 0.85em;
+      color: #6b7280;
+    }
     .admin-badge { background: #fbbf24; color: #1e3a2f; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 700; }
     
     .header-btn {
@@ -707,15 +742,17 @@
     <div class="login-card">
       <h2>🔐 Admin Dashboard</h2>
       <p class="login-subtitle">Access Nature Management Console</p>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="admin@example.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="••••••••">
-      </div>
-      <button class="login-btn" id="loginBtn">Sign In</button>
+      <form id="loginForm" onsubmit="return false;" autocomplete="on">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" name="email" placeholder="admin@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" name="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+      </form>
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
@@ -726,6 +763,7 @@
     <div class="header">
       <h1>🌲 Access Nature <span class="admin-badge">ADMIN</span></h1>
       <div class="header-actions">
+        <span class="connection-status online" id="connectionStatus">🟢 Online</span>
         <span class="user-info" id="userInfo"></span>
         <button class="header-btn" onclick="window.location.href='tracker.html'">🗺️ Tracker</button>
         <button class="header-btn" onclick="signOutUser()">Sign Out</button>
@@ -755,6 +793,14 @@
           <div class="count" id="reportsCount">-</div>
           <div class="label">Accessibility Reports</div>
         </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="action-btn" onclick="loadAllData()" title="Reload all data">
+          🔄 Reload All
+        </button>
+        <span class="load-status" id="loadStatus"></span>
       </div>
 
       <!-- Filters -->
@@ -920,7 +966,7 @@
   <script type="module">
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, Timestamp, enableIndexedDbPersistence, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js';
 
     // Firebase config
@@ -937,8 +983,30 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+    
+    // Enable offline persistence
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('⚠️ Persistence failed: Multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        console.warn('⚠️ Persistence not available in this browser');
+      }
+    });
 
     const ADMIN_EMAIL = 'liorshur@gmail.com';
+    
+    // Connection status
+    let isOnline = navigator.onLine;
+    window.addEventListener('online', () => { isOnline = true; updateConnectionStatus(); });
+    window.addEventListener('offline', () => { isOnline = false; updateConnectionStatus(); });
+    
+    function updateConnectionStatus() {
+      const indicator = document.getElementById('connectionStatus');
+      if (indicator) {
+        indicator.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+        indicator.textContent = isOnline ? '🟢 Online' : '🔴 Offline';
+      }
+    }
 
     // State
     let currentUser = null;
@@ -1076,9 +1144,9 @@
       }
     });
 
-    document.getElementById('loginBtn').addEventListener('click', handleLogin);
-    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleLogin();
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleLogin();
     });
 
     async function handleLogin() {
@@ -1114,6 +1182,10 @@
     // ==================== DATA LOADING ====================
 
     async function loadAllData() {
+      const statusEl = document.getElementById('loadStatus');
+      statusEl.textContent = 'Loading...';
+      statusEl.style.color = '#6b7280';
+      
       showToast('Loading data...', 'info');
       
       // Show spinning loaders on all counts
@@ -1121,34 +1193,61 @@
         document.getElementById(`${s}Count`).innerHTML = '<span class="spinner"></span>';
       });
       
-      // Track results
-      const results = await Promise.all([
-        loadCollectionWithRetry('routes'),
-        loadCollectionWithRetry('guides'),
-        loadCollectionWithRetry('conditions'),
-        loadCollectionWithRetry('reports')
-      ]);
+      // Load sequentially to avoid overwhelming the connection
+      const results = [];
+      const sections = ['routes', 'guides', 'conditions', 'reports'];
+      
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        statusEl.textContent = `Loading ${section}... (${i + 1}/${sections.length})`;
+        console.log(`📥 Loading ${section}...`);
+        
+        const result = await loadCollectionWithRetry(section, 2);
+        results.push(result);
+        
+        // Update count immediately with visual feedback
+        const countEl = document.getElementById(`${section}Count`);
+        const count = cache[section].length;
+        countEl.textContent = count;
+        
+        if (result.success && count > 0) {
+          countEl.style.color = '#10b981'; // Green flash for success
+          setTimeout(() => { countEl.style.color = ''; }, 600);
+        } else if (!result.success) {
+          countEl.style.color = '#ef4444'; // Red for failure
+        }
+      }
       
       const failures = results.filter(r => !r.success);
-      const totalItems = cache.routes.length + cache.guides.length + cache.conditions.length + cache.reports.length;
+      const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
       
       updateAllCounts();
       renderCurrentSection();
+      updateConnectionStatus();
+      
+      // Update status
+      const timestamp = new Date().toLocaleTimeString();
       
       if (failures.length > 0) {
-        // Actual errors occurred
         if (failures.length === 4) {
+          statusEl.textContent = `Failed at ${timestamp}`;
+          statusEl.style.color = '#ef4444';
           showToast('Failed to load data. Check your connection.', 'error');
         } else {
           const failedSections = failures.map(f => f.section).join(', ');
-          showToast(`Some sections failed to load: ${failedSections}`, 'error');
+          statusEl.textContent = `Partial load at ${timestamp}`;
+          statusEl.style.color = '#f59e0b';
+          showToast(`Some sections failed: ${failedSections}`, 'error');
         }
       } else if (totalItems === 0) {
-        // All succeeded but got 0 items - likely connection/offline issue
-        showToast('⚠️ No data loaded. You may be offline or disconnected.', 'error');
+        statusEl.textContent = `No data at ${timestamp}`;
+        statusEl.style.color = '#f59e0b';
+        showToast('⚠️ No data loaded. You may be offline.', 'error');
         console.warn('⚠️ All collections returned 0 items - possible offline/connection issue');
       } else {
-        showToast('Data loaded successfully', 'success');
+        statusEl.textContent = `Updated ${timestamp}`;
+        statusEl.style.color = '#10b981';
+        showToast(`Loaded ${totalItems} items`, 'success');
       }
     }
 
@@ -1158,17 +1257,29 @@
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`📥 Loading ${section} (attempt ${attempt}/${maxRetries})...`);
-          const snapshot = await getDocs(collection(db, COLLECTIONS[section]));
+          
+          const collectionRef = collection(db, COLLECTIONS[section]);
+          
+          // Add timeout to fail faster on slow connections
+          const timeoutMs = 12000; // 12 seconds per attempt
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout - connection may be slow')), timeoutMs)
+          );
+          
+          const queryPromise = getDocs(collectionRef);
+          const snapshot = await Promise.race([queryPromise, timeoutPromise]);
+          
           cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           console.log(`✅ Loaded ${cache[section].length} ${section}`);
-          return { success: true, section }; // Success
+          return { success: true, section };
+          
         } catch (error) {
           lastError = error;
           console.warn(`⚠️ Attempt ${attempt} failed for ${section}:`, error.message);
           
           if (attempt < maxRetries) {
             // Wait before retrying (exponential backoff)
-            const waitTime = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+            const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
             console.log(`⏳ Waiting ${waitTime}ms before retry...`);
             await new Promise(r => setTimeout(r, waitTime));
           }
