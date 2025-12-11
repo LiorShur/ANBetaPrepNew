@@ -96,21 +96,47 @@ class LandingPageController {
   
   async loadDataWithRetry(retryCount = 0) {
     const MAX_RETRIES = 3;
+    const TIMEOUT_MS = 15000; // 15 second timeout per operation
     
     try {
-      await this.loadCommunityStats();
-      await this.loadFeaturedTrails();
-      this.updateUserStats();
+      console.log('📊 Loading data (attempt ' + (retryCount + 1) + ')...');
+      
+      // Helper to add timeout to promises
+      const withTimeout = (promise, name) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`${name} timeout after ${TIMEOUT_MS}ms`)), TIMEOUT_MS)
+          )
+        ]);
+      };
+      
+      // Load sequentially to avoid overwhelming the connection
+      console.log('📊 Step 1/3: Loading community stats...');
+      await withTimeout(this.loadCommunityStats(), 'Community stats');
+      
+      console.log('📊 Step 2/3: Loading featured trails...');
+      await withTimeout(this.loadFeaturedTrails(), 'Featured trails');
+      
+      console.log('📊 Step 3/3: Loading user stats...');
+      await withTimeout(this.updateUserStats(), 'User stats');
+      
+      console.log('✅ All data loaded successfully');
+      
     } catch (error) {
       console.error(`❌ Data loading failed (attempt ${retryCount + 1}):`, error);
       
       if (retryCount < MAX_RETRIES && (
         error.message?.includes('Target ID') ||
         error.message?.includes('unavailable') ||
-        error.message?.includes('timeout')
+        error.message?.includes('timeout') ||
+        error.code === 'unavailable'
       )) {
         console.log(`🔄 Retrying data load... (${retryCount + 1}/${MAX_RETRIES})`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        // Exponential backoff
+        const waitTime = Math.pow(2, retryCount) * 1000;
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         return this.loadDataWithRetry(retryCount + 1);
       }
       
@@ -510,13 +536,14 @@ async searchTrails() {
 // UPDATED: Load community stats without count queries
 async loadCommunityStats(retryCount = 0) {
   const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 12000; // 12 second timeout
   
   try {
-    console.log('Loading community stats...');
+    console.log('📈 Loading community stats...');
     
     // If we already loaded public guides, use cached data
     if (this.publicGuidesCache && this.publicGuidesCache.length > 0) {
-      console.log('Using cached public guides for stats');
+      console.log('📈 Using cached public guides for stats');
       this.calculateAndDisplayStats(this.publicGuidesCache);
       return;
     }
@@ -532,13 +559,25 @@ async loadCommunityStats(retryCount = 0) {
       where('isPublic', '==', true)
     );
     
+    // Add timeout wrapper
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), TIMEOUT_MS)
+    );
+    
     // Try getDocsFromServer first to avoid cache conflicts, fall back to getDocs
     let guidesSnapshot;
+    let source = 'unknown';
+    
     try {
-      guidesSnapshot = await getDocsFromServer(publicGuidesQuery);
+      console.log('   Trying server...');
+      const serverPromise = getDocsFromServer(publicGuidesQuery);
+      guidesSnapshot = await Promise.race([serverPromise, timeoutPromise]);
+      source = 'server';
     } catch (serverError) {
-      console.log('Server query failed, trying cached:', serverError.message);
-      guidesSnapshot = await getDocs(publicGuidesQuery);
+      console.log('   Server failed:', serverError.message, '- trying cache...');
+      const cachePromise = getDocs(publicGuidesQuery);
+      guidesSnapshot = await Promise.race([cachePromise, timeoutPromise]);
+      source = 'cache';
     }
     
     // Cache the results for loadFeaturedTrails
@@ -551,16 +590,17 @@ async loadCommunityStats(retryCount = 0) {
     });
     
     this.calculateAndDisplayStats(this.publicGuidesCache);
-    console.log('Community stats loaded successfully');
+    console.log(`✅ Community stats loaded from ${source}: ${this.publicGuidesCache.length} public guides`);
     
   } catch (error) {
-    console.error('Failed to load community stats:', error);
+    console.error('❌ Failed to load community stats:', error);
     
-    // Retry on Target ID error
-    if (error.message && error.message.includes('Target ID') && retryCount < MAX_RETRIES) {
+    // Retry on Target ID error or timeout
+    if ((error.message?.includes('Target ID') || error.message?.includes('timeout')) && retryCount < MAX_RETRIES) {
       console.log(`🔄 Retrying community stats... (${retryCount + 1}/${MAX_RETRIES})`);
       // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      const waitTime = Math.pow(2, retryCount) * 1000;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
       return this.loadCommunityStats(retryCount + 1);
     }
     
@@ -597,6 +637,8 @@ calculateAndDisplayStats(guides) {
 
 // UPDATED: Load featured trails using cached data if available
 async loadFeaturedTrails() {
+  const TIMEOUT_MS = 12000;
+  
   try {
     console.log('📍 Loading featured trails...');
     
@@ -615,14 +657,26 @@ async loadFeaturedTrails() {
         collection(db, 'trail_guides'),
         where('isPublic', '==', true)
       );
+      
+      // Add timeout wrapper
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout')), TIMEOUT_MS)
+      );
     
       // Try getDocsFromServer first to avoid cache conflicts
       let querySnapshot;
+      let source = 'unknown';
+      
       try {
-        querySnapshot = await getDocsFromServer(featuredQuery);
+        console.log('   Trying server...');
+        const serverPromise = getDocsFromServer(featuredQuery);
+        querySnapshot = await Promise.race([serverPromise, timeoutPromise]);
+        source = 'server';
       } catch (serverError) {
-        console.log('Server query failed, trying cached:', serverError.message);
-        querySnapshot = await getDocs(featuredQuery);
+        console.log('   Server failed:', serverError.message, '- trying cache...');
+        const cachePromise = getDocs(featuredQuery);
+        querySnapshot = await Promise.race([cachePromise, timeoutPromise]);
+        source = 'cache';
       }
       
       guides = [];
@@ -636,6 +690,7 @@ async loadFeaturedTrails() {
       
       // Cache for future use
       this.publicGuidesCache = guides;
+      console.log(`📍 Loaded ${guides.length} guides from ${source}`);
     }
     
     this.allFeaturedTrails = guides;
@@ -667,8 +722,8 @@ async loadFeaturedTrails() {
   } catch (error) {
     console.error('❌ Failed to load featured trails:', error);
     
-    // Retry on Target ID error
-    if (error.message && error.message.includes('Target ID') && !this._featuredRetried) {
+    // Retry on Target ID error or timeout
+    if ((error.message?.includes('Target ID') || error.message?.includes('timeout')) && !this._featuredRetried) {
       console.log('🔄 Retrying featured trails...');
       this._featuredRetried = true;
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -841,6 +896,8 @@ async updateUserStats() {
 // Add this new method to load cloud stats
 async loadUserCloudStats(retryCount = 0) {
   const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 12000;
+  
   try {
     const { collection, query, where, getDocs, getDocsFromServer } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
     const { auth } = await import('../firebase-setup.js');
@@ -852,18 +909,32 @@ async loadUserCloudStats(retryCount = 0) {
       return;
     }
     
+    console.log('📊 Loading user cloud stats...');
+    
     // Get user's routes from Firebase - try server first to avoid cache issues
     const routesQuery = query(
       collection(db, 'routes'),
       where('userId', '==', auth.currentUser.uid)
     );
     
+    // Add timeout wrapper
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), TIMEOUT_MS)
+    );
+    
     let routesSnapshot;
+    let source = 'unknown';
+    
     try {
-      routesSnapshot = await getDocsFromServer(routesQuery);
+      console.log('   Trying server...');
+      const serverPromise = getDocsFromServer(routesQuery);
+      routesSnapshot = await Promise.race([serverPromise, timeoutPromise]);
+      source = 'server';
     } catch (serverError) {
-      console.log('📊 Server fetch failed, trying cache...');
-      routesSnapshot = await getDocs(routesQuery);
+      console.log('   Server failed:', serverError.message, '- trying cache...');
+      const cachePromise = getDocs(routesQuery);
+      routesSnapshot = await Promise.race([cachePromise, timeoutPromise]);
+      source = 'cache';
     }
     
     let totalDistance = 0;
@@ -877,15 +948,16 @@ async loadUserCloudStats(retryCount = 0) {
     this.animateNumber('totalRoutes', routesSnapshot.size);
     this.updateElement('totalDistance', totalDistance.toFixed(1));
     
-    console.log(`📊 User stats loaded: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
+    console.log(`✅ User stats loaded from ${source}: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
     
   } catch (error) {
     console.error('❌ Failed to load cloud stats:', error);
     
-    // Retry on Target ID or network errors
-    if ((error.message?.includes('Target ID') || error.code === 'unavailable') && retryCount < MAX_RETRIES) {
+    // Retry on Target ID, timeout, or network errors
+    if ((error.message?.includes('Target ID') || error.message?.includes('timeout') || error.code === 'unavailable') && retryCount < MAX_RETRIES) {
       console.log(`🔄 Retrying cloud stats... (${retryCount + 1}/${MAX_RETRIES})`);
-      await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+      const waitTime = Math.pow(2, retryCount) * 500;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
       return this.loadUserCloudStats(retryCount + 1);
     }
     
