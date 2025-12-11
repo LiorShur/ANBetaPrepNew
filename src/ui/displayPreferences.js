@@ -360,6 +360,7 @@ class DisplayPreferences {
       '.modal-overlay.visible',
       '.modal-overlay.active',
       '.modal-backdrop.show',
+      '.modal-backdrop.active',
       '.survey-modal',
       '.accessibility-survey-modal',
       '[data-modal].visible',
@@ -368,7 +369,9 @@ class DisplayPreferences {
       '#accessibilitySurveyModal.visible',
       '#accessibilitySurveyModal:not(.hidden)',
       '.modal:not(.hidden)',
-      '[role="dialog"]:not(.hidden)'
+      '[role="dialog"]:not(.hidden)',
+      '.af2-overlay.open',
+      '.af2f-overlay.open'
     ];
     
     for (const selector of modalSelectors) {
@@ -383,17 +386,25 @@ class DisplayPreferences {
       }
     }
     
-    // Check if tracking is active
+    // Check if tracking is active or paused
     const trackingController = window.AccessNatureApp?.getController?.('tracking');
     const isTracking = trackingController?.isTrackingActive?.() ||
                        trackingController?.isTracking ||
-                       window.AccessNatureApp?.getController?.('state')?.isTracking ||
-                       document.body.classList.contains('tracking-active') ||
-                       document.querySelector('.tracking-indicator.active') ||
-                       document.querySelector('[data-tracking="true"]');
+                       document.body.classList.contains('tracking-active');
     
-    if (isTracking) {
-      console.log('🚫 Pull-to-refresh blocked: tracking active');
+    const isPaused = trackingController?.isPaused;
+    
+    if (isTracking || isPaused) {
+      console.log('🚫 Pull-to-refresh blocked: tracking active or paused');
+      return true;
+    }
+    
+    // Check for unsaved route data (tracking stopped but not saved)
+    const stateController = window.AccessNatureApp?.getController?.('state');
+    const routeData = stateController?.getRouteData?.() || [];
+    
+    if (routeData.length > 0) {
+      console.log('🚫 Pull-to-refresh blocked: unsaved route data');
       return true;
     }
     
