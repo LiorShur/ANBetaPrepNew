@@ -51,6 +51,9 @@ async start() {
   this.isTracking = true;
   this.isPaused = false;
   this.appState.setTrackingState(true);
+  
+  // Add body class to disable pull-to-refresh
+  document.body.classList.add('tracking-active');
 
   // Start GPS watch
   this.watchId = navigator.geolocation.watchPosition(
@@ -132,6 +135,10 @@ async stop() {
   this.isTracking = false;
   this.isPaused = false;
   this.appState.setTrackingState(false);
+  
+  // Remove body class to re-enable pull-to-refresh
+  document.body.classList.remove('tracking-active');
+  
   this.updateTrackingButtons();
 
   // Track user engagement (distance and time)
