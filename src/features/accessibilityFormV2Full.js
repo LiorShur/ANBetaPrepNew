@@ -1158,6 +1158,9 @@ export class AccessibilityFormV2Full {
       overlay.classList.add('open');
       this.isOpen = true;
       
+      // Prevent pull-to-refresh while form is open
+      document.body.classList.add('modal-open');
+      
       // Reset form
       overlay.querySelectorAll('input, select, textarea').forEach(i => {
         if (i.type === 'number') {
@@ -1182,6 +1185,9 @@ export class AccessibilityFormV2Full {
     if (overlay) {
       overlay.classList.remove('open');
       this.isOpen = false;
+      
+      // Re-enable pull-to-refresh
+      document.body.classList.remove('modal-open');
     }
   }
 }
