@@ -373,8 +373,9 @@ class ModalManager {
         }
       });
 
-      // Prevent body scroll
+      // Prevent body scroll and pull-to-refresh
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-open');
     });
   }
 
@@ -463,9 +464,10 @@ class ModalManager {
       backdrop.remove();
       this.activeModals.delete(modalId);
 
-      // Restore body scroll
+      // Restore body scroll and pull-to-refresh only when all modals are closed
       if (this.activeModals.size === 0) {
         document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
       }
 
       resolve(result);
