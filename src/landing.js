@@ -54,6 +54,10 @@ class LandingPageController {
       
       this.setupEventListeners();
       
+      // Setup auth state listener FIRST (critical for My Trails)
+      console.log('🏠 Setting up auth listener...');
+      await this.setupAuthListener();
+      
       // Update auth status and show My Trails if logged in
       console.log('🏠 About to call updateLandingAuthStatus()');
       await this.updateLandingAuthStatus();
@@ -1464,7 +1468,9 @@ downloadTrailGuide(htmlContent, routeName) {
       
       // Show My Trails section
       if (myTrailsSection) {
+        console.log('📍 Before: myTrailsSection.style.display =', myTrailsSection.style.display);
         myTrailsSection.style.display = 'block';
+        console.log('📍 After: myTrailsSection.style.display =', myTrailsSection.style.display);
         console.log('📍 My Trails section shown');
         
         // Show loading state
@@ -1508,9 +1514,14 @@ downloadTrailGuide(htmlContent, routeName) {
       const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
       const { auth } = await import('../firebase-setup.js');
       
+      console.log('🔐 Auth listener setup, current user:', auth.currentUser?.email || 'none');
+      
       onAuthStateChanged(auth, async (user) => {
+        console.log('🔐 Auth state changed:', user ? user.email : 'signed out');
         await this.updateLandingAuthStatus();
       });
+      
+      console.log('✅ Auth listener active');
     } catch (error) {
       console.warn('⚠️ Failed to setup auth listener:', error);
     }
