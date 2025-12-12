@@ -793,6 +793,11 @@
           <div class="count" id="reportsCount">-</div>
           <div class="label">Accessibility Reports</div>
         </div>
+        <div class="stat-card" data-section="settings" onclick="switchSection('settings')">
+          <div class="icon">⚙️</div>
+          <div class="count">—</div>
+          <div class="label">Settings</div>
+        </div>
       </div>
 
       <!-- Quick Actions -->
@@ -905,6 +910,78 @@
           </div>
           <div class="table-container" id="reportsTableContainer">
             <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Settings Section -->
+      <div class="section" id="settingsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>⚙️ App Settings</h3>
+          </div>
+          
+          <div style="padding: 20px;">
+            <!-- EmailJS Configuration -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h4 style="margin: 0 0 8px 0; color: #166534;">📧 EmailJS Configuration</h4>
+              <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 0.9rem;">
+                Configure EmailJS to enable automatic email notifications for Lifeline safety feature and route backups.
+              </p>
+              
+              <div style="display: grid; gap: 12px;">
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Public Key</label>
+                  <input type="text" id="emailjsPublicKey" placeholder="e.g., abc123XYZ..." 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Account → API Keys</small>
+                </div>
+                
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Service ID</label>
+                  <input type="text" id="emailjsServiceId" placeholder="e.g., service_abc123" 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Email Services</small>
+                </div>
+                
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Template ID</label>
+                  <input type="text" id="emailjsTemplateId" placeholder="e.g., template_xyz789" 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Email Templates</small>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                  <button class="btn btn-primary" onclick="saveEmailJSSettings()">💾 Save Settings</button>
+                  <button class="btn btn-secondary" onclick="testEmailJS()">🧪 Test Connection</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- EmailJS Setup Guide -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px;">
+              <h4 style="margin: 0 0 12px 0; color: #1e40af;">📖 How to Set Up EmailJS</h4>
+              <ol style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+                <li>Go to <a href="https://www.emailjs.com/" target="_blank" style="color: #2563eb;">emailjs.com</a> and create a free account</li>
+                <li>Add an <strong>Email Service</strong> (Gmail, Outlook, etc.) and verify it</li>
+                <li>Create an <strong>Email Template</strong> with these variables:
+                  <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{to_email}}</code> - Recipient email</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{to_name}}</code> - Recipient name</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{from_name}}</code> - Sender name</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{subject}}</code> - Email subject</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{message}}</code> - Full message body</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{maps_url}}</code> - Google Maps link</li>
+                  </ul>
+                </li>
+                <li>Copy your <strong>Public Key</strong> from Account → API Keys</li>
+                <li>Copy your <strong>Service ID</strong> and <strong>Template ID</strong> from their respective sections</li>
+                <li>Paste them above and click "Save Settings"</li>
+              </ol>
+              <p style="margin: 12px 0 0 0; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 0.9rem;">
+                ⚠️ <strong>Free tier:</strong> 200 emails/month. For more, upgrade your EmailJS plan.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -2760,6 +2837,108 @@
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 3000);
     }
+
+    // ==================== EMAILJS SETTINGS ====================
+    
+    const SETTINGS_KEY = 'accessNature_adminSettings';
+    
+    // Load settings on page load
+    function loadEmailJSSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const emailjs = settings.emailjs || {};
+        
+        document.getElementById('emailjsPublicKey').value = emailjs.publicKey || '';
+        document.getElementById('emailjsServiceId').value = emailjs.serviceId || '';
+        document.getElementById('emailjsTemplateId').value = emailjs.templateId || '';
+        
+        console.log('📧 EmailJS settings loaded');
+      } catch (e) {
+        console.warn('Failed to load EmailJS settings:', e);
+      }
+    }
+    
+    // Save EmailJS settings
+    window.saveEmailJSSettings = function() {
+      try {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        
+        settings.emailjs = {
+          publicKey: document.getElementById('emailjsPublicKey').value.trim(),
+          serviceId: document.getElementById('emailjsServiceId').value.trim(),
+          templateId: document.getElementById('emailjsTemplateId').value.trim()
+        };
+        
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        
+        showToast('✅ EmailJS settings saved!', 'success');
+        console.log('📧 EmailJS settings saved:', settings.emailjs);
+      } catch (e) {
+        console.error('Failed to save EmailJS settings:', e);
+        showToast('❌ Failed to save settings', 'error');
+      }
+    };
+    
+    // Test EmailJS connection
+    window.testEmailJS = async function() {
+      const publicKey = document.getElementById('emailjsPublicKey').value.trim();
+      const serviceId = document.getElementById('emailjsServiceId').value.trim();
+      const templateId = document.getElementById('emailjsTemplateId').value.trim();
+      
+      if (!publicKey || !serviceId || !templateId) {
+        showToast('⚠️ Please fill in all EmailJS fields first', 'error');
+        return;
+      }
+      
+      showToast('🔄 Testing EmailJS connection...', 'info');
+      
+      try {
+        // Load EmailJS if not already loaded
+        if (typeof emailjs === 'undefined') {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        
+        // Initialize with public key
+        emailjs.init(publicKey);
+        
+        // Try to send a test email (to yourself or a test address)
+        const testEmail = prompt('Enter your email address to receive a test message:');
+        if (!testEmail) {
+          showToast('Test cancelled', 'info');
+          return;
+        }
+        
+        await emailjs.send(serviceId, templateId, {
+          to_email: testEmail,
+          to_name: 'Test User',
+          from_name: 'Access Nature Admin',
+          subject: '🧪 EmailJS Test - Access Nature',
+          message: 'This is a test message from Access Nature. If you received this, EmailJS is configured correctly!',
+          maps_url: 'https://maps.google.com',
+          timestamp: new Date().toLocaleString()
+        });
+        
+        showToast('✅ Test email sent! Check your inbox.', 'success');
+      } catch (error) {
+        console.error('EmailJS test failed:', error);
+        showToast(`❌ Test failed: ${error.text || error.message || 'Unknown error'}`, 'error');
+      }
+    };
+    
+    // Load EmailJS settings when settings section is shown
+    const originalSwitchSection = window.switchSection;
+    window.switchSection = (section) => {
+      originalSwitchSection(section);
+      if (section === 'settings') {
+        loadEmailJSSettings();
+      }
+    };
   </script>
 </body>
 </html>
