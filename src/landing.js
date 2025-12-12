@@ -1547,12 +1547,12 @@ downloadTrailGuide(htmlContent, routeName) {
       const { db, auth } = await import('../firebase-setup.js');
       console.log('📍 Firebase imported, auth.currentUser:', auth.currentUser?.uid);
       
-      // Load user's routes
+      // Load user's routes (limit 50 for View All)
       const routesQuery = query(
         collection(db, 'routes'),
         where('userId', '==', auth.currentUser.uid),
         orderBy('createdAt', 'desc'),
-        limit(6)
+        limit(50)
       );
       
       const routesSnapshot = await getDocs(routesQuery);
@@ -1566,12 +1566,12 @@ downloadTrailGuide(htmlContent, routeName) {
         });
       });
       
-      // Also load trail guides
+      // Also load trail guides (limit 50 for View All)
       const guidesQuery = query(
         collection(db, 'trail_guides'),
         where('userId', '==', auth.currentUser.uid),
         orderBy('generatedAt', 'desc'),
-        limit(6)
+        limit(50)
       );
       
       const guidesSnapshot = await getDocs(guidesQuery);
@@ -1663,6 +1663,11 @@ downloadTrailGuide(htmlContent, routeName) {
     
     console.log(`📍 Displaying ${trails.length} trails`);
     
+    // Debug: log first trail data structure
+    if (trails.length > 0) {
+      console.log('📍 Sample trail data:', JSON.stringify(trails[0], null, 2).substring(0, 500));
+    }
+    
     if (trails.length === 0) {
       grid.style.display = 'none';
       if (emptyState) emptyState.style.display = 'block';
@@ -1675,17 +1680,37 @@ downloadTrailGuide(htmlContent, routeName) {
     
     grid.innerHTML = trails.map(trail => {
       const isGuide = trail.type === 'guide';
-      const name = trail.name || trail.title || trail.routeInfo?.name || 'Unnamed Trail';
-      const distance = trail.stats?.totalDistance || trail.totalDistance || trail.routeInfo?.stats?.totalDistance || 0;
-      const date = trail.createdAt?.toDate?.() || trail.generatedAt?.toDate?.() || new Date();
+      
+      // Try multiple field paths for name
+      const name = trail.name || trail.title || trail.routeInfo?.name || trail.metadata?.name || trail.trailName || 'Unnamed Trail';
+      
+      // Try multiple field paths for distance
+      const distance = trail.stats?.totalDistance || trail.totalDistance || trail.routeInfo?.stats?.totalDistance || trail.distance || 0;
+      
+      // Handle Firestore Timestamp objects
+      let date;
+      if (trail.createdAt?.toDate) {
+        date = trail.createdAt.toDate();
+      } else if (trail.generatedAt?.toDate) {
+        date = trail.generatedAt.toDate();
+      } else if (trail.createdAt?.seconds) {
+        date = new Date(trail.createdAt.seconds * 1000);
+      } else if (trail.generatedAt?.seconds) {
+        date = new Date(trail.generatedAt.seconds * 1000);
+      } else {
+        date = new Date();
+      }
+      
       const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       const isPublic = trail.visibility === 'public' || trail.isPublic;
-      const thumbnail = trail.thumbnail || trail.photos?.[0]?.dataUrl || null;
+      const thumbnail = trail.thumbnail || trail.photos?.[0]?.dataUrl || trail.coverImage || null;
+      
+      console.log(`📍 Trail: ${name}, Distance: ${distance}, Type: ${trail.type}`);
       
       return `
         <div class="my-trail-card" onclick="window.landingController?.openMyTrail('${trail.id}', '${trail.type}')">
           <div class="card-image">
-            ${thumbnail ? `<img src="${thumbnail}" alt="${name}">` : (isGuide ? '📚' : '🗺️')}
+            ${thumbnail ? `<img src="${thumbnail}" alt="${this.escapeHtml(name)}">` : (isGuide ? '📚' : '🗺️')}
             <span class="visibility-badge">${isPublic ? '🌍 Public' : '🔒 Private'}</span>
           </div>
           <div class="card-content">
@@ -1735,24 +1760,41 @@ downloadTrailGuide(htmlContent, routeName) {
    * Show all user's trails in a modal
    */
   showAllMyTrails() {
-    if (!this.myTrailsData) return;
+    if (!this.myTrailsData) {
+      console.warn('No myTrailsData available');
+      return;
+    }
     
     const allTrails = [...(this.myTrailsData.routes || []), ...(this.myTrailsData.guides || [])];
+    console.log(`📍 Showing all ${allTrails.length} trails in modal`);
     
     // Create modal content
     const modalContent = allTrails.map(trail => {
       const isGuide = trail.type === 'guide';
-      const name = trail.name || trail.title || trail.routeInfo?.name || 'Unnamed Trail';
-      const distance = trail.stats?.totalDistance || trail.totalDistance || 0;
-      const date = trail.createdAt?.toDate?.() || trail.generatedAt?.toDate?.() || new Date();
+      const name = trail.name || trail.title || trail.routeInfo?.name || trail.metadata?.name || 'Unnamed Trail';
+      const distance = trail.stats?.totalDistance || trail.totalDistance || trail.routeInfo?.stats?.totalDistance || 0;
+      
+      // Handle Firestore Timestamp
+      let date;
+      if (trail.createdAt?.toDate) {
+        date = trail.createdAt.toDate();
+      } else if (trail.generatedAt?.toDate) {
+        date = trail.generatedAt.toDate();
+      } else if (trail.createdAt?.seconds) {
+        date = new Date(trail.createdAt.seconds * 1000);
+      } else {
+        date = new Date();
+      }
       const dateStr = date.toLocaleDateString();
       
       return `
-        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #e5e7eb; cursor: pointer;" 
-             onclick="window.landingController?.openMyTrail('${trail.id}', '${trail.type}'); document.querySelector('.modal-backdrop.active')?.click();">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;" 
+             onmouseover="this.style.background='#f3f4f6'" 
+             onmouseout="this.style.background=''"
+             onclick="window.landingController?.openMyTrail('${trail.id}', '${trail.type}'); this.closest('.modal-backdrop')?.click();">
           <span style="font-size: 1.5rem;">${isGuide ? '📚' : '🗺️'}</span>
-          <div style="flex: 1;">
-            <div style="font-weight: 500;">${this.escapeHtml(name)}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(name)}</div>
             <div style="font-size: 0.85rem; color: #6b7280;">${distance.toFixed(1)} km • ${dateStr}</div>
           </div>
           <span style="color: #9ca3af;">→</span>
@@ -1760,9 +1802,10 @@ downloadTrailGuide(htmlContent, routeName) {
       `;
     }).join('');
     
+    // Use html property instead of message to avoid escaping
     modal.show({
       title: '📍 All My Trails',
-      message: `<div style="max-height: 60vh; overflow-y: auto;">${modalContent || '<p style="text-align: center; color: #6b7280; padding: 20px;">No trails found</p>'}</div>`,
+      html: `<div style="max-height: 60vh; overflow-y: auto;">${modalContent || '<p style="text-align: center; color: #6b7280; padding: 20px;">No trails found</p>'}</div>`,
       buttons: [{ label: 'Close', action: 'close', variant: 'primary' }]
     });
   }
