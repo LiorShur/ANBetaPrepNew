@@ -487,6 +487,29 @@ async function makeGuidesPublic() {
     </div>
   </div>
 
+  <!-- My Trails Section (logged-in users only) -->
+  <div class="my-trails-section" id="myTrailsSection" style="display: none;">
+    <div class="my-trails-container">
+      <div class="my-trails-header">
+        <h3>📍 My Trails</h3>
+        <a href="tracker.html" class="new-trail-btn">+ New Trail</a>
+      </div>
+      <div class="my-trails-stats" id="myTrailsStats">
+        <!-- Stats populated by JS -->
+      </div>
+      <div class="my-trails-grid" id="myTrailsGrid">
+        <!-- Trails populated by JS -->
+      </div>
+      <div class="my-trails-empty" id="myTrailsEmpty" style="display: none;">
+        <p>🥾 You haven't recorded any trails yet!</p>
+        <a href="tracker.html" class="start-trail-btn">Start Your First Trail</a>
+      </div>
+      <button class="view-all-btn" id="viewAllMyTrails" style="display: none;" onclick="window.landingController?.showAllMyTrails()">
+        View All My Trails →
+      </button>
+    </div>
+  </div>
+
   <!-- Community Challenges Section -->
   <div class="challenges-section" style="padding: 20px 0; background: #f9fafb;">
     <div class="challenges-container" style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
@@ -527,6 +550,7 @@ async function makeGuidesPublic() {
           <a href="#" onclick="showPrivacy()">Privacy</a>
           <a href="#" onclick="showContact()">Contact</a>
           <a href="#" onclick="showHelp()">Help</a>
+          <a href="beta-guide.html" style="color: #8b5cf6;">📝 Beta Guide</a>
         </div>
       </div>
       <div class="footer-bottom">
