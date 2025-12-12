@@ -798,6 +798,11 @@
           <div class="count">—</div>
           <div class="label">Settings</div>
         </div>
+        <div class="stat-card" data-section="feedback" onclick="switchSection('feedback')">
+          <div class="icon">💬</div>
+          <div class="count" id="feedbackCount">-</div>
+          <div class="label">Beta Feedback</div>
+        </div>
       </div>
 
       <!-- Quick Actions -->
@@ -982,6 +987,59 @@
                 ⚠️ <strong>Free tier:</strong> 200 emails/month. For more, upgrade your EmailJS plan.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Feedback Section -->
+      <div class="section" id="feedbackSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>💬 Beta Feedback <span class="count-badge" id="feedbackFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <select id="feedbackStatusFilter" onchange="filterFeedback()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db;">
+                <option value="all">All Status</option>
+                <option value="new">🆕 New</option>
+                <option value="reviewing">👀 Reviewing</option>
+                <option value="resolved">✅ Resolved</option>
+                <option value="wontfix">⏭️ Won't Fix</option>
+              </select>
+              <select id="feedbackCategoryFilter" onchange="filterFeedback()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db;">
+                <option value="all">All Categories</option>
+                <option value="bug">🐛 Bugs</option>
+                <option value="feature">💡 Features</option>
+                <option value="general">💭 General</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="loadFeedback()">🔄 Refresh</button>
+            </div>
+          </div>
+          
+          <!-- Feedback Stats -->
+          <div style="display: flex; gap: 16px; padding: 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap;">
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;" id="feedbackNewCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">New</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;" id="feedbackReviewingCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">Reviewing</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;" id="feedbackResolvedCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">Resolved</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #ef4444;" id="feedbackBugCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">🐛 Bugs</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;" id="feedbackFeatureCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">💡 Features</div>
+            </div>
+          </div>
+          
+          <div class="table-container" id="feedbackTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading feedback...</p></div>
           </div>
         </div>
       </div>
@@ -2938,7 +2996,244 @@
       if (section === 'settings') {
         loadEmailJSSettings();
       }
+      if (section === 'feedback') {
+        loadFeedback();
+      }
     };
+
+    // ==================== FEEDBACK MANAGEMENT ====================
+    
+    let allFeedback = [];
+    
+    // Load feedback from Firebase
+    window.loadFeedback = async function() {
+      const container = document.getElementById('feedbackTableContainer');
+      if (!container) return;
+      
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading feedback...</p></div>';
+      
+      try {
+        const { collection, query, orderBy, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        const feedbackQuery = query(
+          collection(db, 'beta_feedback'),
+          orderBy('submittedAt', 'desc')
+        );
+        
+        const snapshot = await getDocs(feedbackQuery);
+        allFeedback = [];
+        
+        snapshot.forEach(doc => {
+          allFeedback.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log(`📬 Loaded ${allFeedback.length} feedback items`);
+        
+        // Update counts
+        updateFeedbackCounts();
+        
+        // Display feedback
+        filterFeedback();
+        
+        // Update main count
+        document.getElementById('feedbackCount').textContent = allFeedback.length;
+        
+      } catch (error) {
+        console.error('Failed to load feedback:', error);
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;">
+          <p>⚠️ Failed to load feedback</p>
+          <p style="font-size: 0.9rem;">${error.message}</p>
+          <button class="btn btn-primary btn-sm" onclick="loadFeedback()" style="margin-top: 12px;">Retry</button>
+        </div>`;
+      }
+    };
+    
+    // Update feedback counts
+    function updateFeedbackCounts() {
+      const newCount = allFeedback.filter(f => f.status === 'new' || !f.status).length;
+      const reviewingCount = allFeedback.filter(f => f.status === 'reviewing').length;
+      const resolvedCount = allFeedback.filter(f => f.status === 'resolved').length;
+      const bugCount = allFeedback.filter(f => f.category === 'bug').length;
+      const featureCount = allFeedback.filter(f => f.category === 'feature').length;
+      
+      document.getElementById('feedbackNewCount').textContent = newCount;
+      document.getElementById('feedbackReviewingCount').textContent = reviewingCount;
+      document.getElementById('feedbackResolvedCount').textContent = resolvedCount;
+      document.getElementById('feedbackBugCount').textContent = bugCount;
+      document.getElementById('feedbackFeatureCount').textContent = featureCount;
+    }
+    
+    // Filter and display feedback
+    window.filterFeedback = function() {
+      const statusFilter = document.getElementById('feedbackStatusFilter')?.value || 'all';
+      const categoryFilter = document.getElementById('feedbackCategoryFilter')?.value || 'all';
+      
+      let filtered = allFeedback;
+      
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'new') {
+          filtered = filtered.filter(f => f.status === 'new' || !f.status);
+        } else {
+          filtered = filtered.filter(f => f.status === statusFilter);
+        }
+      }
+      
+      if (categoryFilter !== 'all') {
+        filtered = filtered.filter(f => f.category === categoryFilter);
+      }
+      
+      document.getElementById('feedbackFilteredCount').textContent = filtered.length;
+      displayFeedback(filtered);
+    };
+    
+    // Display feedback items
+    function displayFeedback(items) {
+      const container = document.getElementById('feedbackTableContainer');
+      if (!container) return;
+      
+      if (items.length === 0) {
+        container.innerHTML = `<div style="padding: 60px; text-align: center; color: #6b7280;">
+          <p style="font-size: 3rem; margin-bottom: 16px;">📭</p>
+          <p>No feedback items found</p>
+        </div>`;
+        return;
+      }
+      
+      const categoryIcons = {
+        bug: '🐛',
+        feature: '💡',
+        general: '💭'
+      };
+      
+      const statusBadges = {
+        new: '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:0.75rem;">🆕 New</span>',
+        reviewing: '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:0.75rem;">👀 Reviewing</span>',
+        resolved: '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:0.75rem;">✅ Resolved</span>',
+        wontfix: '<span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:0.75rem;">⏭️ Won\'t Fix</span>'
+      };
+      
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+          ${items.map(item => {
+            const date = item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Unknown date';
+            const status = item.status || 'new';
+            const category = item.category || 'general';
+            const context = item.context || {};
+            
+            return `
+              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;" data-feedback-id="${item.id}">
+                <div style="padding: 16px;">
+                  <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 1.5rem;">${categoryIcons[category] || '💭'}</span>
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <strong style="font-size: 1.1rem;">${escapeHtml(item.title || 'Untitled')}</strong>
+                        ${statusBadges[status] || statusBadges.new}
+                      </div>
+                      <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+                        ${date} ${item.email ? `• ${escapeHtml(item.email)}` : '• Anonymous'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; font-size: 0.95rem;">
+                    ${escapeHtml(item.details || 'No details provided')}
+                  </div>
+                  
+                  <details style="font-size: 0.85rem; color: #6b7280;">
+                    <summary style="cursor: pointer; padding: 8px 0;">📋 Technical Context</summary>
+                    <pre style="background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; margin-top: 8px;">${JSON.stringify(context, null, 2)}</pre>
+                  </details>
+                  
+                  <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                    <select onchange="updateFeedbackStatus('${item.id}', this.value)" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.85rem;">
+                      <option value="new" ${status === 'new' ? 'selected' : ''}>🆕 New</option>
+                      <option value="reviewing" ${status === 'reviewing' ? 'selected' : ''}>👀 Reviewing</option>
+                      <option value="resolved" ${status === 'resolved' ? 'selected' : ''}>✅ Resolved</option>
+                      <option value="wontfix" ${status === 'wontfix' ? 'selected' : ''}>⏭️ Won't Fix</option>
+                    </select>
+                    ${item.email ? `<button onclick="replyToFeedback('${item.id}')" class="btn btn-secondary btn-sm">📧 Reply</button>` : ''}
+                    <button onclick="deleteFeedback('${item.id}')" class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">🗑️ Delete</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+    
+    // Update feedback status
+    window.updateFeedbackStatus = async function(id, status) {
+      try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        await updateDoc(doc(db, 'beta_feedback', id), {
+          status: status,
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Update local data
+        const item = allFeedback.find(f => f.id === id);
+        if (item) item.status = status;
+        
+        updateFeedbackCounts();
+        showToast(`✅ Status updated to ${status}`, 'success');
+        
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        showToast('❌ Failed to update status', 'error');
+      }
+    };
+    
+    // Reply to feedback via email
+    window.replyToFeedback = function(id) {
+      const item = allFeedback.find(f => f.id === id);
+      if (!item || !item.email) {
+        showToast('No email address available', 'error');
+        return;
+      }
+      
+      const subject = encodeURIComponent(`Re: Your Access Nature Feedback - ${item.title || 'Feedback'}`);
+      const body = encodeURIComponent(`Hi,\n\nThank you for your feedback about Access Nature!\n\nRegarding your ${item.category || 'feedback'}: "${item.title || 'Untitled'}"\n\n---\n\nBest regards,\nAccess Nature Team`);
+      
+      window.open(`mailto:${item.email}?subject=${subject}&body=${body}`, '_blank');
+    };
+    
+    // Delete feedback
+    window.deleteFeedback = async function(id) {
+      if (!confirm('Are you sure you want to delete this feedback?')) return;
+      
+      try {
+        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        await deleteDoc(doc(db, 'beta_feedback', id));
+        
+        // Remove from local data
+        allFeedback = allFeedback.filter(f => f.id !== id);
+        
+        updateFeedbackCounts();
+        filterFeedback();
+        
+        document.getElementById('feedbackCount').textContent = allFeedback.length;
+        showToast('✅ Feedback deleted', 'success');
+        
+      } catch (error) {
+        console.error('Failed to delete feedback:', error);
+        showToast('❌ Failed to delete feedback', 'error');
+      }
+    };
+    
+    // Escape HTML helper
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
   </script>
 </body>
 </html>
