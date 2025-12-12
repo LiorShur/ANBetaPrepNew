@@ -836,7 +836,23 @@ class UserService {
    * @returns {string|null} Profile ID or null
    */
   getMobilityProfile() {
-    return this.userData?.preferences?.mobilityProfile || null;
+    // First try from userData (Firestore)
+    const firestoreProfile = this.userData?.preferences?.mobilityProfile;
+    if (firestoreProfile) {
+      return firestoreProfile;
+    }
+    
+    // Fallback to localStorage (works offline and before login)
+    try {
+      const localProfile = localStorage.getItem('accessNature_mobilityProfile');
+      if (localProfile) {
+        return localProfile;
+      }
+    } catch (e) {
+      console.warn('Could not read mobility profile from localStorage:', e);
+    }
+    
+    return null;
   }
 
   /**
@@ -844,28 +860,38 @@ class UserService {
    * @param {string} profileId - Mobility profile ID
    */
   async setMobilityProfile(profileId) {
-    if (!this.currentUser) {
-      console.warn('⚠️ Cannot set mobility profile: not logged in');
-      return false;
-    }
-
+    // Always save to localStorage first (works offline)
     try {
-      await updateDoc(doc(db, 'users', this.currentUser.uid), {
-        'preferences.mobilityProfile': profileId
-      });
-      
-      // Update local cache
-      if (!this.userData.preferences) {
-        this.userData.preferences = {};
-      }
-      this.userData.preferences.mobilityProfile = profileId;
-      
-      console.log('✅ Mobility profile set to:', profileId);
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to set mobility profile:', error);
-      return false;
+      localStorage.setItem('accessNature_mobilityProfile', profileId);
+      console.log('💾 Mobility profile saved to localStorage:', profileId);
+    } catch (e) {
+      console.warn('Could not save mobility profile to localStorage:', e);
     }
+    
+    // If logged in, also save to Firestore
+    if (this.currentUser) {
+      try {
+        await updateDoc(doc(db, 'users', this.currentUser.uid), {
+          'preferences.mobilityProfile': profileId
+        });
+        
+        // Update local cache
+        if (!this.userData) {
+          this.userData = { preferences: {} };
+        }
+        if (!this.userData.preferences) {
+          this.userData.preferences = {};
+        }
+        this.userData.preferences.mobilityProfile = profileId;
+        
+        console.log('☁️ Mobility profile synced to Firestore:', profileId);
+      } catch (error) {
+        console.warn('⚠️ Could not sync mobility profile to Firestore:', error);
+        // Still return true since localStorage save worked
+      }
+    }
+    
+    return true;
   }
 
   /**
