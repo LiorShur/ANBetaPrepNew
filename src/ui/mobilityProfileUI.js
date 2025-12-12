@@ -178,6 +178,21 @@ class MobilityProfileUI {
         justify-content: center;
         font-size: 0.9rem;
       }
+      
+      .mp-current-badge {
+        position: absolute;
+        top: -8px;
+        left: 12px;
+        background: #10b981;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
 
       .mp-profile-card {
         position: relative;
@@ -453,11 +468,14 @@ class MobilityProfileUI {
 
     const currentProfile = userService.getMobilityProfile();
     const profiles = getAllProfiles();
+    
+    console.log('♿ Rendering mobility profiles, current:', currentProfile);
 
     container.innerHTML = profiles.map(profile => `
       <div class="mp-profile-card ${profile.id === currentProfile ? 'selected' : ''}" 
            data-profile="${profile.id}"
            onclick="mobilityProfileUI.selectProfile('${profile.id}')">
+        ${profile.id === currentProfile ? '<div class="mp-current-badge">✓ Current</div>' : ''}
         <div class="mp-profile-header">
           <div class="mp-profile-icon">${profile.icon}</div>
           <div class="mp-profile-name">${profile.name}</div>
