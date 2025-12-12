@@ -1239,8 +1239,12 @@ Sent via Access Nature App`;
     
     this.lifelineActive = true;
     
+    // Count email vs SMS contacts
+    const emailContacts = this.emergencyContacts.filter(c => c.email).length;
+    const smsOnlyContacts = this.emergencyContacts.length - emailContacts;
+    
     // Share initial location
-    this.sendLifelineUpdate();
+    await this.sendLifelineUpdate();
     
     // Set up interval
     this.lifelineInterval = setInterval(() => {
@@ -1250,7 +1254,18 @@ Sent via Access Nature App`;
     // Show lifeline panel
     this.showLifelinePanel();
     
-    toast.success(`Lifeline active! Sharing location every ${intervalMinutes} minutes`);
+    // Show appropriate toast message
+    if (emailContacts > 0) {
+      toast.success(`Lifeline active! ${emailContacts} contact(s) will receive automatic email updates every ${intervalMinutes} minutes.`);
+    } else {
+      toast.success(`Lifeline active! Tap "Share Now" to send your location to contacts.`);
+    }
+    
+    if (smsOnlyContacts > 0 && emailContacts > 0) {
+      setTimeout(() => {
+        toast.info(`${smsOnlyContacts} contact(s) don't have email - use "Share Now" to send them updates.`);
+      }, 3000);
+    }
   }
 
   /**
@@ -1282,8 +1297,6 @@ Sent via Access Nature App`;
     const time = new Date().toLocaleTimeString();
     const timestamp = new Date().toLocaleString();
     
-    // In a real app, this would send via SMS API or push notification
-    // For now, we'll log and store for potential sharing
     console.log(`📍 Lifeline update for ${userName} at ${time}: ${lat}, ${lng}`);
     
     // Prepare message for sharing
@@ -1305,6 +1318,104 @@ If you cannot reach ${userName} and are concerned about their safety, please con
       mapsUrl,
       message: lifelineMessage
     };
+    
+    // Send notifications to all contacts
+    let emailsSent = 0;
+    let emailsFailed = 0;
+    
+    for (const contact of this.emergencyContacts) {
+      // Try to send email if contact has email and EmailJS is configured
+      if (contact.email) {
+        try {
+          await this.sendLifelineEmail(contact, lifelineMessage, userName, mapsUrl, timestamp);
+          emailsSent++;
+          console.log(`✅ Lifeline email sent to ${contact.name}`);
+        } catch (error) {
+          emailsFailed++;
+          console.warn(`⚠️ Failed to send lifeline email to ${contact.name}:`, error);
+        }
+      }
+    }
+    
+    // Update status
+    if (emailsSent > 0) {
+      console.log(`📧 Lifeline: ${emailsSent} email notification(s) sent`);
+    }
+    if (emailsFailed > 0) {
+      console.warn(`⚠️ Lifeline: ${emailsFailed} email(s) failed to send`);
+    }
+    
+    // Update the lifeline panel with latest status
+    this.updateLifelinePanelTime();
+  }
+  
+  /**
+   * Send lifeline email via EmailJS
+   */
+  async sendLifelineEmail(contact, message, userName, mapsUrl, timestamp) {
+    // Check if EmailJS is available
+    if (typeof emailjs === 'undefined') {
+      // Try to load EmailJS
+      await this.loadEmailJSForLifeline();
+    }
+    
+    if (typeof emailjs === 'undefined') {
+      throw new Error('EmailJS not available');
+    }
+    
+    // Get EmailJS config from localStorage (set in admin)
+    const settings = JSON.parse(localStorage.getItem('accessNature_adminSettings') || '{}');
+    const config = settings.emailjs || {};
+    
+    if (!config.serviceId || !config.templateId || !config.publicKey) {
+      throw new Error('EmailJS not configured');
+    }
+    
+    // Send email
+    await emailjs.send(config.serviceId, config.templateId, {
+      to_email: contact.email,
+      to_name: contact.name,
+      from_name: userName,
+      subject: `📍 Lifeline Check-in from ${userName}`,
+      message: message,
+      maps_url: mapsUrl,
+      timestamp: timestamp
+    });
+  }
+  
+  /**
+   * Load EmailJS for lifeline feature
+   */
+  async loadEmailJSForLifeline() {
+    if (typeof emailjs !== 'undefined') return;
+    
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+      script.onload = () => {
+        const settings = JSON.parse(localStorage.getItem('accessNature_adminSettings') || '{}');
+        const config = settings.emailjs || {};
+        if (config.publicKey) {
+          emailjs.init(config.publicKey);
+        }
+        resolve();
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  
+  /**
+   * Update lifeline panel time display
+   */
+  updateLifelinePanelTime() {
+    const panel = document.getElementById('lifelinePanel');
+    if (!panel) return;
+    
+    const timeEl = panel.querySelector('.lifeline-time');
+    if (timeEl) {
+      timeEl.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+    }
   }
 
   /**
@@ -1320,6 +1431,19 @@ If you cannot reach ${userName} and are concerned about their safety, please con
       document.body.appendChild(panel);
     }
     
+    // Count email vs SMS contacts
+    const emailContacts = this.emergencyContacts.filter(c => c.email).length;
+    const smsOnlyContacts = this.emergencyContacts.length - emailContacts;
+    
+    let contactInfo = '';
+    if (emailContacts > 0 && smsOnlyContacts > 0) {
+      contactInfo = `📧 ${emailContacts} auto-notify, 📱 ${smsOnlyContacts} SMS-only`;
+    } else if (emailContacts > 0) {
+      contactInfo = `📧 ${emailContacts} contact(s) with auto-notifications`;
+    } else {
+      contactInfo = `📱 ${smsOnlyContacts} contact(s) - tap "Share Now" to send updates`;
+    }
+    
     // Update panel content
     panel.innerHTML = `
       <div class="lifeline-header">
@@ -1333,7 +1457,10 @@ If you cannot reach ${userName} and are concerned about their safety, please con
         </div>
       </div>
       <div class="lifeline-info">
-        Sharing location with <strong>${this.emergencyContacts.length}</strong> contact(s)
+        ${contactInfo}
+      </div>
+      <div class="lifeline-time" style="font-size: 0.75rem; color: #6b7280; margin-bottom: 8px;">
+        Last update: ${new Date().toLocaleTimeString()}
       </div>
       <div class="lifeline-actions">
         <button class="lifeline-action-btn" onclick="safetyFeatures.shareLastLifelineUpdate()">
@@ -1389,6 +1516,10 @@ If you cannot reach ${userName} and are concerned about their safety, please con
     }
     
     if (this.lastLifelineUpdate?.message) {
+      // Set the emergency message so share functions work
+      this.lastEmergencyMessage = this.lastLifelineUpdate.message;
+      this.lastEmergencyUserName = this.lastLifelineUpdate.userName;
+      
       this.showShareOptionsModal(
         this.lastLifelineUpdate.message,
         this.lastLifelineUpdate.userName,
@@ -1460,6 +1591,7 @@ If you cannot reach ${userName} and are concerned about their safety, please con
           <div>
             <div class="contact-name">${contact.name}</div>
             <div class="contact-phone">${contact.phone}</div>
+            ${contact.email ? `<div class="contact-email" style="font-size: 0.75rem; color: #10b981;">📧 Auto-notify enabled</div>` : '<div class="contact-email" style="font-size: 0.75rem; color: #9ca3af;">📱 SMS only</div>'}
           </div>
         </div>
         <div class="contact-actions">
@@ -1477,10 +1609,12 @@ If you cannot reach ${userName} and are concerned about their safety, please con
     const name = await modal.prompt('Contact name:', 'Add Emergency Contact');
     if (!name) return;
     
-    const phone = await modal.prompt('Phone number:', 'Add Emergency Contact');
+    const phone = await modal.prompt('Phone number (for SMS):', 'Add Emergency Contact');
     if (!phone) return;
     
-    this.emergencyContacts.push({ name, phone });
+    const email = await modal.prompt('Email address (optional, for automatic notifications):', 'Add Emergency Contact');
+    
+    this.emergencyContacts.push({ name, phone, email: email || null });
     this.saveSettings();
     
     // Update list
@@ -1489,7 +1623,11 @@ If you cannot reach ${userName} and are concerned about their safety, please con
       list.innerHTML = this.renderContacts();
     }
     
-    toast.success(`${name} added to emergency contacts`);
+    if (email) {
+      toast.success(`${name} added with email notifications enabled`);
+    } else {
+      toast.success(`${name} added (SMS sharing only)`);
+    }
   }
 
   /**
@@ -1502,13 +1640,17 @@ If you cannot reach ${userName} and are concerned about their safety, please con
     const name = await modal.prompt('Contact name:', 'Edit Emergency Contact', contact.name);
     if (name === null) return; // User cancelled
     
-    const phone = await modal.prompt('Phone number:', 'Edit Emergency Contact', contact.phone);
+    const phone = await modal.prompt('Phone number (for SMS):', 'Edit Emergency Contact', contact.phone);
     if (phone === null) return; // User cancelled
+    
+    const email = await modal.prompt('Email address (optional, for automatic notifications):', 'Edit Emergency Contact', contact.email || '');
+    if (email === null) return; // User cancelled
     
     // Update contact
     this.emergencyContacts[index] = { 
       name: name || contact.name, 
-      phone: phone || contact.phone 
+      phone: phone || contact.phone,
+      email: email || null
     };
     this.saveSettings();
     
