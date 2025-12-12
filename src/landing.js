@@ -11,6 +11,7 @@ import { accessibilityRating } from './features/accessibilityRating.js';
 import { trailSearch } from './features/trailSearch.js';
 import { showError, getErrorMessage } from './utils/errorMessages.js';
 import { userService } from './services/userService.js';
+import { betaFeedback } from './utils/betaFeedback.js';
 // import { initializeAccessReport } from './js/modules/access-report-main.js';
 
 class LandingPageController {
@@ -37,6 +38,9 @@ class LandingPageController {
       
       // Initialize offline indicator
       offlineIndicator.initialize();
+      
+      // Initialize beta feedback system
+      betaFeedback.initialize();
       
       // Initialize search UI
       console.log('🏠 About to call initializeTrailSearch()');
@@ -111,17 +115,33 @@ class LandingPageController {
         ]);
       };
       
+      // Track results
+      let totalItems = 0;
+      let warnings = [];
+      
       // Load sequentially to avoid overwhelming the connection
       console.log('📊 Step 1/3: Loading community stats...');
-      await withTimeout(this.loadCommunityStats(), 'Community stats');
+      const communityResult = await withTimeout(this.loadCommunityStats(), 'Community stats');
+      if (communityResult?.count) totalItems += communityResult.count;
+      if (communityResult?.warning) warnings.push('community');
       
       console.log('📊 Step 2/3: Loading featured trails...');
       await withTimeout(this.loadFeaturedTrails(), 'Featured trails');
       
       console.log('📊 Step 3/3: Loading user stats...');
-      await withTimeout(this.updateUserStats(), 'User stats');
+      const userResult = await withTimeout(this.updateUserStats(), 'User stats');
+      if (userResult?.count) totalItems += userResult.count;
+      if (userResult?.warning) warnings.push('user');
       
-      console.log('✅ All data loaded successfully');
+      // Check if we actually got data
+      if (totalItems === 0 && warnings.length > 0) {
+        console.warn('⚠️ All queries returned 0 items - likely offline or empty cache');
+        toast.warning('Unable to load data. Check your connection.');
+      } else if (totalItems > 0) {
+        console.log(`✅ All data loaded successfully (${totalItems} items)`);
+      } else {
+        console.log('✅ Data loading complete');
+      }
       
     } catch (error) {
       console.error(`❌ Data loading failed (attempt ${retryCount + 1}):`, error);
@@ -545,7 +565,7 @@ async loadCommunityStats(retryCount = 0) {
     if (this.publicGuidesCache && this.publicGuidesCache.length > 0) {
       console.log('📈 Using cached public guides for stats');
       this.calculateAndDisplayStats(this.publicGuidesCache);
-      return;
+      return { success: true, count: this.publicGuidesCache.length };
     }
     
     // Wait for any other Firebase operations to complete
@@ -590,7 +610,15 @@ async loadCommunityStats(retryCount = 0) {
     });
     
     this.calculateAndDisplayStats(this.publicGuidesCache);
+    
+    // Warn if cache returned 0 items (likely offline with empty cache)
+    if (this.publicGuidesCache.length === 0 && source === 'cache') {
+      console.warn('⚠️ Community stats: Cache returned 0 items - may be offline');
+      return { success: true, count: 0, warning: 'empty_cache' };
+    }
+    
     console.log(`✅ Community stats loaded from ${source}: ${this.publicGuidesCache.length} public guides`);
+    return { success: true, count: this.publicGuidesCache.length, source };
     
   } catch (error) {
     console.error('❌ Failed to load community stats:', error);
@@ -609,6 +637,7 @@ async loadCommunityStats(retryCount = 0) {
     this.updateElement('totalKm', '0');
     this.updateElement('accessibleTrails', '0');
     this.updateElement('totalUsers', '0');
+    return { success: false, error: error.message };
   }
 }
 
@@ -876,20 +905,25 @@ updateLoadMoreButton() {
   }
 
 async updateUserStats() {
+  console.log('👤 updateUserStats() called');
   try {
     const authStatus = await this.checkLandingAuth();
+    console.log('👤 Auth status:', authStatus.isSignedIn ? 'signed in' : 'not signed in');
     
     if (authStatus.isSignedIn) {
       // User is signed in - load their cloud data
-      await this.loadUserCloudStats();
+      return await this.loadUserCloudStats();
     } else {
       // User not signed in - check localStorage only
+      console.log('👤 Loading local stats (not signed in)');
       this.loadLocalStats();
+      return { success: true, source: 'local' };
     }
   } catch (error) {
-    console.error('Failed to update user stats:', error);
+    console.error('❌ Failed to update user stats:', error);
     // Fallback to local stats
     this.loadLocalStats();
+    return { success: false, error: error.message };
   }
 }
 
@@ -906,7 +940,7 @@ async loadUserCloudStats(retryCount = 0) {
     if (!auth.currentUser) {
       console.log('📊 No current user, using local stats');
       this.loadLocalStats();
-      return;
+      return { success: true, source: 'local' };
     }
     
     console.log('📊 Loading user cloud stats...');
@@ -948,7 +982,14 @@ async loadUserCloudStats(retryCount = 0) {
     this.animateNumber('totalRoutes', routesSnapshot.size);
     this.updateElement('totalDistance', totalDistance.toFixed(1));
     
+    // Warn if cache returned 0 items
+    if (routesSnapshot.size === 0 && source === 'cache') {
+      console.warn('⚠️ User stats: Cache returned 0 items - may be offline or new user');
+      return { success: true, count: 0, warning: 'empty_cache', source };
+    }
+    
     console.log(`✅ User stats loaded from ${source}: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
+    return { success: true, count: routesSnapshot.size, source };
     
   } catch (error) {
     console.error('❌ Failed to load cloud stats:', error);
@@ -963,11 +1004,13 @@ async loadUserCloudStats(retryCount = 0) {
     
     // Fallback to local stats
     this.loadLocalStats();
+    return { success: false, error: error.message };
   }
 }
 
 // Add this method for local stats fallback
 loadLocalStats() {
+  console.log('👤 Loading local stats from localStorage...');
   const totalRoutes = localStorage.getItem('sessions') ? JSON.parse(localStorage.getItem('sessions')).length : 0;
   this.updateElement('totalRoutes', totalRoutes);
   
@@ -980,6 +1023,7 @@ loadLocalStats() {
   }
   
   this.updateElement('totalDistance', totalDistance.toFixed(1));
+  console.log(`👤 Local stats: ${totalRoutes} routes, ${totalDistance.toFixed(1)} km`);
 }
 
   // Utility Functions
@@ -1398,11 +1442,24 @@ downloadTrailGuide(htmlContent, routeName) {
     const userInfo = document.getElementById('userInfo');
     const authPrompt = document.getElementById('authPrompt');
     const userEmail = document.getElementById('userEmail');
+    const myTrailsSection = document.getElementById('myTrailsSection');
     
     if (authStatus.isSignedIn) {
       userInfo?.classList.remove('hidden');
       authPrompt?.classList.add('hidden');
       if (userEmail) userEmail.textContent = authStatus.email;
+      
+      // Show My Trails section
+      if (myTrailsSection) {
+        myTrailsSection.style.display = 'block';
+        console.log('📍 My Trails section shown');
+        
+        // Show loading state
+        const grid = document.getElementById('myTrailsGrid');
+        if (grid) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280;">Loading your trails...</div>';
+        }
+      }
       
       // Initialize userService for gamification
       if (!userService.isInitialized) {
@@ -1413,9 +1470,19 @@ downloadTrailGuide(htmlContent, routeName) {
           console.warn('⚠️ UserService initialization failed:', error);
         }
       }
+      
+      // Load user's trails
+      this.loadMyTrails();
+      
     } else {
       userInfo?.classList.add('hidden');
       authPrompt?.classList.remove('hidden');
+      
+      // Hide My Trails section
+      if (myTrailsSection) {
+        myTrailsSection.style.display = 'none';
+      }
+      
       userService.reset();
     }
   }
@@ -1432,6 +1499,245 @@ downloadTrailGuide(htmlContent, routeName) {
     } catch (error) {
       console.warn('⚠️ Failed to setup auth listener:', error);
     }
+  }
+
+  /**
+   * Load and display user's trails in the My Trails section
+   */
+  async loadMyTrails() {
+    try {
+      console.log('📍 Loading My Trails...');
+      
+      const authStatus = await this.checkLandingAuth();
+      if (!authStatus.isSignedIn) return;
+      
+      const { collection, query, where, orderBy, getDocs, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+      const { db, auth } = await import('../firebase-setup.js');
+      
+      // Load user's routes
+      const routesQuery = query(
+        collection(db, 'routes'),
+        where('userId', '==', auth.currentUser.uid),
+        orderBy('createdAt', 'desc'),
+        limit(6)
+      );
+      
+      const routesSnapshot = await getDocs(routesQuery);
+      const routes = [];
+      
+      routesSnapshot.forEach(doc => {
+        routes.push({
+          id: doc.id,
+          type: 'route',
+          ...doc.data()
+        });
+      });
+      
+      // Also load trail guides
+      const guidesQuery = query(
+        collection(db, 'trail_guides'),
+        where('userId', '==', auth.currentUser.uid),
+        orderBy('generatedAt', 'desc'),
+        limit(6)
+      );
+      
+      const guidesSnapshot = await getDocs(guidesQuery);
+      const guides = [];
+      
+      guidesSnapshot.forEach(doc => {
+        guides.push({
+          id: doc.id,
+          type: 'guide',
+          ...doc.data()
+        });
+      });
+      
+      // Combine and sort by date
+      const allTrails = [...routes, ...guides].sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || a.generatedAt?.toDate?.() || new Date(0);
+        const dateB = b.createdAt?.toDate?.() || b.generatedAt?.toDate?.() || new Date(0);
+        return dateB - dateA;
+      }).slice(0, 4);
+      
+      this.myTrailsData = { routes, guides, allTrails };
+      
+      // Calculate stats
+      const totalDistance = routes.reduce((sum, r) => sum + (r.stats?.totalDistance || r.totalDistance || 0), 0);
+      const totalGuides = guides.length;
+      
+      // Update stats display
+      this.displayMyTrailsStats(routes.length, totalDistance, totalGuides);
+      
+      // Display trails
+      this.displayMyTrails(allTrails);
+      
+      console.log(`✅ Loaded ${routes.length} routes and ${guides.length} guides`);
+      
+    } catch (error) {
+      console.error('Failed to load My Trails:', error);
+      // Don't show error toast - might just be empty collection
+    }
+  }
+
+  /**
+   * Display My Trails stats
+   */
+  displayMyTrailsStats(routeCount, totalDistance, guideCount) {
+    const statsContainer = document.getElementById('myTrailsStats');
+    if (!statsContainer) return;
+    
+    statsContainer.innerHTML = `
+      <div class="my-stat-card">
+        <span class="icon">🗺️</span>
+        <div>
+          <div class="value">${routeCount}</div>
+          <div class="label">Routes</div>
+        </div>
+      </div>
+      <div class="my-stat-card">
+        <span class="icon">📏</span>
+        <div>
+          <div class="value">${totalDistance.toFixed(1)} km</div>
+          <div class="label">Total Distance</div>
+        </div>
+      </div>
+      <div class="my-stat-card">
+        <span class="icon">📚</span>
+        <div>
+          <div class="value">${guideCount}</div>
+          <div class="label">Trail Guides</div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Display user's trail cards
+   */
+  displayMyTrails(trails) {
+    const grid = document.getElementById('myTrailsGrid');
+    const emptyState = document.getElementById('myTrailsEmpty');
+    const viewAllBtn = document.getElementById('viewAllMyTrails');
+    
+    if (!grid) {
+      console.warn('⚠️ myTrailsGrid element not found');
+      return;
+    }
+    
+    console.log(`📍 Displaying ${trails.length} trails`);
+    
+    if (trails.length === 0) {
+      grid.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'block';
+      if (viewAllBtn) viewAllBtn.style.display = 'none';
+      return;
+    }
+    
+    grid.style.display = 'grid';
+    if (emptyState) emptyState.style.display = 'none';
+    
+    grid.innerHTML = trails.map(trail => {
+      const isGuide = trail.type === 'guide';
+      const name = trail.name || trail.title || trail.routeInfo?.name || 'Unnamed Trail';
+      const distance = trail.stats?.totalDistance || trail.totalDistance || trail.routeInfo?.stats?.totalDistance || 0;
+      const date = trail.createdAt?.toDate?.() || trail.generatedAt?.toDate?.() || new Date();
+      const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const isPublic = trail.visibility === 'public' || trail.isPublic;
+      const thumbnail = trail.thumbnail || trail.photos?.[0]?.dataUrl || null;
+      
+      return `
+        <div class="my-trail-card" onclick="window.landingController?.openMyTrail('${trail.id}', '${trail.type}')">
+          <div class="card-image">
+            ${thumbnail ? `<img src="${thumbnail}" alt="${name}">` : (isGuide ? '📚' : '🗺️')}
+            <span class="visibility-badge">${isPublic ? '🌍 Public' : '🔒 Private'}</span>
+          </div>
+          <div class="card-content">
+            <div class="card-title">${this.escapeHtml(name)}</div>
+            <div class="card-meta">
+              <span>📏 ${distance.toFixed(1)} km</span>
+              <span>${isGuide ? '📚 Guide' : '🗺️ Route'}</span>
+            </div>
+            <div class="card-date">${dateStr}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Show "View All" button if there are more trails
+    const totalTrails = (this.myTrailsData?.routes?.length || 0) + (this.myTrailsData?.guides?.length || 0);
+    if (viewAllBtn) {
+      viewAllBtn.style.display = totalTrails > 4 ? 'block' : 'none';
+    }
+  }
+
+  /**
+   * Open a trail (route or guide)
+   */
+  async openMyTrail(id, type) {
+    if (type === 'guide') {
+      // Open trail guide viewer
+      try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        const { db } = await import('../firebase-setup.js');
+        
+        const guideDoc = await getDoc(doc(db, 'trail_guides', id));
+        if (guideDoc.exists()) {
+          const guideData = guideDoc.data();
+          this.showTrailGuide(guideData);
+        }
+      } catch (error) {
+        toast.error('Failed to load trail guide');
+      }
+    } else {
+      // Go to tracker page with route ID to load
+      window.location.href = `tracker.html?loadRoute=${id}`;
+    }
+  }
+
+  /**
+   * Show all user's trails in a modal
+   */
+  showAllMyTrails() {
+    if (!this.myTrailsData) return;
+    
+    const allTrails = [...(this.myTrailsData.routes || []), ...(this.myTrailsData.guides || [])];
+    
+    // Create modal content
+    const modalContent = allTrails.map(trail => {
+      const isGuide = trail.type === 'guide';
+      const name = trail.name || trail.title || trail.routeInfo?.name || 'Unnamed Trail';
+      const distance = trail.stats?.totalDistance || trail.totalDistance || 0;
+      const date = trail.createdAt?.toDate?.() || trail.generatedAt?.toDate?.() || new Date();
+      const dateStr = date.toLocaleDateString();
+      
+      return `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #e5e7eb; cursor: pointer;" 
+             onclick="window.landingController?.openMyTrail('${trail.id}', '${trail.type}'); document.querySelector('.modal-backdrop.active')?.click();">
+          <span style="font-size: 1.5rem;">${isGuide ? '📚' : '🗺️'}</span>
+          <div style="flex: 1;">
+            <div style="font-weight: 500;">${this.escapeHtml(name)}</div>
+            <div style="font-size: 0.85rem; color: #6b7280;">${distance.toFixed(1)} km • ${dateStr}</div>
+          </div>
+          <span style="color: #9ca3af;">→</span>
+        </div>
+      `;
+    }).join('');
+    
+    modal.show({
+      title: '📍 All My Trails',
+      message: `<div style="max-height: 60vh; overflow-y: auto;">${modalContent || '<p style="text-align: center; color: #6b7280; padding: 20px;">No trails found</p>'}</div>`,
+      buttons: [{ label: 'Close', action: 'close', variant: 'primary' }]
+    });
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   */
+  escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   async loadMyTrailGuides() {
@@ -1933,6 +2239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Make controller available globally
     window.LandingPageController = landingController;
+    window.landingController = landingController;
     
     // Make utilities available for debugging
     window.offlineIndicator = offlineIndicator;
