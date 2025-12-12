@@ -323,6 +323,11 @@ class ModalManager {
       if (config.message) {
         html += `<p class="modal-message">${this.escapeHtml(config.message)}</p>`;
       }
+      
+      // Support raw HTML content (use with caution - only for trusted content)
+      if (config.html) {
+        html += `<div class="modal-html-content">${config.html}</div>`;
+      }
 
       if (config.input) {
         const inputType = config.input.type || 'text';
