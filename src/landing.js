@@ -1437,12 +1437,16 @@ downloadTrailGuide(htmlContent, routeName) {
 
   // Update landing auth status
   async updateLandingAuthStatus() {
+    console.log('🔐 updateLandingAuthStatus called');
     const authStatus = await this.checkLandingAuth();
+    console.log('👤 Auth status:', authStatus.isSignedIn ? `signed in as ${authStatus.email}` : 'not signed in');
     
     const userInfo = document.getElementById('userInfo');
     const authPrompt = document.getElementById('authPrompt');
     const userEmail = document.getElementById('userEmail');
     const myTrailsSection = document.getElementById('myTrailsSection');
+    
+    console.log('📍 myTrailsSection element:', myTrailsSection ? 'found' : 'NOT FOUND');
     
     if (authStatus.isSignedIn) {
       userInfo?.classList.remove('hidden');
@@ -1452,6 +1456,15 @@ downloadTrailGuide(htmlContent, routeName) {
       // Show My Trails section
       if (myTrailsSection) {
         myTrailsSection.style.display = 'block';
+        console.log('📍 My Trails section shown');
+        
+        // Show loading state
+        const grid = document.getElementById('myTrailsGrid');
+        if (grid) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280;">Loading your trails...</div>';
+        }
+      } else {
+        console.warn('⚠️ myTrailsSection element not found in DOM - are you on index.html?');
       }
       
       // Initialize userService for gamification
@@ -1612,7 +1625,12 @@ downloadTrailGuide(htmlContent, routeName) {
     const emptyState = document.getElementById('myTrailsEmpty');
     const viewAllBtn = document.getElementById('viewAllMyTrails');
     
-    if (!grid) return;
+    if (!grid) {
+      console.warn('⚠️ myTrailsGrid element not found');
+      return;
+    }
+    
+    console.log(`📍 Displaying ${trails.length} trails`);
     
     if (trails.length === 0) {
       grid.style.display = 'none';
