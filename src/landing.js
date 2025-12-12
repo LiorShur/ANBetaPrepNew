@@ -1452,13 +1452,6 @@ downloadTrailGuide(htmlContent, routeName) {
       // Show My Trails section
       if (myTrailsSection) {
         myTrailsSection.style.display = 'block';
-        console.log('📍 My Trails section shown');
-        
-        // Show loading state
-        const grid = document.getElementById('myTrailsGrid');
-        if (grid) {
-          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280;">Loading your trails...</div>';
-        }
       }
       
       // Initialize userService for gamification
@@ -1619,12 +1612,7 @@ downloadTrailGuide(htmlContent, routeName) {
     const emptyState = document.getElementById('myTrailsEmpty');
     const viewAllBtn = document.getElementById('viewAllMyTrails');
     
-    if (!grid) {
-      console.warn('⚠️ myTrailsGrid element not found');
-      return;
-    }
-    
-    console.log(`📍 Displaying ${trails.length} trails`);
+    if (!grid) return;
     
     if (trails.length === 0) {
       grid.style.display = 'none';

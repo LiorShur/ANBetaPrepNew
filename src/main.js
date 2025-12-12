@@ -20,6 +20,7 @@ import authController from './features/auth.js';  // Use singleton, not class
 import { toast } from './utils/toast.js';
 import { modal } from './utils/modal.js';
 import { showError, getErrorMessage } from './utils/errorMessages.js';
+import { betaFeedback } from './utils/betaFeedback.js';
 
 class AccessNatureApp {
   constructor() {
@@ -687,6 +688,9 @@ gamificationUI.setupBadgeNotifications();
 // Initialize mobility profile UI
 mobilityProfileUI.initialize();
 
+// Initialize beta feedback system
+betaFeedback.initialize();
+
 // Connect offlineMapsUI to the map when available
 setTimeout(() => {
   const mapController = window.AccessNatureApp?.getController('map');
@@ -696,4 +700,4 @@ setTimeout(() => {
   }
 }, 2000);
 
-export { AccessNatureApp, offlineIndicator, loadingStates, gamificationUI, mobilityProfileUI, accessibilityRating, trailSearch, showError, getErrorMessage };
+export { AccessNatureApp, offlineIndicator, loadingStates, gamificationUI, mobilityProfileUI, accessibilityRating, trailSearch, showError, getErrorMessage, betaFeedback };
