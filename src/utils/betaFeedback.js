@@ -739,16 +739,26 @@ class BetaFeedback {
    * Save feedback to Firebase
    */
   async saveToFirebase(data) {
-    // Check if Firebase is available
-    if (typeof firebase === 'undefined' && !window.db) {
-      return false;
-    }
-    
     try {
+      // Import Firebase modules dynamically
       const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js');
-      const db = window.db;
       
-      if (!db) return false;
+      // Try to get db from window or import it
+      let db = window.db;
+      
+      if (!db) {
+        try {
+          const firebaseSetup = await import('../../firebase-setup.js');
+          db = firebaseSetup.db;
+        } catch (e) {
+          console.warn('Could not import firebase-setup.js:', e);
+        }
+      }
+      
+      if (!db) {
+        console.warn('Firebase db not available');
+        return false;
+      }
       
       await addDoc(collection(db, 'beta_feedback'), {
         ...data,
