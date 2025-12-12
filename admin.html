@@ -1681,7 +1681,10 @@
       document.querySelectorAll('.section').forEach(sec => {
         sec.classList.toggle('active', sec.id === `${section}Section`);
       });
-      renderCurrentSection();
+      // Only render for data sections, not settings/feedback
+      if (['routes', 'guides', 'conditions', 'reports'].includes(section)) {
+        renderCurrentSection();
+      }
     };
 
     // ==================== RENDERING ====================
