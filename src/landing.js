@@ -39,8 +39,13 @@ class LandingPageController {
       // Initialize offline indicator
       offlineIndicator.initialize();
       
-      // Initialize beta feedback system
-      betaFeedback.initialize();
+      // Initialize beta feedback system (non-critical, wrap in try-catch)
+      try {
+        betaFeedback.initialize();
+        console.log('✅ Beta feedback initialized');
+      } catch (e) {
+        console.warn('⚠️ Beta feedback init failed (non-critical):', e);
+      }
       
       // Initialize search UI
       console.log('🏠 About to call initializeTrailSearch()');
@@ -48,7 +53,11 @@ class LandingPageController {
       console.log('🏠 initializeTrailSearch() completed');
       
       this.setupEventListeners();
+      
+      // Update auth status and show My Trails if logged in
+      console.log('🏠 About to call updateLandingAuthStatus()');
       await this.updateLandingAuthStatus();
+      console.log('🏠 updateLandingAuthStatus() completed');
       
       // Load data with retry wrapper
       await this.loadDataWithRetry();
@@ -1512,13 +1521,20 @@ downloadTrailGuide(htmlContent, routeName) {
    */
   async loadMyTrails() {
     try {
-      console.log('📍 Loading My Trails...');
+      console.log('📍 loadMyTrails() called');
       
       const authStatus = await this.checkLandingAuth();
-      if (!authStatus.isSignedIn) return;
+      console.log('📍 Auth check result:', authStatus.isSignedIn ? 'signed in' : 'not signed in');
       
+      if (!authStatus.isSignedIn) {
+        console.log('📍 User not signed in, skipping trails load');
+        return;
+      }
+      
+      console.log('📍 Importing Firebase modules...');
       const { collection, query, where, orderBy, getDocs, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
       const { db, auth } = await import('../firebase-setup.js');
+      console.log('📍 Firebase imported, auth.currentUser:', auth.currentUser?.uid);
       
       // Load user's routes
       const routesQuery = query(
@@ -1580,8 +1596,12 @@ downloadTrailGuide(htmlContent, routeName) {
       console.log(`✅ Loaded ${routes.length} routes and ${guides.length} guides`);
       
     } catch (error) {
-      console.error('Failed to load My Trails:', error);
-      // Don't show error toast - might just be empty collection
+      console.error('❌ Failed to load My Trails:', error);
+      // Show empty state on error
+      const grid = document.getElementById('myTrailsGrid');
+      const emptyState = document.getElementById('myTrailsEmpty');
+      if (grid) grid.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'block';
     }
   }
 
