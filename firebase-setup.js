@@ -3,7 +3,9 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth
 import { 
   getFirestore,
   initializeFirestore,
-  memoryLocalCache
+  persistentLocalCache,
+  persistentSingleTabManager,
+  CACHE_SIZE_UNLIMITED
 } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js";
 
@@ -27,15 +29,19 @@ if (getApps().length === 0) {
   console.log('🔥 Using existing Firebase app');
 }
 
-// Initialize Firestore with memory cache to prevent Target ID conflicts
-// This must be done BEFORE any getFirestore() calls
+// Initialize Firestore with IndexedDB persistence for offline support
+// Using single-tab manager to prevent Target ID conflicts across tabs
 let db;
 try {
-  // Try to initialize with memory cache (prevents IndexedDB Target ID conflicts)
   db = initializeFirestore(app, {
-    localCache: memoryLocalCache()
+    localCache: persistentLocalCache({
+      tabManager: persistentSingleTabManager({
+        forceOwnership: true  // Force this tab to own persistence
+      }),
+      cacheSizeBytes: CACHE_SIZE_UNLIMITED
+    })
   });
-  console.log('🔥 Firestore initialized with memory cache');
+  console.log('🔥 Firestore initialized with IndexedDB persistence');
 } catch (e) {
   // If initializeFirestore fails (already initialized), fall back to getFirestore
   if (e.code === 'failed-precondition' || e.message?.includes('already been called')) {

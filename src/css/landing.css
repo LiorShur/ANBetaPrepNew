@@ -513,6 +513,36 @@ body {
   color: white;
 }
 
+.my-trails-actions {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.view-guides-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #2c5530, #4a7c59);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 30px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(44, 85, 48, 0.3);
+}
+
+.view-guides-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(44, 85, 48, 0.4);
+}
+
+.view-guides-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Featured Section */
 .featured-section {
   padding: 80px 20px;
