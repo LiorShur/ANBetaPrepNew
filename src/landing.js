@@ -1571,6 +1571,14 @@ downloadTrailGuide(htmlContent, routeName) {
       
       console.log(`📍 Found ${guides.length} trail guides`);
       
+      // Debug: Check first guide's HTML for distance pattern
+      if (guides.length > 0 && guides[0].htmlContent) {
+        const sampleHtml = guides[0].htmlContent;
+        // Find the stats row section
+        const statsMatch = sampleHtml.match(/tg-stats-row[\s\S]{0,500}/);
+        console.log('📍 Sample stats HTML:', statsMatch ? statsMatch[0].substring(0, 300) : 'not found');
+      }
+      
       // Store guides data for modal
       this.myTrailGuides = guides;
       
@@ -1578,10 +1586,13 @@ downloadTrailGuide(htmlContent, routeName) {
       const totalDistance = guides.reduce((sum, g) => {
         // Try to extract distance from the generated HTML
         if (g.htmlContent) {
-          // Look for: <span class="tg-stat-value">X.X</span>\n                <span class="tg-stat-label">km</span>
-          const match = g.htmlContent.match(/<span class="tg-stat-value">([0-9.]+)<\/span>\s*<span class="tg-stat-label">km<\/span>/);
+          // Look for the distance stat - the first tg-stat-value followed by km label
+          const match = g.htmlContent.match(/<span class="tg-stat-value">(\d+\.?\d*)<\/span>\s*[\r\n\s]*<span class="tg-stat-label">km<\/span>/i);
           if (match && match[1]) {
-            return sum + parseFloat(match[1]);
+            const dist = parseFloat(match[1]);
+            if (dist > 0) {
+              return sum + dist;
+            }
           }
         }
         // Fallback to stats or metadata
@@ -1660,7 +1671,7 @@ downloadTrailGuide(htmlContent, routeName) {
       // Extract distance from htmlContent
       let distance = 0;
       if (guide.htmlContent) {
-        const match = guide.htmlContent.match(/<span class="tg-stat-value">([0-9.]+)<\/span>\s*<span class="tg-stat-label">km<\/span>/);
+        const match = guide.htmlContent.match(/<span class="tg-stat-value">(\d+\.?\d*)<\/span>\s*[\r\n\s]*<span class="tg-stat-label">km<\/span>/i);
         if (match && match[1]) {
           distance = parseFloat(match[1]);
         }
@@ -1711,28 +1722,33 @@ downloadTrailGuide(htmlContent, routeName) {
       buttons: [{ label: 'Close', action: 'close', variant: 'secondary' }]
     });
     
-    // Add event delegation for guide clicks after modal is shown
-    setTimeout(() => {
-      const container = document.getElementById('guideListContainer');
-      if (container) {
-        container.addEventListener('click', (e) => {
-          const item = e.target.closest('.guide-list-item');
-          if (item) {
-            const guideId = item.dataset.guideId;
-            console.log('📚 Guide item clicked:', guideId);
-            if (guideId) {
-              this.viewTrailGuide(guideId);
+    // Add event delegation for guide clicks - use requestAnimationFrame for reliable timing
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const container = document.getElementById('guideListContainer');
+        if (container) {
+          console.log('📚 Setting up click handlers on container');
+          container.addEventListener('click', (e) => {
+            const item = e.target.closest('.guide-list-item');
+            if (item) {
+              const guideId = item.dataset.guideId;
+              console.log('📚 Guide item clicked:', guideId);
+              if (guideId) {
+                this.viewTrailGuide(guideId);
+              }
             }
-          }
-        });
-        
-        // Add hover effects
-        container.querySelectorAll('.guide-list-item').forEach(item => {
-          item.addEventListener('mouseenter', () => item.style.background = '#f0fdf4');
-          item.addEventListener('mouseleave', () => item.style.background = '');
-        });
-      }
-    }, 100);
+          });
+          
+          // Add hover effects
+          container.querySelectorAll('.guide-list-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f0fdf4');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+          });
+        } else {
+          console.warn('📚 guideListContainer not found');
+        }
+      }, 50);
+    });
   }
 
   /**
@@ -1799,18 +1815,22 @@ downloadTrailGuide(htmlContent, routeName) {
         // Fallback to simple display
         const distance = guideData.stats?.totalDistance || guideData.metadata?.totalDistance || 0;
         guideHTML = `
-          <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: system-ui, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
             <h2 style="color: #2c5530;">${this.escapeHtml(guideName)}</h2>
             <p><strong>Distance:</strong> ${distance.toFixed(1)} km</p>
             ${guideData.accessibility ? `<p><strong>Accessibility:</strong> ${JSON.stringify(guideData.accessibility)}</p>` : ''}
             <p style="color: #666; margin-top: 20px;">Full guide content is not available.</p>
-          </div>
+          </body>
+          </html>
         `;
       }
       
       console.log('📚 HTML content length:', guideHTML?.length || 0);
       
-      // Create fullscreen overlay
+      // Create fullscreen overlay with iframe for proper script execution (maps, etc.)
       const overlay = document.createElement('div');
       overlay.className = 'trail-guide-overlay';
       overlay.innerHTML = `
@@ -1820,9 +1840,7 @@ downloadTrailGuide(htmlContent, routeName) {
           </button>
           <h2>${this.escapeHtml(guideName)}</h2>
         </div>
-        <div class="trail-guide-overlay-content">
-          ${guideHTML}
-        </div>
+        <iframe class="trail-guide-iframe" id="guideIframe" sandbox="allow-scripts allow-same-origin"></iframe>
       `;
       
       // Add styles if not already present
@@ -1850,6 +1868,7 @@ downloadTrailGuide(htmlContent, routeName) {
             background: linear-gradient(135deg, #2c5530, #4a7c59);
             color: white;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            flex-shrink: 0;
           }
           .trail-guide-overlay-header h2 {
             flex: 1;
@@ -1872,16 +1891,29 @@ downloadTrailGuide(htmlContent, routeName) {
           .close-overlay-btn:hover {
             background: rgba(255,255,255,0.3);
           }
-          .trail-guide-overlay-content {
+          .trail-guide-iframe {
             flex: 1;
-            overflow-y: auto;
-            padding: 0;
+            width: 100%;
+            border: none;
           }
         `;
         document.head.appendChild(style);
       }
       
       document.body.appendChild(overlay);
+      
+      // Write content to iframe
+      const iframe = overlay.querySelector('#guideIframe');
+      if (iframe) {
+        iframe.onload = () => {
+          console.log('📚 Iframe loaded');
+        };
+        // Use srcdoc for inline HTML or write to contentDocument
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(guideHTML);
+        iframeDoc.close();
+      }
       
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
@@ -1894,14 +1926,6 @@ downloadTrailGuide(htmlContent, routeName) {
           document.body.style.overflow = '';
         });
       }
-      
-      // Restore body scroll when clicking outside
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          overlay.remove();
-          document.body.style.overflow = '';
-        }
-      });
       
       // Handle escape key
       const handleEscape = (e) => {
