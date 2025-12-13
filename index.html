@@ -491,22 +491,21 @@ async function makeGuidesPublic() {
   <div class="my-trails-section" id="myTrailsSection" style="display: none;">
     <div class="my-trails-container">
       <div class="my-trails-header">
-        <h3>📍 My Trails</h3>
-        <a href="tracker.html" class="new-trail-btn">+ New Trail</a>
+        <h3>📍 My Trail Guides</h3>
+        <a href="tracker.html" class="new-trail-btn">+ Record New Trail</a>
       </div>
       <div class="my-trails-stats" id="myTrailsStats">
         <!-- Stats populated by JS -->
       </div>
-      <div class="my-trails-grid" id="myTrailsGrid">
-        <!-- Trails populated by JS -->
+      <div class="my-trails-actions">
+        <button class="view-guides-btn" id="viewMyGuidesBtn" onclick="window.landingController?.showMyTrailGuides()">
+          📚 View My Trail Guides
+        </button>
       </div>
       <div class="my-trails-empty" id="myTrailsEmpty" style="display: none;">
-        <p>🥾 You haven't recorded any trails yet!</p>
+        <p>🥾 You haven't created any trail guides yet!</p>
         <a href="tracker.html" class="start-trail-btn">Start Your First Trail</a>
       </div>
-      <button class="view-all-btn" id="viewAllMyTrails" style="display: none;" onclick="window.landingController?.showAllMyTrails()">
-        View All My Trails →
-      </button>
     </div>
   </div>
 
