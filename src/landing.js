@@ -1767,19 +1767,6 @@ downloadTrailGuide(htmlContent, routeName) {
       toast.error('Failed to load trail guide');
     }
   }
-      
-      const guideDoc = await getDoc(doc(db, 'trail_guides', guideId));
-      if (guideDoc.exists()) {
-        const guideData = { id: guideId, ...guideDoc.data() };
-        this.showTrailGuide(guideData);
-      } else {
-        toast.error('Trail guide not found');
-      }
-    } catch (error) {
-      console.error('Failed to load trail guide:', error);
-      toast.error('Failed to load trail guide');
-    }
-  }
 
   /**
    * Display a trail guide in a fullscreen overlay
