@@ -1320,72 +1320,48 @@ Happy trail mapping! 🥾`);
   }
 
   // ADD this debug function to your LandingPageController class
-async debugTrailGuides() {
-  try {
-    console.log('🐛 Debugging trail guides...');
-    
-    const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-    
-    // Check ALL trail guides (public and private)
-    const allGuidesQuery = query(collection(db, 'trail_guides'), limit(10));
-    const allSnapshot = await getDocs(allGuidesQuery);
-    
-    console.log('📊 Total trail guides in database:', allSnapshot.size);
-    
-    if (allSnapshot.size > 0) {
-      allSnapshot.forEach(doc => {
-        const data = doc.data();
-        console.log('📄 Trail guide:', {
-          id: doc.id,
-          name: data.routeName,
-          isPublic: data.isPublic,
-          userId: data.userId,
-          generatedAt: data.generatedAt
+  async debugTrailGuides() {
+    try {
+      console.log('🐛 Debugging trail guides...');
+      
+      const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+      
+      // Check ALL trail guides (public and private)
+      const allGuidesQuery = query(collection(db, 'trail_guides'), limit(10));
+      const allSnapshot = await getDocs(allGuidesQuery);
+      
+      console.log('📊 Total trail guides in database:', allSnapshot.size);
+      
+      if (allSnapshot.size > 0) {
+        allSnapshot.forEach(doc => {
+          const data = doc.data();
+          console.log('📄 Trail guide:', {
+            id: doc.id,
+            name: data.routeName,
+            isPublic: data.isPublic,
+            userId: data.userId,
+            generatedAt: data.generatedAt
+          });
         });
-      });
+        
+        // Check specifically for public guides
+        const { where } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        const publicQuery = query(
+          collection(db, 'trail_guides'), 
+          where('isPublic', '==', true),
+          limit(10)
+        );
+        const publicSnapshot = await getDocs(publicQuery);
+        console.log('🌍 Public trail guides:', publicSnapshot.size);
+        
+      } else {
+        console.log('❌ No trail guides found in database');
+      }
       
-      // Check specifically for public guides
-      const { where } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-      const publicQuery = query(
-        collection(db, 'trail_guides'), 
-        where('isPublic', '==', true),
-        limit(10)
-      );
-      const publicSnapshot = await getDocs(publicQuery);
-      console.log('🌍 Public trail guides:', publicSnapshot.size);
-      
-    } else {
-      console.log('❌ No trail guides found in database');
+    } catch (error) {
+      console.error('🐛 Debug failed:', error);
     }
-    
-  } catch (error) {
-    console.error('🐛 Debug failed:', error);
   }
-}
-
-// Keep downloadTrailGuide for backup/fallback
-function downloadTrailGuide(htmlContent, routeName) {
-  try {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${routeName.replace(/[^a-z0-9]/gi, '_')}_trail_guide.html`;
-    a.style.display = 'none';
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-    
-    console.log('✅ Trail guide downloaded');
-    
-  } catch (error) {
-    console.error('❌ Failed to download trail guide:', error);
-  }
-}
 
   // UPDATED: Check authentication status for landing page
   async checkLandingAuth() {
