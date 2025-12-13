@@ -2630,7 +2630,60 @@
       });
       
       document.getElementById('addPhotosBtn').addEventListener('click', () => {
-        document.getElementById('reportPhotos').click();
+        // Show options for take photo or upload
+        const photoOptions = document.createElement('div');
+        photoOptions.id = 'photoOptionsMenu';
+        photoOptions.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100001;';
+        photoOptions.innerHTML = `
+          <div style="background: white; border-radius: 16px; padding: 24px; max-width: 320px; width: 90%; text-align: center;">
+            <h3 style="margin: 0 0 20px 0;">📸 Add Photo</h3>
+            <button id="takePhotoOption" style="width: 100%; padding: 14px; margin-bottom: 12px; background: linear-gradient(135deg, #2c5530, #4a7c59); color: white; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              📷 Take Photo
+            </button>
+            <button id="uploadPhotoOption" style="width: 100%; padding: 14px; margin-bottom: 12px; background: #f3f4f6; color: #333; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              📁 Upload from Device
+            </button>
+            <button id="cancelPhotoOption" style="width: 100%; padding: 12px; background: transparent; color: #6b7280; border: none; font-size: 0.9rem; cursor: pointer;">
+              Cancel
+            </button>
+          </div>
+        `;
+        document.body.appendChild(photoOptions);
+        
+        // Take photo option - use camera
+        document.getElementById('takePhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+          // Create a temporary input with capture attribute
+          const cameraInput = document.createElement('input');
+          cameraInput.type = 'file';
+          cameraInput.accept = 'image/*';
+          cameraInput.capture = 'environment'; // Use back camera
+          cameraInput.style.display = 'none';
+          cameraInput.addEventListener('change', (e) => {
+            handlePhotoSelection(e.target.files);
+            cameraInput.remove();
+          });
+          document.body.appendChild(cameraInput);
+          cameraInput.click();
+        });
+        
+        // Upload option - use regular file picker
+        document.getElementById('uploadPhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+          document.getElementById('reportPhotos').click();
+        });
+        
+        // Cancel
+        document.getElementById('cancelPhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+        });
+        
+        // Close on backdrop click
+        photoOptions.addEventListener('click', (e) => {
+          if (e.target === photoOptions) {
+            photoOptions.remove();
+          }
+        });
       });
       
       document.getElementById('reportPhotos').addEventListener('change', (e) => {
@@ -2860,11 +2913,12 @@
       try {
         const reportRef = doc(db, 'accessibilityReports', reportId);
         
-        // Create status history entry
+        // Create status history entry - use Date object instead of serverTimestamp()
+        // because serverTimestamp() cannot be used inside arrayUnion()
         const historyEntry = {
           status: newStatus,
           previousStatus: report.status || 'new',
-          timestamp: serverTimestamp(),
+          timestamp: new Date().toISOString(),
           userId: currentUser.uid,
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           note: note || null
@@ -3042,11 +3096,12 @@
       try {
         const reportRef = doc(db, 'accessibilityReports', reportId);
         
-        // Create status history entry
+        // Create status history entry - use Date object instead of serverTimestamp()
+        // because serverTimestamp() cannot be used inside arrayUnion()
         const historyEntry = {
           status: newStatus,
           previousStatus: report.status || 'new',
-          timestamp: serverTimestamp(),
+          timestamp: new Date().toISOString(),
           userId: currentUser.uid,
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           note: note || null,
@@ -3228,9 +3283,9 @@ Access Nature Community
 Report ID: ${report.id}
 Generated: ${new Date().toLocaleString()}`;
 
-      // Open mailto link
+      // Open mailto link - use location.href for proper email client opening
       const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailto);
+      window.location.href = mailto;
       
       showToast('✉️ Email template opened. Add your local 311 email address.', 'success');
     };
