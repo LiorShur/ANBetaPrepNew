@@ -1572,12 +1572,25 @@ downloadTrailGuide(htmlContent, routeName) {
       
       console.log(`📍 Found ${guides.length} trail guides`);
       
+      // Debug: log first guide structure to find distance field
+      if (guides.length > 0) {
+        console.log('📍 Sample guide data structure:', JSON.stringify(guides[0], null, 2).substring(0, 1000));
+      }
+      
       // Store guides data for modal
       this.myTrailGuides = guides;
       
-      // Calculate total distance across all guides
+      // Calculate total distance across all guides - check multiple possible paths
       const totalDistance = guides.reduce((sum, g) => {
-        const dist = g.routeInfo?.stats?.totalDistance || g.stats?.totalDistance || g.totalDistance || 0;
+        // Try all possible paths for distance
+        const dist = g.routeInfo?.stats?.totalDistance 
+          || g.stats?.totalDistance 
+          || g.totalDistance 
+          || g.metadata?.totalDistance
+          || g.distance
+          || g.routeInfo?.totalDistance
+          || 0;
+        console.log(`📍 Guide "${g.title || g.name || 'unknown'}": distance = ${dist}`);
         return sum + dist;
       }, 0);
       
@@ -1647,7 +1660,11 @@ downloadTrailGuide(htmlContent, routeName) {
     // Create modal content - list of guides sorted by date (newest first)
     const modalContent = this.myTrailGuides.map(guide => {
       const name = guide.title || guide.name || guide.routeInfo?.name || 'Unnamed Trail';
-      const distance = guide.routeInfo?.stats?.totalDistance || guide.stats?.totalDistance || guide.totalDistance || 0;
+      const distance = guide.routeInfo?.stats?.totalDistance 
+        || guide.stats?.totalDistance 
+        || guide.totalDistance 
+        || guide.metadata?.totalDistance
+        || 0;
       
       // Handle Firestore Timestamp
       let date;
@@ -1663,10 +1680,7 @@ downloadTrailGuide(htmlContent, routeName) {
       const isPublic = guide.visibility === 'public' || guide.isPublic;
       
       return `
-        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;" 
-             onmouseover="this.style.background='#f0fdf4'" 
-             onmouseout="this.style.background=''"
-             onclick="window.landingController?.viewTrailGuide('${guide.id}')">
+        <div class="guide-list-item" data-guide-id="${guide.id}" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;">
           <span style="font-size: 1.8rem;">📚</span>
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600; color: #1f2937; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(name)}</div>
@@ -1683,7 +1697,7 @@ downloadTrailGuide(htmlContent, routeName) {
     modal.show({
       title: '📚 My Trail Guides',
       html: `
-        <div style="max-height: 60vh; overflow-y: auto; margin: -16px; margin-top: 0;">
+        <div id="guideListContainer" style="max-height: 60vh; overflow-y: auto; margin: -16px; margin-top: 0;">
           ${modalContent}
         </div>
         <p style="text-align: center; color: #6b7280; font-size: 0.85rem; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
@@ -1692,21 +1706,67 @@ downloadTrailGuide(htmlContent, routeName) {
       `,
       buttons: [{ label: 'Close', action: 'close', variant: 'secondary' }]
     });
+    
+    // Add event delegation for guide clicks after modal is shown
+    setTimeout(() => {
+      const container = document.getElementById('guideListContainer');
+      if (container) {
+        container.addEventListener('click', (e) => {
+          const item = e.target.closest('.guide-list-item');
+          if (item) {
+            const guideId = item.dataset.guideId;
+            console.log('📚 Guide item clicked:', guideId);
+            if (guideId) {
+              this.viewTrailGuide(guideId);
+            }
+          }
+        });
+        
+        // Add hover effects
+        container.querySelectorAll('.guide-list-item').forEach(item => {
+          item.addEventListener('mouseenter', () => item.style.background = '#f0fdf4');
+          item.addEventListener('mouseleave', () => item.style.background = '');
+        });
+      }
+    }, 100);
   }
 
   /**
    * View a specific trail guide
    */
   async viewTrailGuide(guideId) {
+    console.log('📚 viewTrailGuide called with ID:', guideId);
+    
     try {
-      // Close the list modal first
-      document.querySelector('.modal-backdrop')?.click();
+      // Close the list modal first - try multiple methods
+      const modalBackdrop = document.querySelector('.modal-backdrop');
+      if (modalBackdrop) {
+        console.log('📚 Closing modal...');
+        modalBackdrop.remove();
+      }
       
       // Show loading
       toast.info('Loading trail guide...');
       
       const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
       const { db } = await import('../firebase-setup.js');
+      
+      console.log('📚 Fetching guide from Firestore...');
+      const guideDoc = await getDoc(doc(db, 'trail_guides', guideId));
+      
+      if (guideDoc.exists()) {
+        const guideData = { id: guideId, ...guideDoc.data() };
+        console.log('📚 Guide loaded:', guideData.title || guideData.name);
+        this.showTrailGuide(guideData);
+      } else {
+        console.error('📚 Guide not found:', guideId);
+        toast.error('Trail guide not found');
+      }
+    } catch (error) {
+      console.error('📚 Failed to load trail guide:', error);
+      toast.error('Failed to load trail guide');
+    }
+  }
       
       const guideDoc = await getDoc(doc(db, 'trail_guides', guideId));
       if (guideDoc.exists()) {
@@ -1743,7 +1803,7 @@ downloadTrailGuide(htmlContent, routeName) {
       overlay.className = 'trail-guide-overlay';
       overlay.innerHTML = `
         <div class="trail-guide-overlay-header">
-          <button class="close-overlay-btn" onclick="this.closest('.trail-guide-overlay').remove()">
+          <button class="close-overlay-btn" id="closeGuideOverlay">
             ✕ Close
           </button>
           <h2>${this.escapeHtml(guideData.title || guideData.routeInfo?.name || 'Trail Guide')}</h2>
@@ -1814,7 +1874,16 @@ downloadTrailGuide(htmlContent, routeName) {
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
       
-      // Restore body scroll when closed
+      // Close button handler
+      const closeBtn = overlay.querySelector('#closeGuideOverlay');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          overlay.remove();
+          document.body.style.overflow = '';
+        });
+      }
+      
+      // Restore body scroll when clicking outside
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           overlay.remove();
