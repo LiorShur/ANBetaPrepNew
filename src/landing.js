@@ -1574,23 +1574,18 @@ downloadTrailGuide(htmlContent, routeName) {
       
       // Debug: log first guide structure to find distance field
       if (guides.length > 0) {
-        console.log('📍 Sample guide data structure:', JSON.stringify(guides[0], null, 2).substring(0, 1000));
+        console.log('📍 Sample guide keys:', Object.keys(guides[0]));
+        console.log('📍 Sample guide totalDistance:', guides[0].totalDistance);
+        console.log('📍 Sample guide metadata:', guides[0].metadata);
       }
       
       // Store guides data for modal
       this.myTrailGuides = guides;
       
-      // Calculate total distance across all guides - check multiple possible paths
+      // Calculate total distance - use same pattern as working user stats
       const totalDistance = guides.reduce((sum, g) => {
-        // Try all possible paths for distance
-        const dist = g.routeInfo?.stats?.totalDistance 
-          || g.stats?.totalDistance 
-          || g.totalDistance 
-          || g.metadata?.totalDistance
-          || g.distance
-          || g.routeInfo?.totalDistance
-          || 0;
-        console.log(`📍 Guide "${g.title || g.name || 'unknown'}": distance = ${dist}`);
+        // Direct totalDistance field (like routes use)
+        const dist = g.totalDistance || 0;
         return sum + dist;
       }, 0);
       
@@ -1660,11 +1655,8 @@ downloadTrailGuide(htmlContent, routeName) {
     // Create modal content - list of guides sorted by date (newest first)
     const modalContent = this.myTrailGuides.map(guide => {
       const name = guide.title || guide.name || guide.routeInfo?.name || 'Unnamed Trail';
-      const distance = guide.routeInfo?.stats?.totalDistance 
-        || guide.stats?.totalDistance 
-        || guide.totalDistance 
-        || guide.metadata?.totalDistance
-        || 0;
+      // Use direct totalDistance like working stats code
+      const distance = guide.totalDistance || 0;
       
       // Handle Firestore Timestamp
       let date;
@@ -1737,33 +1729,43 @@ downloadTrailGuide(htmlContent, routeName) {
   async viewTrailGuide(guideId) {
     console.log('📚 viewTrailGuide called with ID:', guideId);
     
+    // Close the list modal first
+    const modalBackdrop = document.querySelector('.modal-backdrop');
+    if (modalBackdrop) {
+      console.log('📚 Closing modal...');
+      modalBackdrop.remove();
+    }
+    
+    // First try to find the guide in our cached data
+    const cachedGuide = this.myTrailGuides?.find(g => g.id === guideId);
+    
+    if (cachedGuide) {
+      console.log('📚 Using cached guide data:', cachedGuide.title || cachedGuide.name);
+      this.showTrailGuide(cachedGuide);
+      return;
+    }
+    
+    // If not in cache, fetch from Firestore
+    console.log('📚 Guide not in cache, fetching from Firestore...');
+    toast.info('Loading trail guide...');
+    
     try {
-      // Close the list modal first - try multiple methods
-      const modalBackdrop = document.querySelector('.modal-backdrop');
-      if (modalBackdrop) {
-        console.log('📚 Closing modal...');
-        modalBackdrop.remove();
-      }
-      
-      // Show loading
-      toast.info('Loading trail guide...');
-      
       const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
       const { db } = await import('../firebase-setup.js');
       
-      console.log('📚 Fetching guide from Firestore...');
       const guideDoc = await getDoc(doc(db, 'trail_guides', guideId));
       
       if (guideDoc.exists()) {
         const guideData = { id: guideId, ...guideDoc.data() };
-        console.log('📚 Guide loaded:', guideData.title || guideData.name);
+        console.log('📚 Guide loaded from Firestore:', guideData.title || guideData.name);
         this.showTrailGuide(guideData);
       } else {
         console.error('📚 Guide not found:', guideId);
         toast.error('Trail guide not found');
       }
     } catch (error) {
-      console.error('📚 Failed to load trail guide:', error);
+      console.error('📚 Failed to fetch trail guide:', error);
+      console.error('📚 Error details:', error.message, error.code);
       toast.error('Failed to load trail guide');
     }
   }
@@ -1773,7 +1775,8 @@ downloadTrailGuide(htmlContent, routeName) {
    */
   showTrailGuide(guideData) {
     try {
-      console.log('📚 Showing trail guide:', guideData.title || guideData.routeInfo?.name);
+      console.log('📚 showTrailGuide called with data:', guideData?.id);
+      console.log('📚 Guide title:', guideData?.title || guideData?.name || guideData?.routeInfo?.name);
       
       // Generate HTML using the trail guide generator
       const routeData = guideData.routeData || { points: guideData.routeInfo?.points || [] };
@@ -1783,7 +1786,22 @@ downloadTrailGuide(htmlContent, routeName) {
       };
       const accessibilityData = guideData.accessibilityData || guideData.accessibility || {};
       
-      const guideHTML = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData);
+      console.log('📚 Generating HTML...');
+      let guideHTML;
+      try {
+        guideHTML = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData);
+        console.log('📚 HTML generated successfully');
+      } catch (genError) {
+        console.error('📚 Generator error:', genError);
+        // Fallback to simple HTML
+        guideHTML = `
+          <div style="padding: 20px;">
+            <h2>${this.escapeHtml(guideData.title || guideData.name || 'Trail Guide')}</h2>
+            <p>Distance: ${(guideData.totalDistance || 0).toFixed(1)} km</p>
+            <p style="color: #666;">Full guide view is temporarily unavailable.</p>
+          </div>
+        `;
+      }
       
       // Create fullscreen overlay
       const overlay = document.createElement('div');
