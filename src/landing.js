@@ -12,7 +12,6 @@ import { trailSearch } from './features/trailSearch.js';
 import { showError, getErrorMessage } from './utils/errorMessages.js';
 import { userService } from './services/userService.js';
 import { betaFeedback } from './utils/betaFeedback.js';
-import { trailGuideGeneratorV2 } from './features/trailGuideGeneratorV2.js';
 // import { initializeAccessReport } from './js/modules/access-report-main.js';
 
 class LandingPageController {
@@ -1572,22 +1571,24 @@ downloadTrailGuide(htmlContent, routeName) {
       
       console.log(`📍 Found ${guides.length} trail guides`);
       
-      // Debug: log first guide structure to find distance field
-      if (guides.length > 0) {
-        console.log('📍 Sample guide keys:', Object.keys(guides[0]));
-        console.log('📍 Sample guide totalDistance:', guides[0].totalDistance);
-        console.log('📍 Sample guide metadata:', guides[0].metadata);
-      }
-      
       // Store guides data for modal
       this.myTrailGuides = guides;
       
-      // Calculate total distance - use same pattern as working user stats
+      // Calculate total distance by extracting from htmlContent
       const totalDistance = guides.reduce((sum, g) => {
-        // Direct totalDistance field (like routes use)
-        const dist = g.totalDistance || 0;
-        return sum + dist;
+        // Try to extract distance from the generated HTML
+        if (g.htmlContent) {
+          // Look for: <span class="tg-stat-value">X.X</span>\n                <span class="tg-stat-label">km</span>
+          const match = g.htmlContent.match(/<span class="tg-stat-value">([0-9.]+)<\/span>\s*<span class="tg-stat-label">km<\/span>/);
+          if (match && match[1]) {
+            return sum + parseFloat(match[1]);
+          }
+        }
+        // Fallback to stats or metadata
+        return sum + (g.stats?.totalDistance || g.metadata?.totalDistance || 0);
       }, 0);
+      
+      console.log(`📍 Total distance calculated: ${totalDistance.toFixed(1)} km`);
       
       // Update stats display
       this.displayMyTrailsStats(guides.length, totalDistance);
@@ -1654,9 +1655,20 @@ downloadTrailGuide(htmlContent, routeName) {
     
     // Create modal content - list of guides sorted by date (newest first)
     const modalContent = this.myTrailGuides.map(guide => {
-      const name = guide.title || guide.name || guide.routeInfo?.name || 'Unnamed Trail';
-      // Use direct totalDistance like working stats code
-      const distance = guide.totalDistance || 0;
+      const name = guide.routeName || guide.title || guide.name || 'Unnamed Trail';
+      
+      // Extract distance from htmlContent
+      let distance = 0;
+      if (guide.htmlContent) {
+        const match = guide.htmlContent.match(/<span class="tg-stat-value">([0-9.]+)<\/span>\s*<span class="tg-stat-label">km<\/span>/);
+        if (match && match[1]) {
+          distance = parseFloat(match[1]);
+        }
+      }
+      // Fallback
+      if (distance === 0) {
+        distance = guide.stats?.totalDistance || guide.metadata?.totalDistance || 0;
+      }
       
       // Handle Firestore Timestamp
       let date;
@@ -1776,32 +1788,27 @@ downloadTrailGuide(htmlContent, routeName) {
   showTrailGuide(guideData) {
     try {
       console.log('📚 showTrailGuide called with data:', guideData?.id);
-      console.log('📚 Guide title:', guideData?.title || guideData?.name || guideData?.routeInfo?.name);
+      const guideName = guideData?.routeName || guideData?.title || guideData?.name || 'Trail Guide';
+      console.log('📚 Guide name:', guideName);
       
-      // Generate HTML using the trail guide generator
-      const routeData = guideData.routeData || { points: guideData.routeInfo?.points || [] };
-      const routeInfo = guideData.routeInfo || {
-        name: guideData.title || guideData.name || 'Trail Guide',
-        stats: guideData.stats || {}
-      };
-      const accessibilityData = guideData.accessibilityData || guideData.accessibility || {};
+      // Use the pre-generated htmlContent if available
+      let guideHTML = guideData.htmlContent;
       
-      console.log('📚 Generating HTML...');
-      let guideHTML;
-      try {
-        guideHTML = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData);
-        console.log('📚 HTML generated successfully');
-      } catch (genError) {
-        console.error('📚 Generator error:', genError);
-        // Fallback to simple HTML
+      if (!guideHTML) {
+        console.log('📚 No htmlContent found, using fallback');
+        // Fallback to simple display
+        const distance = guideData.stats?.totalDistance || guideData.metadata?.totalDistance || 0;
         guideHTML = `
-          <div style="padding: 20px;">
-            <h2>${this.escapeHtml(guideData.title || guideData.name || 'Trail Guide')}</h2>
-            <p>Distance: ${(guideData.totalDistance || 0).toFixed(1)} km</p>
-            <p style="color: #666;">Full guide view is temporarily unavailable.</p>
+          <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+            <h2 style="color: #2c5530;">${this.escapeHtml(guideName)}</h2>
+            <p><strong>Distance:</strong> ${distance.toFixed(1)} km</p>
+            ${guideData.accessibility ? `<p><strong>Accessibility:</strong> ${JSON.stringify(guideData.accessibility)}</p>` : ''}
+            <p style="color: #666; margin-top: 20px;">Full guide content is not available.</p>
           </div>
         `;
       }
+      
+      console.log('📚 HTML content length:', guideHTML?.length || 0);
       
       // Create fullscreen overlay
       const overlay = document.createElement('div');
@@ -1811,7 +1818,7 @@ downloadTrailGuide(htmlContent, routeName) {
           <button class="close-overlay-btn" id="closeGuideOverlay">
             ✕ Close
           </button>
-          <h2>${this.escapeHtml(guideData.title || guideData.routeInfo?.name || 'Trail Guide')}</h2>
+          <h2>${this.escapeHtml(guideName)}</h2>
         </div>
         <div class="trail-guide-overlay-content">
           ${guideHTML}
