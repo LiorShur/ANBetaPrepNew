@@ -1667,17 +1667,34 @@ Happy trail mapping! 🥾`);
   openGuideByIndex(index) {
     console.log('📚 openGuideByIndex called:', index);
     
-    // Close modal first
-    const modalBackdrop = document.querySelector('.modal-backdrop');
-    if (modalBackdrop) {
-      modalBackdrop.remove();
-    }
+    // Close modal first - try multiple methods
+    const closeModal = () => {
+      // Try backdrop
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+        return true;
+      }
+      // Try modal container
+      const modalContainer = document.querySelector('.modal-container');
+      if (modalContainer) {
+        modalContainer.remove();
+        return true;
+      }
+      return false;
+    };
+    
+    // Close immediately
+    closeModal();
+    // Also try after a frame (for async rendering)
+    requestAnimationFrame(() => closeModal());
     
     // Get guide from temp array
     const guide = window._tempGuides?.[index];
     if (guide) {
       console.log('📚 Opening guide:', guide.routeName || guide.id);
-      this.showTrailGuide(guide);
+      // Small delay to ensure modal is closed
+      setTimeout(() => this.showTrailGuide(guide), 50);
     } else {
       console.error('📚 Guide not found at index:', index);
       toast.error('Guide not found');
