@@ -14,6 +14,25 @@ import { userService } from './services/userService.js';
 import { betaFeedback } from './utils/betaFeedback.js';
 // import { initializeAccessReport } from './js/modules/access-report-main.js';
 
+// Early global function stubs (replaced once controller initializes)
+window.openTrailBrowser = () => {
+  console.log('⏳ Landing controller not ready yet, retrying...');
+  setTimeout(() => window.landingController?.openTrailBrowser(), 100);
+};
+window.closeTrailBrowser = () => window.landingController?.closeTrailBrowser();
+window.openTracker = () => { window.location.href = 'tracker.html'; };
+window.quickSearch = () => window.landingController?.quickSearch();
+window.searchTrails = () => window.landingController?.searchTrails();
+window.applyFilters = () => window.landingController?.applyFilters();
+window.loadMoreResults = () => window.landingController?.loadMoreResults();
+window.loadMoreFeatured = () => window.landingController?.loadMoreFeatured();
+window.viewTrailGuide = (guideId) => window.landingController?.viewTrailGuide(guideId);
+window.loadMyTrailGuides = () => window.landingController?.loadMyTrailGuides();
+window.showAbout = () => window.landingController?.showAbout();
+window.showPrivacy = () => window.landingController?.showPrivacy();
+window.showContact = () => window.landingController?.showContact();
+window.showHelp = () => window.landingController?.showHelp();
+
 class LandingPageController {
   constructor() {
     this.authController = null;
