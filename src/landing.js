@@ -539,29 +539,51 @@ async searchTrails() {
     try {
       console.log('👁️ Viewing trail guide:', guideId);
       
-      // Get trail guide with HTML content
-      const authController = window.AccessNatureApp?.getController?.('auth');
-      if (authController && typeof authController.getTrailGuide === 'function') {
-        const guide = await authController.getTrailGuide(guideId);
-        
-        if (guide && guide.htmlContent) {
-          // Open HTML content in new tab
-          const blob = new Blob([guide.htmlContent], { type: 'text/html' });
-          const url = URL.createObjectURL(blob);
-          const newWindow = window.open(url, '_blank');
-          
-          // Clean up URL after delay
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        } else {
-          toast.error('Trail guide not found');
+      // Import Firestore functions
+      const { doc, getDoc, updateDoc, increment } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+      const { db, auth } = await import('../firebase-setup.js');
+      
+      // Get the trail guide document
+      const guideRef = doc(db, 'trail_guides', guideId);
+      const guideSnap = await getDoc(guideRef);
+      
+      if (!guideSnap.exists()) {
+        toast.error('Trail guide not found');
+        return;
+      }
+      
+      const guideData = { id: guideId, ...guideSnap.data() };
+      
+      // Check if it's public or user owns it
+      const currentUser = auth.currentUser;
+      const canView = guideData.isPublic || (currentUser && currentUser.uid === guideData.userId);
+      
+      if (!canView) {
+        toast.error('This trail guide is private');
+        return;
+      }
+      
+      // Increment view count (only for public guides and if not the owner)
+      if (guideData.isPublic && (!currentUser || currentUser.uid !== guideData.userId)) {
+        try {
+          await updateDoc(guideRef, {
+            'community.views': increment(1)
+          });
+        } catch (error) {
+          console.warn('Failed to increment view count:', error);
         }
+      }
+      
+      // Show the trail guide in overlay
+      if (guideData.htmlContent) {
+        this.showTrailGuide(guideData);
       } else {
-        toast.info('Please sign in to view full trail guides');
+        toast.error('Trail guide content not available');
       }
       
     } catch (error) {
       console.error('❌ Failed to view trail guide:', error);
-      toast.error('Failed to load trail guide. Please try again.');
+      toast.error('Failed to load trail guide');
     }
   }
 
@@ -1322,94 +1344,8 @@ async debugTrailGuides() {
   }
 }
 
-// NEW: View trail guide directly (no auth controller dependency)
-async viewTrailGuide(guideId) {
-  try {
-    console.log('👁️ Viewing trail guide:', guideId);
-    
-    // Import Firestore functions
-    const { doc, getDoc, updateDoc, increment } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-    
-    // Get the trail guide document
-    const guideRef = doc(db, 'trail_guides', guideId);
-    const guideSnap = await getDoc(guideRef);
-    
-    if (!guideSnap.exists()) {
-      toast.error('Trail guide not found');
-      return;
-    }
-    
-    const guideData = guideSnap.data();
-    
-    // Check if it's public or user owns it
-    const { auth } = await import('../firebase-setup.js');
-    const currentUser = auth.currentUser;
-    
-    const canView = guideData.isPublic || (currentUser && currentUser.uid === guideData.userId);
-    
-    if (!canView) {
-      toast.error('❌ This trail guide is private and you don\'t have permission to view it.');
-      return;
-    }
-    
-    // Increment view count (only for public guides and if not the owner)
-    if (guideData.isPublic && (!currentUser || currentUser.uid !== guideData.userId)) {
-      try {
-        await updateDoc(guideRef, {
-          'community.views': increment(1)
-        });
-        console.log('📈 View count incremented');
-      } catch (error) {
-        console.warn('Failed to increment view count:', error);
-        // Don't fail the whole operation for this
-      }
-    }
-    
-    // Show the HTML content
-    if (guideData.htmlContent) {
-      this.displayTrailGuideHTML(guideData.htmlContent, guideData.routeName);
-    } else {
-      toast.error('❌ Trail guide content not available');
-    }
-    
-  } catch (error) {
-    console.error('❌ Failed to view trail guide:', error);
-    toast.error('❌ Failed to load trail guide: ' + error.message);
-  }
-}
-
-// NEW: Display trail guide HTML in new window
-async displayTrailGuideHTML(htmlContent, routeName) {
-  try {
-    // Create blob and open in new tab
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    // Open in new window/tab
-    const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-    
-    if (!newWindow) {
-      // Popup blocked, offer download instead
-      const downloadConfirm = await modal.confirm('Popup blocked! Would you like to download the trail guide instead?', '📥 Download Guide');
-      if (downloadConfirm) {
-        this.downloadTrailGuide(htmlContent, routeName);
-      }
-    } else {
-      // Set window title
-      newWindow.document.title = `${routeName} - Trail Guide`;
-    }
-    
-    // Clean up URL after delay
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    
-  } catch (error) {
-    console.error('❌ Failed to display trail guide:', error);
-    toast.error('Failed to display trail guide: ' + error.message);
-  }
-}
-
-// NEW: Download trail guide as HTML file
-downloadTrailGuide(htmlContent, routeName) {
+// Keep downloadTrailGuide for backup/fallback
+function downloadTrailGuide(htmlContent, routeName) {
   try {
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -1429,7 +1365,6 @@ downloadTrailGuide(htmlContent, routeName) {
     
   } catch (error) {
     console.error('❌ Failed to download trail guide:', error);
-    toast.error('❌ Failed to download trail guide: ' + error.message);
   }
 }
 
@@ -1664,8 +1599,11 @@ downloadTrailGuide(htmlContent, routeName) {
     
     console.log(`📚 Showing ${this.myTrailGuides.length} trail guides in modal`);
     
+    // Store guides globally for onclick access
+    window._tempGuides = this.myTrailGuides;
+    
     // Create modal content - list of guides sorted by date (newest first)
-    const modalContent = this.myTrailGuides.map(guide => {
+    const modalContent = this.myTrailGuides.map((guide, index) => {
       const name = guide.routeName || guide.title || guide.name || 'Unnamed Trail';
       
       // Extract distance from htmlContent
@@ -1694,8 +1632,13 @@ downloadTrailGuide(htmlContent, routeName) {
       
       const isPublic = guide.visibility === 'public' || guide.isPublic;
       
+      // Use index to access from window._tempGuides
       return `
-        <div class="guide-list-item" data-guide-id="${guide.id}" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;">
+        <div class="guide-list-item" 
+             onclick="window.landingController?.openGuideByIndex(${index})"
+             style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;"
+             onmouseover="this.style.background='#f0fdf4'" 
+             onmouseout="this.style.background=''">
           <span style="font-size: 1.8rem;">📚</span>
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600; color: #1f2937; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(name)}</div>
@@ -1721,80 +1664,28 @@ downloadTrailGuide(htmlContent, routeName) {
       `,
       buttons: [{ label: 'Close', action: 'close', variant: 'secondary' }]
     });
-    
-    // Add event delegation for guide clicks - use requestAnimationFrame for reliable timing
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const container = document.getElementById('guideListContainer');
-        if (container) {
-          console.log('📚 Setting up click handlers on container');
-          container.addEventListener('click', (e) => {
-            const item = e.target.closest('.guide-list-item');
-            if (item) {
-              const guideId = item.dataset.guideId;
-              console.log('📚 Guide item clicked:', guideId);
-              if (guideId) {
-                this.viewTrailGuide(guideId);
-              }
-            }
-          });
-          
-          // Add hover effects
-          container.querySelectorAll('.guide-list-item').forEach(item => {
-            item.addEventListener('mouseenter', () => item.style.background = '#f0fdf4');
-            item.addEventListener('mouseleave', () => item.style.background = '');
-          });
-        } else {
-          console.warn('📚 guideListContainer not found');
-        }
-      }, 50);
-    });
   }
 
   /**
-   * View a specific trail guide
+   * Open guide by index from the temp guides array
    */
-  async viewTrailGuide(guideId) {
-    console.log('📚 viewTrailGuide called with ID:', guideId);
+  openGuideByIndex(index) {
+    console.log('📚 openGuideByIndex called:', index);
     
-    // Close the list modal first
+    // Close modal first
     const modalBackdrop = document.querySelector('.modal-backdrop');
     if (modalBackdrop) {
-      console.log('📚 Closing modal...');
       modalBackdrop.remove();
     }
     
-    // First try to find the guide in our cached data
-    const cachedGuide = this.myTrailGuides?.find(g => g.id === guideId);
-    
-    if (cachedGuide) {
-      console.log('📚 Using cached guide data:', cachedGuide.title || cachedGuide.name);
-      this.showTrailGuide(cachedGuide);
-      return;
-    }
-    
-    // If not in cache, fetch from Firestore
-    console.log('📚 Guide not in cache, fetching from Firestore...');
-    toast.info('Loading trail guide...');
-    
-    try {
-      const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-      const { db } = await import('../firebase-setup.js');
-      
-      const guideDoc = await getDoc(doc(db, 'trail_guides', guideId));
-      
-      if (guideDoc.exists()) {
-        const guideData = { id: guideId, ...guideDoc.data() };
-        console.log('📚 Guide loaded from Firestore:', guideData.title || guideData.name);
-        this.showTrailGuide(guideData);
-      } else {
-        console.error('📚 Guide not found:', guideId);
-        toast.error('Trail guide not found');
-      }
-    } catch (error) {
-      console.error('📚 Failed to fetch trail guide:', error);
-      console.error('📚 Error details:', error.message, error.code);
-      toast.error('Failed to load trail guide');
+    // Get guide from temp array
+    const guide = window._tempGuides?.[index];
+    if (guide) {
+      console.log('📚 Opening guide:', guide.routeName || guide.id);
+      this.showTrailGuide(guide);
+    } else {
+      console.error('📚 Guide not found at index:', index);
+      toast.error('Guide not found');
     }
   }
 
@@ -1840,7 +1731,7 @@ downloadTrailGuide(htmlContent, routeName) {
           </button>
           <h2>${this.escapeHtml(guideName)}</h2>
         </div>
-        <iframe class="trail-guide-iframe" id="guideIframe" sandbox="allow-scripts allow-same-origin"></iframe>
+        <iframe class="trail-guide-iframe" id="guideIframe" sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"></iframe>
       `;
       
       // Add styles if not already present
