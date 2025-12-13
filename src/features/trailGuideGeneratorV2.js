@@ -102,25 +102,34 @@ export class TrailGuideGeneratorV2 {
         <div class="tg-action-bar" id="actionBar">
             ${locationPoints.length > 0 ? `
             <div class="tg-action-dropdown">
-                <button class="tg-action-btn tg-action-navigate" onclick="document.getElementById('navDropdown').classList.toggle('show')">
+                <button class="tg-action-btn tg-action-navigate" onclick="toggleNavDropdown(event)">
                     🧭 Navigate to Start
                 </button>
                 <div id="navDropdown" class="tg-dropdown-content">
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&travelmode=driving" target="_blank" rel="noopener">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&travelmode=driving" target="_blank" rel="noopener" onclick="closeNavDropdown()">
                         📍 Google Maps
                     </a>
-                    <a href="https://waze.com/ul?ll=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&navigate=yes" target="_blank" rel="noopener">
+                    <a href="https://waze.com/ul?ll=${locationPoints[0].coords.lat},${locationPoints[0].coords.lng}&navigate=yes" target="_blank" rel="noopener" onclick="closeNavDropdown()">
                         🚗 Waze
                     </a>
                 </div>
             </div>
             ` : ''}
-            <button class="tg-action-btn tg-action-pdf" onclick="downloadPDF()">
+            <button class="tg-action-btn tg-action-pdf" id="pdfBtn" onclick="downloadPDF()">
                 📥 Download PDF
             </button>
-            <button class="tg-action-btn tg-action-details" onclick="document.getElementById('surveyDetails').classList.toggle('show')">
+            <button class="tg-action-btn tg-action-details" onclick="closeNavDropdown(); document.getElementById('surveyDetails').classList.toggle('show')">
                 📋 Full Survey Details
             </button>
+        </div>
+        
+        <!-- PDF Loading Overlay -->
+        <div id="pdfLoadingOverlay" class="tg-pdf-overlay" style="display: none;">
+            <div class="tg-pdf-loading">
+                <div class="tg-pdf-spinner"></div>
+                <p>Generating PDF...</p>
+                <p class="tg-pdf-hint">This may take a few seconds</p>
+            </div>
         </div>
 
         <!-- Hidden Survey Details Panel -->
@@ -200,18 +209,49 @@ export class TrailGuideGeneratorV2 {
     
     <!-- PDF Download Script -->
     <script>
+        // Navigation dropdown handlers
+        function toggleNavDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('navDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        function closeNavDropdown() {
+            const dropdown = document.getElementById('navDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('show');
+            }
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('navDropdown');
+            const navBtn = document.querySelector('.tg-action-navigate');
+            if (dropdown && !dropdown.contains(event.target) && !navBtn?.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        // PDF Download with loading overlay
         function downloadPDF() {
-            // Show loading state
-            const btn = document.querySelector('.tg-action-pdf');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Generating PDF...';
-            btn.disabled = true;
+            // Show loading overlay
+            const overlay = document.getElementById('pdfLoadingOverlay');
+            const btn = document.getElementById('pdfBtn');
+            
+            if (overlay) overlay.style.display = 'flex';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Generating...';
+            }
+            
+            // Close any open dropdowns
+            closeNavDropdown();
             
             // Hide action bar and show survey details for PDF
             const actionBar = document.getElementById('actionBar');
             const surveyPanel = document.getElementById('surveyDetails');
-            actionBar.style.display = 'none';
-            surveyPanel.classList.add('show');
+            if (actionBar) actionBar.style.display = 'none';
+            if (surveyPanel) surveyPanel.classList.add('show');
             
             const element = document.getElementById('trailGuideContent');
             const filename = '${routeInfo.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_trail_guide.pdf';
@@ -236,16 +276,22 @@ export class TrailGuideGeneratorV2 {
             
             html2pdf().set(opt).from(element).save().then(() => {
                 // Restore UI
-                actionBar.style.display = 'flex';
-                surveyPanel.classList.remove('show');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                if (actionBar) actionBar.style.display = 'flex';
+                if (surveyPanel) surveyPanel.classList.remove('show');
+                if (overlay) overlay.style.display = 'none';
+                if (btn) {
+                    btn.innerHTML = '📥 Download PDF';
+                    btn.disabled = false;
+                }
             }).catch(err => {
                 console.error('PDF generation failed:', err);
-                actionBar.style.display = 'flex';
-                surveyPanel.classList.remove('show');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                if (actionBar) actionBar.style.display = 'flex';
+                if (surveyPanel) surveyPanel.classList.remove('show');
+                if (overlay) overlay.style.display = 'none';
+                if (btn) {
+                    btn.innerHTML = '📥 Download PDF';
+                    btn.disabled = false;
+                }
                 alert('PDF generation failed. Please try again or use Print to PDF.');
             });
         }
@@ -1412,6 +1458,56 @@ export class TrailGuideGeneratorV2 {
         
         .tg-dropdown-content a:hover {
             background: #f3f4f6;
+        }
+        
+        /* PDF Loading Overlay */
+        .tg-pdf-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .tg-pdf-loading {
+            background: white;
+            padding: 40px 60px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .tg-pdf-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #2c5530;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            animation: tg-spin 1s linear infinite;
+        }
+        
+        @keyframes tg-spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .tg-pdf-loading p {
+            margin: 0;
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .tg-pdf-hint {
+            color: #666 !important;
+            font-size: 0.9rem !important;
+            font-weight: 400 !important;
+            margin-top: 8px !important;
         }
         
         /* Survey Details Panel */
