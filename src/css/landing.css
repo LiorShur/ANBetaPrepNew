@@ -1194,3 +1194,268 @@ body {
     opacity: 1;
   }
 }
+/* ========== Trail Card Social Features ========== */
+.trail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.like-trail-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.like-trail-btn:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.like-trail-btn.liked {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+.like-trail-btn.pulse {
+  animation: likePulse 0.3s ease;
+}
+
+@keyframes likePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.like-icon {
+  font-size: 1rem;
+}
+
+.like-count {
+  font-weight: 600;
+  color: #374151;
+}
+
+.share-trail-btn {
+  padding: 8px 14px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.share-trail-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.view-trail-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #2c5530, #4a7c59);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.view-trail-btn:hover {
+  background: linear-gradient(135deg, #1e3a21, #2c5530);
+  transform: translateY(-1px);
+}
+
+/* Share Modal */
+.share-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.share-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+}
+
+.share-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.share-modal h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.share-modal p {
+  margin: 0 0 16px;
+  color: #6b7280;
+}
+
+.share-link-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.share-link-container input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.share-link-container button {
+  padding: 10px 16px;
+  background: #2c5530;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.share-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.share-btn:hover {
+  opacity: 0.9;
+}
+
+.share-btn.twitter {
+  background: #1da1f2;
+  color: white;
+}
+
+.share-btn.facebook {
+  background: #4267b2;
+  color: white;
+}
+
+.share-btn.email {
+  background: #6b7280;
+  color: white;
+}
+
+/* Notification Banner */
+.notification-banner {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 90%;
+}
+
+.notification-banner-text {
+  flex: 1;
+}
+
+.notification-banner-text strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.notification-banner-text span {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.notification-banner button {
+  padding: 8px 16px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-banner .dismiss-btn {
+  padding: 4px 8px;
+  background: transparent;
+  color: white;
+  opacity: 0.8;
+}
+
+/* High contrast adjustments */
+.high-contrast .like-trail-btn,
+.high-contrast .share-trail-btn {
+  border-color: #000;
+}
+
+.high-contrast .like-trail-btn.liked {
+  background: #000;
+  color: #fff;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .trail-actions {
+    flex-direction: column;
+  }
+  
+  .view-trail-btn {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .like-trail-btn,
+  .share-trail-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
