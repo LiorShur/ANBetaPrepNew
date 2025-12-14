@@ -228,9 +228,14 @@
     padding: 0 12px;
   }
   
-  /* Hide auth indicator on mobile - use menu instead */
+  /* Keep auth indicator visible on mobile */
   .nav-auth-indicator {
-    display: none;
+    display: flex !important;
+    font-size: 0.7rem;
+  }
+  
+  .nav-auth-indicator .auth-status {
+    padding: 3px 8px;
   }
   
   /* Show hamburger menu */
@@ -241,22 +246,23 @@
   /* Mobile Menu - hidden by default */
   .nav-menu {
     display: none !important;
-    position: fixed;
-    top: var(--nav-height-mobile);
-    right: 0;
-    left: 0;
-    bottom: auto;
-    width: 100%;
-    max-width: 100%;
-    flex-direction: column;
-    align-items: stretch;
+    position: fixed !important;
+    top: var(--nav-height-mobile) !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
     gap: 4px;
-    padding: 16px;
-    background: var(--nav-bg-solid);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px !important;
+    background: #ffffff !important;
+    background: var(--nav-bg-solid, #ffffff) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
     overflow-y: auto;
     max-height: calc(100vh - var(--nav-height-mobile));
-    z-index: var(--z-menu);
+    z-index: 10001 !important;
   }
   
   /* Show menu when active */
@@ -265,22 +271,39 @@
   }
   
   .nav-link {
-    padding: 14px 16px;
-    font-size: 1rem;
+    padding: 14px 16px !important;
+    font-size: 1rem !important;
     border-radius: 10px;
+    background: transparent;
+    color: #1f2937 !important;
+  }
+  
+  .nav-link:hover {
+    background: #f3f4f6 !important;
+  }
+  
+  .nav-link.active {
+    background: #f0fdf4 !important;
+    color: #2c5530 !important;
   }
   
   .nav-auth {
     margin-left: 0;
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid var(--nav-border);
+    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--nav-border, #e5e7eb);
   }
   
   .nav-auth .btn {
-    width: 100%;
-    padding: 14px;
-    font-size: 1rem;
+    width: 100% !important;
+    padding: 14px !important;
+    font-size: 1rem !important;
+    background: linear-gradient(135deg, #2c5530, #4a7c59) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer;
   }
   
   /* Mobile menu backdrop */
