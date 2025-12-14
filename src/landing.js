@@ -1388,13 +1388,23 @@ Happy trail mapping! 🥾`);
     const authPrompt = document.getElementById('authPrompt');
     const userEmail = document.getElementById('userEmail');
     const myTrailsSection = document.getElementById('myTrailsSection');
+    const profileNavLink = document.getElementById('profileNavLink');
+    const navAuthBtn = document.getElementById('navAuthBtn');
     
     console.log('📍 myTrailsSection element:', myTrailsSection ? 'found' : 'NOT FOUND');
+    console.log('📍 profileNavLink element:', profileNavLink ? 'found' : 'NOT FOUND');
     
     if (authStatus.isSignedIn) {
       userInfo?.classList.remove('hidden');
       authPrompt?.classList.add('hidden');
-      if (userEmail) userEmail.textContent = authStatus.email;
+      if (userEmail) userEmail.textContent = authStatus.displayName || authStatus.email;
+      
+      // Show profile link in nav
+      if (profileNavLink) {
+        profileNavLink.style.display = 'block';
+        console.log('📍 Profile nav link shown');
+      }
+      if (navAuthBtn) navAuthBtn.textContent = 'Sign Out';
       
       // Show My Trails section
       if (myTrailsSection) {
@@ -1428,6 +1438,12 @@ Happy trail mapping! 🥾`);
     } else {
       userInfo?.classList.add('hidden');
       authPrompt?.classList.remove('hidden');
+      
+      // Hide profile link in nav
+      if (profileNavLink) {
+        profileNavLink.style.display = 'none';
+      }
+      if (navAuthBtn) navAuthBtn.textContent = 'Sign In';
       
       // Hide My Trails section
       if (myTrailsSection) {
