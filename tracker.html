@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Access Nature</title>
+  
+  <!-- Preconnect to external origins for faster loading -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#2c5530">
@@ -590,7 +595,7 @@ textarea:focus-visible,
           localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
         } catch(e) {}
         updateHCButton();
-        if (navigator.vibrate) navigator.vibrate(10);
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
       });
     })();
   </script>

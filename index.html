@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Access Nature - Making Trails Accessible</title>
+  
+  <!-- Preconnect to external origins for faster loading -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
   
   <!-- CRITICAL CSS - Nav styles inline for immediate render -->
   <style>
@@ -610,7 +615,7 @@ async function makeGuidesPublic() {
           <a href="privacy.html">Privacy Policy</a>
           <a href="terms.html">Terms of Service</a>
           <a href="#" onclick="showContact(); return false;">Contact</a>
-          <a href="beta-guide.html" style="color: #8b5cf6;">📝 Beta Guide</a>
+          <a href="beta-guide.html" style="color: #7c3aed;">📝 Beta Guide</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -838,7 +843,7 @@ async function makeGuidesPublic() {
           localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
         } catch(e) {}
         updateHCButton();
-        if (navigator.vibrate) navigator.vibrate(10);
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
       });
     })();
   </script>

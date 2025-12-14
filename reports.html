@@ -7,6 +7,11 @@
   <title>Accessibility Reports - Access Nature</title>
   <meta name="description" content="View and report accessibility barriers in outdoor spaces and urban areas">
   
+  <!-- Preconnect to external origins for faster loading -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+  
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#2c5530">
   <meta name="mobile-web-app-capable" content="yes">
@@ -832,7 +837,7 @@
 
     <!-- Filters -->
     <div class="filters-section">
-      <h3 class="filters-title"><span>🔍</span><span>Filter Reports</span></h3>
+      <h2 class="filters-title"><span>🔍</span><span>Filter Reports</span></h2>
       <div class="filters-grid">
         <div class="form-group">
           <label for="statusFilter">Status</label>
@@ -1223,7 +1228,7 @@
           localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
         } catch(e) {}
         updateHCButton();
-        if (navigator.vibrate) navigator.vibrate(10);
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
       });
     })();
   </script>
@@ -1492,14 +1497,18 @@
 
       const icon = L.divIcon({
         html: `
-          <div style="width: 20px; height: 20px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>
+          <div style="width: 20px; height: 20px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" role="img" aria-label="Your current location"></div>
         `,
         className: 'user-location-marker',
         iconSize: [20, 20],
         iconAnchor: [10, 10]
       });
 
-      userLocationMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon })
+      userLocationMarker = L.marker([currentLocation.lat, currentLocation.lng], { 
+        icon,
+        alt: 'Your current location',
+        keyboard: true
+      })
         .addTo(map)
         .bindPopup('📍 You are here');
     }
@@ -1680,13 +1689,17 @@
         : `width: 36px; height: 36px; background: ${color}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px;`;
 
       const divIcon = L.divIcon({
-        html: `<div style="${markerStyle}">${icon}</div>`,
+        html: `<div style="${markerStyle}" role="img" aria-label="Accessibility report: ${escapeHtml(report.title)}">${icon}</div>`,
         className: 'report-marker' + (isTemporary ? ' temporary' : ''),
         iconSize: [36, 36],
         iconAnchor: [18, 18]
       });
 
-      const marker = L.marker([lat, lng], { icon: divIcon });
+      const marker = L.marker([lat, lng], { 
+        icon: divIcon,
+        alt: `Accessibility report: ${escapeHtml(report.title)}`,
+        keyboard: true
+      });
 
       // Add tooltip for hover preview
       const tempBadge = isTemporary ? '<span style="background: #3b82f6; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-left: 4px;">⏳ TEMP</span>' : '';
@@ -1752,7 +1765,7 @@
         return `
           <div class="report-card severity-${severityClass}" onclick="window.viewReportDetails('${report.id}')">
             <div class="report-card-header">
-              <h4 class="report-card-title">${escapeHtml(report.title)}${temporaryBadge}${verifiedBadge}</h4>
+              <h3 class="report-card-title">${escapeHtml(report.title)}${temporaryBadge}${verifiedBadge}</h3>
               <span class="report-card-date">${date}</span>
             </div>
             <p class="report-card-description">${escapeHtml((report.description || '').substring(0, 150))}${(report.description || '').length > 150 ? '...' : ''}</p>
@@ -2388,11 +2401,13 @@
         } else {
           locationPickerMarker = L.marker([lat, lng], {
             icon: L.divIcon({
-              html: '<div style="width: 24px; height: 24px; background: #ef4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+              html: '<div style="width: 24px; height: 24px; background: #ef4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" role="img" aria-label="Selected report location"></div>',
               className: 'location-marker',
               iconSize: [24, 24],
               iconAnchor: [12, 12]
-            })
+            }),
+            alt: 'Selected report location',
+            keyboard: true
           }).addTo(locationPickerMap);
         }
         locationPickerMap.setView([lat, lng], 16);
