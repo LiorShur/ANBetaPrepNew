@@ -994,38 +994,31 @@
 
   <!-- Firebase -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signOut, updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
-    
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyC39RCPfWqG6WK4ijVbP9xbY-h0T7tBeDo",
-      authDomain: "accessnature-cd65a.firebaseapp.com",
-      projectId: "accessnature-cd65a",
-      storageBucket: "accessnature-cd65a.firebasestorage.app",
-      messagingSenderId: "726149612855",
-      appId: "1:726149612855:web:3f2e9e2f3d1a4c5b6e7d8f"
-    };
-    
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Import from shared Firebase setup
+    import { auth, db } from './firebase-setup.js';
+    import { onAuthStateChanged, signOut, updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
     
     let currentUser = null;
     let userStats = { guides: 0, distance: 0, reports: 0 };
     let mobilityProfile = {};
     
+    console.log('👤 Profile page: Firebase auth imported from shared setup');
+    console.log('👤 Profile page: Current auth state:', auth.currentUser?.email || 'none');
+    
     // Initialize
     onAuthStateChanged(auth, async (user) => {
+      console.log('👤 Profile page: Auth state changed:', user ? user.email : 'signed out');
       document.getElementById('loadingOverlay').style.display = 'none';
       
       if (user) {
         currentUser = user;
+        console.log('👤 Profile page: Showing main content for:', user.email);
         document.getElementById('mainContent').style.display = 'block';
         document.getElementById('signinPrompt').style.display = 'none';
         await loadUserProfile();
       } else {
+        console.log('👤 Profile page: No user, showing sign-in prompt');
         document.getElementById('mainContent').style.display = 'none';
         document.getElementById('signinPrompt').style.display = 'block';
       }
