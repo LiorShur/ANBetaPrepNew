@@ -1105,6 +1105,274 @@ class OfflineSync {
     URL.revokeObjectURL(url);
     toast.success('Guide exported');
   }
+
+  // ==================== Photo Queue ====================
+
+  /**
+   * Queue a photo for upload when offline
+   * @param {object} photoData - Photo data including base64 content
+   * @param {object} context - Context (routeId, location, etc.)
+   */
+  async queuePhoto(photoData, context = {}) {
+    const queuedPhoto = {
+      id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      data: photoData.content, // base64 or blob
+      fileName: photoData.fileName || `photo_${Date.now()}.jpg`,
+      mimeType: photoData.mimeType || 'image/jpeg',
+      location: photoData.location || context.location || null,
+      routeId: context.routeId || null,
+      reportId: context.reportId || null,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+      retryCount: 0
+    };
+
+    try {
+      // Store in localStorage for photos (smaller than IndexedDB key/value limits)
+      const pendingPhotos = JSON.parse(localStorage.getItem('accessNature_pendingPhotos') || '[]');
+      pendingPhotos.push(queuedPhoto);
+      localStorage.setItem('accessNature_pendingPhotos', JSON.stringify(pendingPhotos));
+      
+      console.log(`📸 Photo queued for upload: ${queuedPhoto.id}`);
+      toast.info('Photo saved offline - will upload when connected');
+      
+      // Update pending indicator
+      this.updatePendingIndicator();
+      
+      // Try to upload if online
+      if (this.isOnline) {
+        this.processPhotoQueue();
+      }
+      
+      return queuedPhoto.id;
+    } catch (error) {
+      console.error('Failed to queue photo:', error);
+      toast.error('Failed to save photo offline');
+      return null;
+    }
+  }
+
+  /**
+   * Process pending photo uploads
+   */
+  async processPhotoQueue() {
+    const pendingPhotos = JSON.parse(localStorage.getItem('accessNature_pendingPhotos') || '[]');
+    
+    if (pendingPhotos.length === 0) return;
+    
+    console.log(`📸 Processing ${pendingPhotos.length} pending photos...`);
+    
+    for (const photo of pendingPhotos) {
+      if (photo.status === 'uploaded') continue;
+      
+      try {
+        // Import Firebase storage
+        const { storage } = await import('../../firebase-setup.js');
+        const { ref, uploadString, getDownloadURL } = 
+          await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js');
+        
+        const storageRef = ref(storage, `photos/${photo.id}`);
+        
+        // Upload base64 data
+        const snapshot = await uploadString(storageRef, photo.data, 'data_url');
+        const downloadUrl = await getDownloadURL(snapshot.ref);
+        
+        // Mark as uploaded
+        photo.status = 'uploaded';
+        photo.downloadUrl = downloadUrl;
+        photo.uploadedAt = new Date().toISOString();
+        
+        console.log(`✅ Photo uploaded: ${photo.id}`);
+        
+      } catch (error) {
+        console.error(`Failed to upload photo ${photo.id}:`, error);
+        photo.retryCount = (photo.retryCount || 0) + 1;
+        
+        if (photo.retryCount >= 3) {
+          photo.status = 'failed';
+        }
+      }
+    }
+    
+    // Save updated queue
+    localStorage.setItem('accessNature_pendingPhotos', JSON.stringify(pendingPhotos));
+    
+    // Remove successfully uploaded photos after a delay
+    setTimeout(() => {
+      const remaining = pendingPhotos.filter(p => p.status !== 'uploaded');
+      localStorage.setItem('accessNature_pendingPhotos', JSON.stringify(remaining));
+      this.updatePendingIndicator();
+    }, 5000);
+  }
+
+  // ==================== Survey Queue ====================
+
+  /**
+   * Queue an accessibility survey for submission when offline
+   * @param {object} surveyData - The survey form data
+   * @param {object} context - Route/location context
+   */
+  async queueSurvey(surveyData, context = {}) {
+    const queuedSurvey = {
+      id: `survey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      data: surveyData,
+      routeId: context.routeId || null,
+      location: context.location || null,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+      retryCount: 0
+    };
+
+    try {
+      const pendingSurveys = JSON.parse(localStorage.getItem('accessNature_pendingSurveys') || '[]');
+      pendingSurveys.push(queuedSurvey);
+      localStorage.setItem('accessNature_pendingSurveys', JSON.stringify(pendingSurveys));
+      
+      console.log(`📋 Survey queued: ${queuedSurvey.id}`);
+      toast.info('Survey saved offline - will submit when connected');
+      
+      this.updatePendingIndicator();
+      
+      if (this.isOnline) {
+        this.processSurveyQueue();
+      }
+      
+      return queuedSurvey.id;
+    } catch (error) {
+      console.error('Failed to queue survey:', error);
+      toast.error('Failed to save survey offline');
+      return null;
+    }
+  }
+
+  /**
+   * Process pending survey submissions
+   */
+  async processSurveyQueue() {
+    const pendingSurveys = JSON.parse(localStorage.getItem('accessNature_pendingSurveys') || '[]');
+    
+    if (pendingSurveys.length === 0) return;
+    
+    console.log(`📋 Processing ${pendingSurveys.length} pending surveys...`);
+    
+    for (const survey of pendingSurveys) {
+      if (survey.status === 'submitted') continue;
+      
+      try {
+        // Store survey data with route or as standalone
+        const { db } = await import('../../firebase-setup.js');
+        const { doc, updateDoc, collection, addDoc, serverTimestamp } = 
+          await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js');
+        
+        if (survey.routeId) {
+          // Update existing route with survey data
+          const routeRef = doc(db, 'routes', survey.routeId);
+          await updateDoc(routeRef, {
+            accessibility: survey.data,
+            accessibilityUpdatedAt: serverTimestamp()
+          });
+        } else {
+          // Store as standalone survey
+          await addDoc(collection(db, 'accessibility_surveys'), {
+            ...survey.data,
+            location: survey.location,
+            submittedAt: serverTimestamp(),
+            queuedAt: survey.timestamp
+          });
+        }
+        
+        survey.status = 'submitted';
+        survey.submittedAt = new Date().toISOString();
+        
+        console.log(`✅ Survey submitted: ${survey.id}`);
+        
+      } catch (error) {
+        console.error(`Failed to submit survey ${survey.id}:`, error);
+        survey.retryCount = (survey.retryCount || 0) + 1;
+        
+        if (survey.retryCount >= 3) {
+          survey.status = 'failed';
+        }
+      }
+    }
+    
+    // Save updated queue
+    localStorage.setItem('accessNature_pendingSurveys', JSON.stringify(pendingSurveys));
+    
+    // Clean up submitted surveys
+    setTimeout(() => {
+      const remaining = pendingSurveys.filter(s => s.status !== 'submitted');
+      localStorage.setItem('accessNature_pendingSurveys', JSON.stringify(remaining));
+      this.updatePendingIndicator();
+    }, 5000);
+  }
+
+  /**
+   * Update pending items indicator in UI
+   */
+  updatePendingIndicator() {
+    const photos = JSON.parse(localStorage.getItem('accessNature_pendingPhotos') || '[]');
+    const surveys = JSON.parse(localStorage.getItem('accessNature_pendingSurveys') || '[]');
+    
+    const pendingPhotos = photos.filter(p => p.status === 'pending').length;
+    const pendingSurveys = surveys.filter(s => s.status === 'pending').length;
+    const total = pendingPhotos + pendingSurveys;
+    
+    // Update any pending indicators in the UI
+    const indicators = document.querySelectorAll('.pending-sync-count');
+    indicators.forEach(el => {
+      el.textContent = total;
+      el.style.display = total > 0 ? 'flex' : 'none';
+    });
+    
+    // Dispatch event for other components
+    window.dispatchEvent(new CustomEvent('pendingItemsUpdated', {
+      detail: { photos: pendingPhotos, surveys: pendingSurveys, total }
+    }));
+  }
+
+  /**
+   * Get all pending items count
+   */
+  getAllPendingCount() {
+    const photos = JSON.parse(localStorage.getItem('accessNature_pendingPhotos') || '[]');
+    const surveys = JSON.parse(localStorage.getItem('accessNature_pendingSurveys') || '[]');
+    const routes = this.pendingRoutes?.length || 0;
+    const guides = this.pendingGuides?.length || 0;
+    
+    return {
+      photos: photos.filter(p => p.status === 'pending').length,
+      surveys: surveys.filter(s => s.status === 'pending').length,
+      routes,
+      guides,
+      total: photos.length + surveys.length + routes + guides
+    };
+  }
+
+  /**
+   * Process all pending queues
+   */
+  async processAllQueues() {
+    if (!this.isOnline) {
+      toast.warning('Cannot sync while offline');
+      return;
+    }
+    
+    toast.info('Syncing pending items...');
+    
+    await Promise.all([
+      this.processPhotoQueue(),
+      this.processSurveyQueue(),
+      this.retryPendingUploads()
+    ]);
+    
+    const remaining = this.getAllPendingCount();
+    if (remaining.total === 0) {
+      toast.success('All items synced! ✓');
+    } else {
+      toast.warning(`${remaining.total} items still pending`);
+    }
+  }
 }
 
 // Create and export singleton
