@@ -294,6 +294,7 @@
     <a href="index.html" class="nav-link active">🏠 Home</a>
     <a href="tracker.html" class="nav-link">🗺️ Track</a>
     <a href="reports.html" class="nav-link">📋 Reports</a>
+    <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;">👤 Profile</a>
     <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;">
       ♿ Mobility Profile
     </button>
@@ -545,10 +546,10 @@ async function makeGuidesPublic() {
           <p>Making outdoor spaces accessible for everyone</p>
         </div>
         <div class="footer-links">
-          <a href="#" onclick="showAbout()">About</a>
-          <a href="#" onclick="showPrivacy()">Privacy</a>
-          <a href="#" onclick="showContact()">Contact</a>
-          <a href="#" onclick="showHelp()">Help</a>
+          <a href="#" onclick="showAbout(); return false;">About</a>
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms of Service</a>
+          <a href="#" onclick="showContact(); return false;">Contact</a>
           <a href="beta-guide.html" style="color: #8b5cf6;">📝 Beta Guide</a>
         </div>
       </div>

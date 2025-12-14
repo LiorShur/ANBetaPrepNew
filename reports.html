@@ -733,7 +733,7 @@
       <a href="index.html" class="nav-link">🏠 Home</a>
       <a href="tracker.html" class="nav-link">🗺️ Track</a>
       <a href="reports.html" class="nav-link active">📋 Reports</a>
-      <!-- <a href="routes.html" class="nav-link">📂 Routes</a> -->
+      <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;">👤 Profile</a>
       <div class="nav-auth">
         <button id="navAuthBtn" class="btn btn-primary">Sign In</button>
       </div>
@@ -2734,15 +2734,18 @@
       const navAuthBtn = document.getElementById('navAuthBtn');
       const indicator = document.getElementById('navAuthIndicator');
       const statusText = document.getElementById('navAuthStatusText');
+      const profileNavLink = document.getElementById('profileNavLink');
       
       if (user) {
         if (navAuthBtn) navAuthBtn.textContent = 'Sign Out';
         if (indicator) indicator.classList.add('signed-in');
         if (statusText) statusText.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+        if (profileNavLink) profileNavLink.style.display = 'block';
       } else {
         if (navAuthBtn) navAuthBtn.textContent = 'Sign In';
         if (indicator) indicator.classList.remove('signed-in');
         if (statusText) statusText.textContent = 'Guest';
+        if (profileNavLink) profileNavLink.style.display = 'none';
       }
     }
 
