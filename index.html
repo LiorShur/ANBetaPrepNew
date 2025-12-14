@@ -34,7 +34,7 @@
     /* Skip to main content link */
     .skip-link {
       position: absolute;
-      top: -40px;
+      top: 0;
       left: 0;
       background: #2c5530;
       color: white;
@@ -43,10 +43,12 @@
       text-decoration: none;
       font-weight: 500;
       border-radius: 0 0 4px 0;
+      transform: translateY(-100%);
+      transition: transform 0.2s ease;
     }
 
     .skip-link:focus {
-      top: 0;
+      transform: translateY(0);
     }
 
     .top-nav {
@@ -330,9 +332,9 @@
 <nav class="top-nav" role="navigation" aria-label="Main navigation">
   <a href="index.html" class="nav-brand">🌲 Access Nature</a>
   <div class="nav-auth-indicator">
-    <div class="auth-status" id="authIndicator">
+    <div class="auth-status" id="navAuthIndicator">
       <span aria-hidden="true">👤</span>
-      <span id="authStatusText">Guest</span>
+      <span id="navAuthStatusText">Guest</span>
     </div>
   </div>
   <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
@@ -896,8 +898,8 @@ async function makeGuidesPublic() {
   });
   
   onAuthStateChanged(auth, async (user) => {
-    const indicator = document.getElementById('authIndicator');
-    const text = document.getElementById('authStatusText');
+    const indicator = document.getElementById('navAuthIndicator');
+    const text = document.getElementById('navAuthStatusText');
     const btn = document.getElementById('navAuthBtn');
     
     if (user) {

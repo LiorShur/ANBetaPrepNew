@@ -81,7 +81,7 @@ textarea:focus-visible,
 /* Skip to main content link */
 .skip-link {
   position: absolute;
-  top: -40px;
+  top: 0;
   left: 0;
   background: #2c5530;
   color: white;
@@ -89,10 +89,12 @@ textarea:focus-visible,
   z-index: 100000;
   text-decoration: none;
   font-weight: 500;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease;
 }
 
 .skip-link:focus {
-  top: 0;
+  transform: translateY(0);
 }
 
 .top-nav {
