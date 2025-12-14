@@ -3504,7 +3504,7 @@ Generated: ${new Date().toLocaleString()}`;
     <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
   </div>
 </bo${""}dy>
-</html>`;
+</ht${""}ml>`;
 
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
@@ -3677,8 +3677,8 @@ Generated: ${new Date().toLocaleString()}`;
       <p><strong>Online Report:</strong> ${window.location.origin}/reports.html#report=${report.id}</p>
     </div>
   </div>
-</body>
-</html>`;
+</bo${""}dy>
+</ht${""}ml>`;
 
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -4001,8 +4001,8 @@ Generated: ${new Date().toLocaleString()}`;
     <p><strong>Generated:</strong> ${new Date().toLocaleString()} | <strong>Source:</strong> Access Nature Community Platform</p>
     <p style="margin-top: 4px;">To save as PDF: Press Ctrl+P (Cmd+P on Mac) → Select "Save as PDF"</p>
   </div>
-</body>
-</html>`;
+</bo${""}dy>
+</ht${""}ml>`;
 
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
@@ -4164,9 +4164,10 @@ Generated: ${new Date().toLocaleString()}`;
               <span class="input-icon">📧</span>
             </div>
             
-            <div class="input-group">
+            <div class="input-group password-group">
               <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
               <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">👁️</button>
             </div>
             
             <button type="submit" id="loginBtn" class="auth-submit-btn">
@@ -4198,9 +4199,10 @@ Generated: ${new Date().toLocaleString()}`;
               <span class="input-icon">📧</span>
             </div>
             
-            <div class="input-group">
+            <div class="input-group password-group">
               <input type="password" id="signupPassword" placeholder="Create password" required autocomplete="new-password">
               <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">👁️</button>
             </div>
             
             <button type="submit" id="signupBtn" class="auth-submit-btn">
@@ -4229,6 +4231,18 @@ Generated: ${new Date().toLocaleString()}`;
     function switchToLogin() {
       document.getElementById('signupForm')?.classList.remove('active');
       document.getElementById('loginForm')?.classList.add('active');
+    }
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+      }
     }
   </script>
   

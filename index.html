@@ -720,10 +720,11 @@ async function makeGuidesPublic() {
               <span class="input-icon" aria-hidden="true">📧</span>
             </div>
             
-            <div class="input-group">
+            <div class="input-group password-group">
               <label for="loginPassword" class="visually-hidden">Password</label>
               <input type="password" id="loginPassword" placeholder="Password" aria-label="Password" required autocomplete="current-password">
               <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">👁️</button>
             </div>
             
             <button type="submit" id="loginBtn" class="auth-submit-btn">
@@ -757,10 +758,11 @@ async function makeGuidesPublic() {
               <span class="input-icon" aria-hidden="true">📧</span>
             </div>
             
-            <div class="input-group">
+            <div class="input-group password-group">
               <label for="signupPassword" class="visually-hidden">Create password</label>
               <input type="password" id="signupPassword" placeholder="Create password" aria-label="Create password" required autocomplete="new-password">
               <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">👁️</button>
             </div>
             
             <button type="submit" id="signupBtn" class="auth-submit-btn">
@@ -789,6 +791,18 @@ async function makeGuidesPublic() {
     function switchToLogin() {
       document.getElementById('signupForm')?.classList.remove('active');
       document.getElementById('loginForm')?.classList.add('active');
+    }
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+      }
     }
     
     // Setup hamburger menu immediately (no Firebase dependency)
