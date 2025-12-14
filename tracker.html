@@ -251,39 +251,8 @@ textarea:focus-visible,
     z-index: 20001 !important;
   }
   
+  /* Mobile nav styles now handled by unified-nav.css */
   @media (max-width: 768px) {
-    /* Show hamburger on mobile */
-    .menu-toggle { 
-      display: flex !important;
-      align-items: center;
-    }
-    
-    /* Hide nav-menu on mobile by default (no !important so .active can override) */
-    .nav-menu {
-      display: none;
-    }
-    
-    /* Show menu when active - !important ensures it overrides */
-    .nav-menu.active {
-      display: flex !important;
-      flex-direction: column;
-      position: fixed;
-      top: 50px;
-      left: 0;
-      right: 0;
-      background: white !important;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      z-index: 99999 !important; /* Higher than Leaflet controls */
-    }
-    .nav-menu .nav-link { 
-      padding: 14px 16px; 
-      width: 100%; 
-      font-size: 1rem;
-    }
-    .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
-    .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
-    
     /* Ensure proper alignment */
     .top-nav {
       align-items: center !important;

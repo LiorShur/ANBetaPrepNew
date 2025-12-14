@@ -110,36 +110,31 @@
     .nav-menu .nav-link.active { background: #667eea; color: white; }
     .menu-toggle { display: none; }
     
-    /* Mobile: hide nav-menu, show hamburger */
-    @media (max-width: 768px) {
-      .top-nav { height: 50px; }
-      .menu-toggle {
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        padding: 8px;
-        cursor: pointer;
-        color: #111827;
-      }
-      .nav-menu {
-        display: none;
-        position: fixed;
-        top: 50px;
-        left: 0;
-        right: 0;
-        background: white;
-        flex-direction: column;
-        padding: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999;
-      }
-      .nav-menu.active { display: flex !important; }
-      .nav-menu .nav-link { padding: 12px 16px; width: 100%; }
-      .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
-      .nav-menu .nav-auth .btn { width: 100%; }
+    /* Mobile nav styles now handled by unified-nav.css */
+    /* Hamburger icon styles */
+    .hamburger-icon {
+      width: 20px;
+      height: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: #374151;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(1) {
+      transform: rotate(45deg) translate(4px, 4px);
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(2) {
+      opacity: 0;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(3) {
+      transform: rotate(-45deg) translate(4px, -4px);
     }
     
     /* High contrast toggle */
@@ -340,7 +335,13 @@
       <span id="authStatusText">Guest</span>
     </div>
   </div>
-  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">☰</button>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+    <span class="hamburger-icon" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </span>
+  </button>
   <div class="nav-menu" id="navMenu" role="menu">
     <a href="index.html" class="nav-link active" role="menuitem">🏠 Home</a>
     <a href="tracker.html" class="nav-link" role="menuitem">🗺️ Track</a>
