@@ -279,12 +279,13 @@ class PWAManager {
           <span class="install-icon">📱</span>
           <div class="install-text">
             <strong>Install Access Nature</strong>
-            <span>Add to home screen for offline access</span>
+            <span>Get the full app experience</span>
           </div>
         </div>
         <div class="install-actions">
           <button class="install-btn" id="pwaInstallBtn">Install</button>
-          <button class="install-dismiss" id="pwaInstallDismiss">×</button>
+          <button class="install-later" id="pwaInstallLater">Later</button>
+          <button class="install-dismiss" id="pwaInstallDismiss" aria-label="Dismiss">×</button>
         </div>
       `;
       
@@ -292,7 +293,11 @@ class PWAManager {
       
       // Add event listeners
       document.getElementById('pwaInstallBtn')?.addEventListener('click', () => {
-        this.promptInstall();
+        this.showInstallModal();
+      });
+      
+      document.getElementById('pwaInstallLater')?.addEventListener('click', () => {
+        this.remindLater();
       });
       
       document.getElementById('pwaInstallDismiss')?.addEventListener('click', () => {
@@ -301,6 +306,203 @@ class PWAManager {
     }
     
     banner.classList.add('visible');
+  }
+
+  /**
+   * Show enhanced install modal with platform-specific instructions
+   */
+  showInstallModal() {
+    const platform = this.detectPlatform();
+    const isIOS = platform === 'ios';
+    const isAndroid = platform === 'android';
+    const isDesktop = platform === 'desktop';
+    
+    // Create modal
+    let modal = document.getElementById('pwaInstallModal');
+    if (modal) modal.remove();
+    
+    modal = document.createElement('div');
+    modal.id = 'pwaInstallModal';
+    modal.className = 'pwa-install-modal';
+    modal.innerHTML = `
+      <div class="pwa-install-modal-backdrop" id="pwaModalBackdrop"></div>
+      <div class="pwa-install-modal-content" role="dialog" aria-labelledby="installModalTitle" aria-modal="true">
+        <button class="pwa-modal-close" id="pwaModalClose" aria-label="Close">×</button>
+        
+        <div class="pwa-modal-header">
+          <div class="pwa-app-icon">🌲</div>
+          <h2 id="installModalTitle">Install Access Nature</h2>
+          <p class="pwa-modal-subtitle">Add to your home screen for the best experience</p>
+        </div>
+        
+        <div class="pwa-benefits">
+          <h3>Why Install?</h3>
+          <ul>
+            <li>
+              <span class="benefit-icon">📴</span>
+              <div>
+                <strong>Works Offline</strong>
+                <span>Access your saved trails without internet</span>
+              </div>
+            </li>
+            <li>
+              <span class="benefit-icon">⚡</span>
+              <div>
+                <strong>Faster Loading</strong>
+                <span>App launches instantly from home screen</span>
+              </div>
+            </li>
+            <li>
+              <span class="benefit-icon">🔔</span>
+              <div>
+                <strong>Background Sync</strong>
+                <span>Your data syncs automatically</span>
+              </div>
+            </li>
+            <li>
+              <span class="benefit-icon">📱</span>
+              <div>
+                <strong>Full Screen Mode</strong>
+                <span>No browser bars - more space for trails</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        
+        ${isIOS ? this.getIOSInstructions() : ''}
+        
+        <div class="pwa-modal-actions">
+          ${!isIOS ? `<button class="pwa-install-now" id="pwaInstallNowBtn">
+            <span class="btn-icon">📲</span>
+            Install Now
+          </button>` : ''}
+          <button class="pwa-install-skip" id="pwaInstallSkipBtn">Maybe Later</button>
+        </div>
+        
+        <p class="pwa-modal-note">
+          ${isIOS ? 'Free • No App Store needed • ~2MB storage' : 'Free • No download needed • ~2MB storage'}
+        </p>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Add event listeners
+    document.getElementById('pwaModalClose')?.addEventListener('click', () => this.closeInstallModal());
+    document.getElementById('pwaModalBackdrop')?.addEventListener('click', () => this.closeInstallModal());
+    document.getElementById('pwaInstallSkipBtn')?.addEventListener('click', () => {
+      this.closeInstallModal();
+      this.remindLater();
+    });
+    
+    if (!isIOS) {
+      document.getElementById('pwaInstallNowBtn')?.addEventListener('click', () => {
+        this.closeInstallModal();
+        this.promptInstall();
+      });
+    }
+    
+    // Show modal with animation
+    requestAnimationFrame(() => {
+      modal.classList.add('visible');
+    });
+    
+    // Keyboard handling
+    modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.closeInstallModal();
+    });
+    
+    // Focus trap
+    const closeBtn = document.getElementById('pwaModalClose');
+    closeBtn?.focus();
+  }
+
+  /**
+   * Get iOS-specific installation instructions
+   */
+  getIOSInstructions() {
+    return `
+      <div class="pwa-ios-instructions">
+        <h3>📱 How to Install on iPhone/iPad</h3>
+        <ol>
+          <li>
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Tap the Share button</strong>
+              <span>It's at the bottom of Safari (box with arrow)</span>
+              <div class="step-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/>
+                  <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Scroll down and tap "Add to Home Screen"</strong>
+              <span>You may need to scroll in the share menu</span>
+              <div class="step-icon">➕</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Tap "Add" in the top right</strong>
+              <span>The app icon will appear on your home screen</span>
+              <div class="step-icon">✓</div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    `;
+  }
+
+  /**
+   * Detect platform for platform-specific instructions
+   */
+  detectPlatform() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    
+    // iOS detection
+    if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+      return 'ios';
+    }
+    
+    // Android detection
+    if (/android/i.test(ua)) {
+      return 'android';
+    }
+    
+    // Desktop (default)
+    return 'desktop';
+  }
+
+  /**
+   * Close install modal
+   */
+  closeInstallModal() {
+    const modal = document.getElementById('pwaInstallModal');
+    if (modal) {
+      modal.classList.remove('visible');
+      setTimeout(() => modal.remove(), 300);
+    }
+    document.body.style.overflow = '';
+  }
+
+  /**
+   * Remind user later (24 hours)
+   */
+  remindLater() {
+    this.hideInstallButton();
+    const remindTime = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+    localStorage.setItem('pwa_remind_later', remindTime.toString());
+    toast.info('We\'ll remind you tomorrow!');
   }
 
   /**
@@ -329,8 +531,20 @@ class PWAManager {
     // Don't show if dismissed this session
     if (sessionStorage.getItem('pwa_banner_dismissed')) return;
     
-    // Don't show if no prompt available
-    if (!this.deferredPrompt) return;
+    // Don't show if user said "remind later" and time hasn't passed
+    const remindTime = localStorage.getItem('pwa_remind_later');
+    if (remindTime && Date.now() < parseInt(remindTime)) {
+      return;
+    }
+    
+    // Clear expired remind later
+    if (remindTime) {
+      localStorage.removeItem('pwa_remind_later');
+    }
+    
+    // Don't show if no prompt available (except for iOS which never gets beforeinstallprompt)
+    const isIOS = this.detectPlatform() === 'ios';
+    if (!this.deferredPrompt && !isIOS) return;
     
     // Show after delay
     setTimeout(() => {
@@ -726,6 +940,236 @@ class PWAManager {
   isRunningAsPWA() {
     return window.matchMedia('(display-mode: standalone)').matches ||
            window.navigator.standalone === true;
+  }
+
+  // ==================== Push Notifications ====================
+
+  /**
+   * Check if push notifications are supported
+   */
+  isPushSupported() {
+    return 'PushManager' in window && 'Notification' in window;
+  }
+
+  /**
+   * Get current notification permission status
+   */
+  getNotificationPermission() {
+    if (!('Notification' in window)) return 'unsupported';
+    return Notification.permission; // 'granted', 'denied', or 'default'
+  }
+
+  /**
+   * Request notification permission
+   */
+  async requestNotificationPermission() {
+    if (!this.isPushSupported()) {
+      toast.warning('Push notifications are not supported on this device');
+      return 'unsupported';
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      
+      if (permission === 'granted') {
+        toast.success('Notifications enabled! 🔔');
+        await this.subscribeToPush();
+        this.updateNotificationUI(true);
+      } else if (permission === 'denied') {
+        toast.warning('Notifications blocked. Enable in browser settings.');
+        this.updateNotificationUI(false);
+      }
+      
+      return permission;
+    } catch (error) {
+      console.error('[PWA] Failed to request notification permission:', error);
+      return 'error';
+    }
+  }
+
+  /**
+   * Subscribe to push notifications
+   */
+  async subscribeToPush() {
+    if (!this.swRegistration) {
+      console.warn('[PWA] No service worker registration for push');
+      return null;
+    }
+
+    try {
+      // Check for existing subscription
+      let subscription = await this.swRegistration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        // Create new subscription
+        // Note: In production, you'd get this from your server
+        const vapidPublicKey = localStorage.getItem('accessNature_vapidKey') || 
+          'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+        
+        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+        
+        subscription = await this.swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        });
+        
+        console.log('[PWA] Push subscription created');
+        
+        // Store subscription (in production, send to your server)
+        this.saveSubscription(subscription);
+      }
+      
+      return subscription;
+    } catch (error) {
+      console.error('[PWA] Failed to subscribe to push:', error);
+      
+      if (error.name === 'NotAllowedError') {
+        toast.warning('Notification permission was denied');
+      }
+      
+      return null;
+    }
+  }
+
+  /**
+   * Unsubscribe from push notifications
+   */
+  async unsubscribeFromPush() {
+    try {
+      const subscription = await this.swRegistration?.pushManager?.getSubscription();
+      
+      if (subscription) {
+        await subscription.unsubscribe();
+        localStorage.removeItem('accessNature_pushSubscription');
+        toast.info('Notifications disabled');
+        this.updateNotificationUI(false);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[PWA] Failed to unsubscribe:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Save subscription to local storage
+   */
+  saveSubscription(subscription) {
+    try {
+      localStorage.setItem('accessNature_pushSubscription', JSON.stringify(subscription.toJSON()));
+    } catch (e) {
+      console.warn('[PWA] Failed to save subscription:', e);
+    }
+  }
+
+  /**
+   * Convert VAPID key to Uint8Array
+   */
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    
+    return outputArray;
+  }
+
+  /**
+   * Update notification UI elements
+   */
+  updateNotificationUI(enabled) {
+    const toggles = document.querySelectorAll('.notification-toggle');
+    toggles.forEach(toggle => {
+      toggle.classList.toggle('enabled', enabled);
+      toggle.setAttribute('aria-pressed', enabled);
+    });
+    
+    const icons = document.querySelectorAll('.notification-status-icon');
+    icons.forEach(icon => {
+      icon.textContent = enabled ? '🔔' : '🔕';
+    });
+  }
+
+  /**
+   * Show notification prompt banner
+   */
+  showNotificationPrompt() {
+    // Don't show if already granted or denied
+    if (this.getNotificationPermission() !== 'default') return;
+    
+    // Don't show if dismissed recently
+    const dismissed = localStorage.getItem('accessNature_notifPromptDismissed');
+    if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+    
+    // Remove existing banner
+    document.getElementById('notificationPromptBanner')?.remove();
+    
+    const banner = document.createElement('div');
+    banner.id = 'notificationPromptBanner';
+    banner.className = 'notification-banner';
+    banner.innerHTML = `
+      <span class="notification-icon">🔔</span>
+      <div class="notification-banner-text">
+        <strong>Stay Updated</strong>
+        <span>Get notified about trail conditions and report updates</span>
+      </div>
+      <button class="enable-btn" id="enableNotifBtn">Enable</button>
+      <button class="dismiss-btn" id="dismissNotifBtn">×</button>
+    `;
+    
+    document.body.appendChild(banner);
+    
+    document.getElementById('enableNotifBtn')?.addEventListener('click', async () => {
+      banner.remove();
+      await this.requestNotificationPermission();
+    });
+    
+    document.getElementById('dismissNotifBtn')?.addEventListener('click', () => {
+      banner.remove();
+      localStorage.setItem('accessNature_notifPromptDismissed', Date.now().toString());
+    });
+    
+    // Auto-dismiss after 15 seconds
+    setTimeout(() => banner.remove(), 15000);
+  }
+
+  /**
+   * Send a local notification (for testing or local events)
+   */
+  async showLocalNotification(title, body, options = {}) {
+    if (this.getNotificationPermission() !== 'granted') {
+      console.warn('[PWA] Notification permission not granted');
+      return false;
+    }
+
+    try {
+      await this.swRegistration?.showNotification(title, {
+        body,
+        icon: '/assets/icons/icon-192x192.png',
+        badge: '/assets/icons/badge-72x72.png',
+        tag: options.tag || 'access-nature-notification',
+        renotify: options.renotify || false,
+        data: options.data || {},
+        actions: options.actions || [
+          { action: 'view', title: 'View' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ],
+        ...options
+      });
+      return true;
+    } catch (error) {
+      console.error('[PWA] Failed to show notification:', error);
+      return false;
+    }
   }
 }
 
