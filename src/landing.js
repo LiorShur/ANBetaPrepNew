@@ -348,6 +348,10 @@ class LandingPageController {
     window.viewTrailGuide = (guideId) => this.viewTrailGuide(guideId);
     window.loadMyTrailGuides = () => this.loadMyTrailGuides();
     
+    // Social functions
+    window.likeTrail = (trailId) => this.likeTrail(trailId);
+    window.shareTrail = (trailId, trailName) => this.shareTrail(trailId, trailName);
+    
     // Info functions
     window.showAbout = () => this.showAbout();
     window.showPrivacy = () => this.showPrivacy();
@@ -918,9 +922,11 @@ updateLoadMoreButton() {
     const accessibility = trail.accessibility || {};
     const metadata = trail.metadata || {};
     const community = trail.community || {};
+    const likes = community.likes || 0;
+    const hasLiked = this.userLikedTrails?.includes(trail.id) || false;
     
     return `
-      <div class="featured-trail">
+      <div class="featured-trail" data-trail-id="${trail.id}">
         <div class="trail-image">🌲</div>
         <div class="trail-info">
           <div class="trail-name">${trail.routeName}</div>
@@ -937,12 +943,162 @@ updateLoadMoreButton() {
             <span>👁️ ${community.views || 0} views</span>
             <span>📷 ${metadata.photoCount || 0} photos</span>
           </div>
-          <button class="view-trail-btn" onclick="viewTrailGuide('${trail.id}')">
-            View Trail Guide
-          </button>
+          <div class="trail-actions">
+            <button class="like-trail-btn ${hasLiked ? 'liked' : ''}" 
+                    onclick="event.stopPropagation(); likeTrail('${trail.id}')" 
+                    aria-label="${hasLiked ? 'Unlike this trail' : 'Like this trail'}"
+                    data-trail-id="${trail.id}">
+              <span class="like-icon">${hasLiked ? '❤️' : '🤍'}</span>
+              <span class="like-count">${likes}</span>
+            </button>
+            <button class="share-trail-btn" 
+                    onclick="event.stopPropagation(); shareTrail('${trail.id}', '${encodeURIComponent(trail.routeName)}')"
+                    aria-label="Share this trail">
+              📤 Share
+            </button>
+            <button class="view-trail-btn" onclick="viewTrailGuide('${trail.id}')">
+              View Guide
+            </button>
+          </div>
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Like/unlike a trail guide
+   */
+  async likeTrail(trailId) {
+    try {
+      // Check auth
+      const { auth, db } = await import('../firebase-setup.js');
+      if (!auth.currentUser) {
+        toast.info('Please sign in to like trails');
+        return;
+      }
+
+      const { doc, updateDoc, increment, arrayUnion, arrayRemove, getDoc } = 
+        await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+      
+      // Initialize user liked trails array if needed
+      if (!this.userLikedTrails) {
+        this.userLikedTrails = JSON.parse(localStorage.getItem('accessNature_likedTrails') || '[]');
+      }
+
+      const hasLiked = this.userLikedTrails.includes(trailId);
+      const trailRef = doc(db, 'trail_guides', trailId);
+      
+      // Update button immediately for responsiveness
+      const likeBtn = document.querySelector(`.like-trail-btn[data-trail-id="${trailId}"]`);
+      if (likeBtn) {
+        const iconSpan = likeBtn.querySelector('.like-icon');
+        const countSpan = likeBtn.querySelector('.like-count');
+        const currentCount = parseInt(countSpan.textContent) || 0;
+        
+        if (hasLiked) {
+          // Unlike
+          likeBtn.classList.remove('liked');
+          iconSpan.textContent = '🤍';
+          countSpan.textContent = Math.max(0, currentCount - 1);
+        } else {
+          // Like
+          likeBtn.classList.add('liked');
+          iconSpan.textContent = '❤️';
+          countSpan.textContent = currentCount + 1;
+          // Add small animation
+          likeBtn.classList.add('pulse');
+          setTimeout(() => likeBtn.classList.remove('pulse'), 300);
+        }
+      }
+
+      // Update Firebase
+      await updateDoc(trailRef, {
+        'community.likes': increment(hasLiked ? -1 : 1),
+        'community.likedBy': hasLiked ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid)
+      });
+
+      // Update local state
+      if (hasLiked) {
+        this.userLikedTrails = this.userLikedTrails.filter(id => id !== trailId);
+      } else {
+        this.userLikedTrails.push(trailId);
+      }
+      localStorage.setItem('accessNature_likedTrails', JSON.stringify(this.userLikedTrails));
+
+      // Update cached trail data
+      const trailIndex = this.allFeaturedTrails?.findIndex(t => t.id === trailId);
+      if (trailIndex >= 0) {
+        const trail = this.allFeaturedTrails[trailIndex];
+        if (!trail.community) trail.community = {};
+        trail.community.likes = (trail.community.likes || 0) + (hasLiked ? -1 : 1);
+      }
+
+    } catch (error) {
+      console.error('Failed to like trail:', error);
+      toast.error('Failed to update like. Please try again.');
+      // Revert UI on error
+      this.displayFeaturedBatch();
+    }
+  }
+
+  /**
+   * Share a trail guide
+   */
+  async shareTrail(trailId, trailName) {
+    const shareUrl = `${window.location.origin}/index.html?trail=${trailId}`;
+    const shareText = `Check out "${decodeURIComponent(trailName)}" on Access Nature - an accessible trail guide!`;
+    
+    // Try native share API first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: decodeURIComponent(trailName),
+          text: shareText,
+          url: shareUrl
+        });
+        toast.success('Trail shared!');
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Native share failed, falling back to clipboard');
+        }
+      }
+    }
+    
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied to clipboard!');
+    } catch (err) {
+      // Final fallback - show modal with link
+      this.showShareModal(shareUrl, decodeURIComponent(trailName));
+    }
+  }
+
+  /**
+   * Show share modal as fallback
+   */
+  showShareModal(url, trailName) {
+    const modal = document.createElement('div');
+    modal.className = 'share-modal-overlay';
+    modal.innerHTML = `
+      <div class="share-modal">
+        <button class="share-modal-close" onclick="this.closest('.share-modal-overlay').remove()">×</button>
+        <h3>📤 Share Trail</h3>
+        <p>Share "${trailName}" with friends:</p>
+        <div class="share-link-container">
+          <input type="text" value="${url}" readonly onclick="this.select()">
+          <button onclick="navigator.clipboard.writeText('${url}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+        </div>
+        <div class="share-buttons">
+          <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Check out this accessible trail!')}" target="_blank" class="share-btn twitter">🐦 Twitter</a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" class="share-btn facebook">📘 Facebook</a>
+          <a href="mailto:?subject=${encodeURIComponent(trailName)}&body=${encodeURIComponent('Check out this accessible trail: ' + url)}" class="share-btn email">✉️ Email</a>
+        </div>
+      </div>
+    `;
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
   }
 
   showFeaturedPlaceholder() {
