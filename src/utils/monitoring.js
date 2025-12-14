@@ -21,7 +21,7 @@
   const CONFIG = {
     // Google Analytics 4 Measurement ID
     // Get this from: Google Analytics > Admin > Data Streams > your stream > Measurement ID
-    GA4_MEASUREMENT_ID: 'G-XXXXXXXXXX', // TODO: Replace with actual ID
+    GA4_MEASUREMENT_ID: 'G-R6BHMF7B1Z', // TODO: Replace with actual ID
     
     // Sentry DSN (Data Source Name)
     // Get this from: Sentry > Settings > Projects > your project > Client Keys (DSN)
