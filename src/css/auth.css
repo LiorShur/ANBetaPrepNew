@@ -197,13 +197,18 @@
 
 .input-group input {
   width: 100%;
-  padding: 15px 20px 15px 50px;
+  padding: 15px 50px 15px 18px;
   border: 2px solid #e1e5e9;
   border-radius: 12px;
   font-size: 16px;
   transition: all 0.3s ease;
   background: #f8f9fa;
   box-sizing: border-box;
+}
+
+/* Password fields need extra padding for both icon and toggle */
+.input-group.password-group input {
+  padding-right: 90px;
 }
 
 .input-group input:focus {
@@ -216,11 +221,46 @@
 
 .input-icon {
   position: absolute;
-  left: 18px;
+  right: 18px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 18px;
   z-index: 1;
+  pointer-events: none;
+  color: #6b7280;
+}
+
+/* Password fields: move icon further right to make room for toggle */
+.input-group.password-group .input-icon {
+  right: 54px;
+}
+
+/* Password visibility toggle */
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px 8px;
+  color: #6b7280;
+  z-index: 2;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: #667eea;
+}
+
+.password-toggle:focus {
+  outline: none;
+  color: #667eea;
 }
 
 /* Submit Buttons */
