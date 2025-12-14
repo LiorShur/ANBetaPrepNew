@@ -385,18 +385,24 @@ setupCloudButtonsWithRetry() {
     const authPrompt = document.getElementById('authPrompt');
     const userEmail = document.getElementById('userEmail');
     const cloudButtons = document.querySelectorAll('.cloud-save-btn, .cloud-load-btn');
+    const profileNavLink = document.getElementById('profileNavLink');
+    const navAuthBtn = document.getElementById('navAuthBtn');
 
     if (user) {
       // Show user info
       userInfo?.classList.remove('hidden');
       authPrompt?.classList.add('hidden');
-      if (userEmail) userEmail.textContent = user.email;
+      if (userEmail) userEmail.textContent = user.displayName || user.email;
 
       // Enable cloud features
       cloudButtons.forEach(btn => {
         btn.disabled = false;
         btn.style.opacity = '1';
       });
+      
+      // Show profile link
+      if (profileNavLink) profileNavLink.style.display = 'block';
+      if (navAuthBtn) navAuthBtn.textContent = 'Sign Out';
 
     } else {
       // Show login prompt
@@ -408,6 +414,10 @@ setupCloudButtonsWithRetry() {
         btn.disabled = true;
         btn.style.opacity = '0.5';
       });
+      
+      // Hide profile link
+      if (profileNavLink) profileNavLink.style.display = 'none';
+      if (navAuthBtn) navAuthBtn.textContent = 'Sign In';
     }
   }
 
