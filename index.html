@@ -247,8 +247,13 @@
     
     /* Ensure nav elements always visible on mobile */
     .nav-auth-indicator { 
+      display: flex !important;
       flex-shrink: 0;
-      min-width: 80px;
+      min-width: auto;
+      font-size: 0.7rem;
+    }
+    .nav-auth-indicator .auth-status {
+      padding: 3px 8px;
     }
   }
   
