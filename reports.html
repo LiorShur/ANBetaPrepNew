@@ -747,49 +747,6 @@
         justify-content: center;
       }
     }
-    
-    /* Auth modal must be above everything - COMPLETE STYLES */
-    .auth-modal {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 200000 !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      box-sizing: border-box !important;
-    }
-    .auth-modal.hidden {
-      display: none !important;
-    }
-    .auth-modal-backdrop {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      background: rgba(0, 0, 0, 0.8) !important;
-      backdrop-filter: blur(10px) !important;
-      z-index: 1 !important;
-    }
-    .auth-modal-container {
-      position: relative !important;
-      z-index: 2 !important;
-      background: white !important;
-      border-radius: 20px !important;
-      width: 90% !important;
-      max-width: 420px !important;
-      max-height: 90vh !important;
-      overflow: hidden !important;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3) !important;
-      margin: 0 auto !important;
-    }
   </style>
   
   <!-- Analytics & Error Monitoring -->
@@ -2829,7 +2786,7 @@
             }
           } else {
             // Open auth modal
-            document.getElementById('authModal')?.classList.remove('hidden');
+            openAuthModal();
           }
         });
       }
@@ -4174,9 +4131,9 @@ Generated: ${new Date().toLocaleString()}`;
   </script>
 
   <!-- Auth Modal -->
-  <div id="authModal" class="auth-modal hidden">
-    <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
-    <div class="auth-modal-container">
+  <div id="authModal" class="auth-modal hidden" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; align-items: center; justify-content: center; z-index: 999999;">
+    <div class="auth-modal-backdrop" onclick="closeAuthModal()" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);"></div>
+    <div class="auth-modal-container" style="position: relative; z-index: 1; background: white; border-radius: 20px; width: 90%; max-width: 420px; max-height: 90vh; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">
       <div class="auth-modal-header">
         <h2 id="authModalTitle">Welcome to Access Nature</h2>
         <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
@@ -4253,8 +4210,19 @@ Generated: ${new Date().toLocaleString()}`;
 
   <!-- Auth Modal Helper Functions -->
   <script>
+    function openAuthModal() {
+      const modal = document.getElementById('authModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+    }
     function closeAuthModal() {
-      document.getElementById('authModal')?.classList.add('hidden');
+      const modal = document.getElementById('authModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
     }
     function switchToSignup() {
       document.getElementById('loginForm')?.classList.remove('active');
