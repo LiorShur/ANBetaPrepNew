@@ -7,6 +7,48 @@
   
   <!-- CRITICAL CSS - Nav styles inline for immediate render -->
   <style>
+    /* WCAG Accessibility Styles */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Focus styles for all interactive elements */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 3px solid #2c5530;
+      outline-offset: 2px;
+    }
+
+    /* Skip to main content link */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #2c5530;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100000;
+      text-decoration: none;
+      font-weight: 500;
+      border-radius: 0 0 4px 0;
+    }
+
+    .skip-link:focus {
+      top: 0;
+    }
+
     .top-nav {
       position: fixed;
       top: 0;
@@ -278,35 +320,41 @@
   } catch(e) {}
 })();
 </script>
+
+<!-- Analytics & Error Monitoring -->
+<script src="src/utils/monitoring.js" defer></script>
 </head>
 <body>
+<!-- Skip to main content link for keyboard users -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
 <!-- Navigation -->
-<nav class="top-nav">
+<nav class="top-nav" role="navigation" aria-label="Main navigation">
   <a href="index.html" class="nav-brand">🌲 Access Nature</a>
   <div class="nav-auth-indicator">
     <div class="auth-status" id="authIndicator">
-      <span>👤</span>
+      <span aria-hidden="true">👤</span>
       <span id="authStatusText">Guest</span>
     </div>
   </div>
-  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
-  <div class="nav-menu" id="navMenu">
-    <a href="index.html" class="nav-link active">🏠 Home</a>
-    <a href="tracker.html" class="nav-link">🗺️ Track</a>
-    <a href="reports.html" class="nav-link">📋 Reports</a>
-    <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;">👤 Profile</a>
-    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;">
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">☰</button>
+  <div class="nav-menu" id="navMenu" role="menu">
+    <a href="index.html" class="nav-link active" role="menuitem">🏠 Home</a>
+    <a href="tracker.html" class="nav-link" role="menuitem">🗺️ Track</a>
+    <a href="reports.html" class="nav-link" role="menuitem">📋 Reports</a>
+    <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;" role="menuitem">👤 Profile</a>
+    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;" role="menuitem" aria-label="Open mobility profile settings">
       ♿ Mobility Profile
     </button>
     <div class="nav-auth">
-      <button id="navAuthBtn" class="btn">Sign In</button>
+      <button id="navAuthBtn" class="btn" aria-label="Sign in to your account">Sign In</button>
     </div>
   </div>
 </nav>
 
 <!-- High Contrast Toggle -->
-<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode">
-  <span class="toggle-icon">☀️</span>
+<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode" aria-pressed="false">
+  <span class="toggle-icon" aria-hidden="true">☀️</span>
   <span class="toggle-text">High Contrast</span>
 </button>
 
@@ -406,7 +454,7 @@ async function makeGuidesPublic() {
 }
 </script>
   <!-- Main Navigation -->
-  <div class="main-navigation">
+  <main id="main-content" class="main-navigation" role="main">
     <div class="nav-container">
       
       <!-- Search Trail Guides -->
@@ -426,9 +474,10 @@ async function makeGuidesPublic() {
           🔍 Browse Trail Guides
         </button>
         
-        <div class="quick-search">
-          <input type="text" id="quickSearch" placeholder="Quick search trails..." maxlength="50">
-          <button onclick="quickSearch()" class="search-btn">Search</button>
+        <div class="quick-search" role="search">
+          <label for="quickSearch" class="visually-hidden">Search trails</label>
+          <input type="text" id="quickSearch" placeholder="Quick search trails..." maxlength="50" aria-label="Quick search trails">
+          <button onclick="quickSearch()" class="search-btn" aria-label="Search trails">Search</button>
         </div>
       </div>
 
@@ -570,30 +619,34 @@ async function makeGuidesPublic() {
       
       <div class="modal-content">
         <!-- Search and Filters -->
-        <div class="search-section">
+        <div class="search-section" role="search" aria-label="Trail search">
           <div class="search-bar">
-            <input type="text" id="trailSearch" placeholder="Search trail names, locations..." maxlength="100">
-            <button onclick="searchTrails()" class="search-button">🔍 Search</button>
+            <label for="trailSearch" class="visually-hidden">Search trail names and locations</label>
+            <input type="text" id="trailSearch" placeholder="Search trail names, locations..." maxlength="100" aria-label="Search trail names and locations">
+            <button onclick="searchTrails()" class="search-button" aria-label="Search trails">🔍 Search</button>
           </div>
           
           <div class="filters-section">
-            <h4>🎯 Filter by Accessibility</h4>
-            <div class="filter-grid">
-              <select id="wheelchairFilter">
+            <h4 id="filterHeading">🎯 Filter by Accessibility</h4>
+            <div class="filter-grid" role="group" aria-labelledby="filterHeading">
+              <label for="wheelchairFilter" class="visually-hidden">Filter by wheelchair access</label>
+              <select id="wheelchairFilter" aria-label="Filter by wheelchair access">
                 <option value="">Wheelchair Access</option>
                 <option value="Fully Accessible">Fully Accessible</option>
                 <option value="Partially Accessible">Partially Accessible</option>
                 <option value="Not Accessible">Not Accessible</option>
               </select>
               
-              <select id="difficultyFilter">
+              <label for="difficultyFilter" class="visually-hidden">Filter by difficulty level</label>
+              <select id="difficultyFilter" aria-label="Filter by difficulty level">
                 <option value="">Difficulty Level</option>
                 <option value="Easy">Easy</option>
                 <option value="Moderate">Moderate</option>
                 <option value="Difficult">Difficult</option>
               </select>
               
-              <select id="distanceFilter">
+              <label for="distanceFilter" class="visually-hidden">Filter by distance</label>
+              <select id="distanceFilter" aria-label="Filter by distance">
                 <option value="">Distance</option>
                 <option value="0-2">0-2 km</option>
                 <option value="2-5">2-5 km</option>
@@ -601,19 +654,19 @@ async function makeGuidesPublic() {
                 <option value="10+">10+ km</option>
               </select>
               
-              <button onclick="applyFilters()" class="filter-apply-btn">Apply Filters</button>
+              <button onclick="applyFilters()" class="filter-apply-btn" aria-label="Apply selected filters">Apply Filters</button>
             </div>
           </div>
         </div>
         
         <!-- Results -->
-        <div class="results-section">
+        <div class="results-section" aria-live="polite">
           <div class="results-header">
             <h4>📍 Trail Results</h4>
-            <span id="resultsCount">0 trails found</span>
+            <span id="resultsCount" aria-live="polite">0 trails found</span>
           </div>
           
-          <div id="trailResults" class="trail-results-grid">
+          <div id="trailResults" class="trail-results-grid" role="list" aria-label="Trail search results">
             <!-- Dynamically populated -->
           </div>
           
@@ -628,12 +681,12 @@ async function makeGuidesPublic() {
   </div>
 
   <!-- Auth Modal -->
-  <div id="authModal" class="auth-modal hidden">
+  <div id="authModal" class="auth-modal hidden" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
     <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
     <div class="auth-modal-container">
       <div class="auth-modal-header">
         <h2 id="authModalTitle">Welcome to Access Nature</h2>
-        <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+        <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close authentication modal">✕</button>
       </div>
       
       <div class="auth-modal-content">
@@ -644,20 +697,22 @@ async function makeGuidesPublic() {
             <p>Continue your accessibility mapping journey</p>
           </div>
           
-          <form class="auth-inputs" id="loginFormElement">
+          <form class="auth-inputs" id="loginFormElement" aria-label="Sign in form">
             <div class="input-group">
-              <input type="email" id="loginEmail" placeholder="Email address" required>
-              <span class="input-icon">📧</span>
+              <label for="loginEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="loginEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
             </div>
             
             <div class="input-group">
-              <input type="password" id="loginPassword" placeholder="Password" required>
-              <span class="input-icon">🔒</span>
+              <label for="loginPassword" class="visually-hidden">Password</label>
+              <input type="password" id="loginPassword" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
             </div>
             
             <button type="submit" id="loginBtn" class="auth-submit-btn">
               <span class="btn-text">Sign In</span>
-              <span class="btn-spinner hidden">⏳</span>
+              <span class="btn-spinner hidden" aria-hidden="true">⏳</span>
             </button>
           </form>
           
@@ -673,25 +728,28 @@ async function makeGuidesPublic() {
             <p>Join the community making nature accessible</p>
           </div>
           
-          <form class="auth-inputs" id="signupFormElement">
+          <form class="auth-inputs" id="signupFormElement" aria-label="Create account form">
             <div class="input-group">
-              <input type="text" id="signupName" placeholder="Full name" required>
-              <span class="input-icon">👤</span>
+              <label for="signupName" class="visually-hidden">Full name</label>
+              <input type="text" id="signupName" placeholder="Full name" aria-label="Full name" required autocomplete="name">
+              <span class="input-icon" aria-hidden="true">👤</span>
             </div>
             
             <div class="input-group">
-              <input type="email" id="signupEmail" placeholder="Email address" required>
-              <span class="input-icon">📧</span>
+              <label for="signupEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="signupEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
             </div>
             
             <div class="input-group">
-              <input type="password" id="signupPassword" placeholder="Create password" required>
-              <span class="input-icon">🔒</span>
+              <label for="signupPassword" class="visually-hidden">Create password</label>
+              <input type="password" id="signupPassword" placeholder="Create password" aria-label="Create password" required autocomplete="new-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
             </div>
             
             <button type="submit" id="signupBtn" class="auth-submit-btn">
               <span class="btn-text">Create Account</span>
-              <span class="btn-spinner hidden">⏳</span>
+              <span class="btn-spinner hidden" aria-hidden="true">⏳</span>
             </button>
           </form>
           
