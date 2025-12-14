@@ -2232,16 +2232,22 @@ async updateAuthStatus() {
   const userInfo = document.getElementById('userInfo');
   const authPrompt = document.getElementById('authPrompt');
   const userEmail = document.getElementById('userEmail');
+  const profileNavLink = document.getElementById('profileNavLink');
+  const navAuthBtn = document.getElementById('navAuthBtn');
 
   if (this.currentUser) {
     // User is signed in
     if (userInfo) userInfo.classList.remove('hidden');
     if (authPrompt) authPrompt.classList.add('hidden');
-    if (userEmail) userEmail.textContent = this.currentUser.email;
+    if (userEmail) userEmail.textContent = this.currentUser.displayName || this.currentUser.email;
+    if (profileNavLink) profileNavLink.style.display = 'block';
+    if (navAuthBtn) navAuthBtn.textContent = 'Sign Out';
   } else {
     // User is signed out
     if (userInfo) userInfo.classList.add('hidden');
     if (authPrompt) authPrompt.classList.remove('hidden');
+    if (profileNavLink) profileNavLink.style.display = 'none';
+    if (navAuthBtn) navAuthBtn.textContent = 'Sign In';
   }
 }
 
