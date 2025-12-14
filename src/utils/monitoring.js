@@ -25,7 +25,7 @@
     
     // Sentry DSN (Data Source Name)
     // Get this from: Sentry > Settings > Projects > your project > Client Keys (DSN)
-    SENTRY_DSN: '', // TODO: Replace with actual DSN like 'https://xxx@xxx.ingest.sentry.io/xxx'
+    SENTRY_DSN: 'https://4198ba355b470166ba6141f8efd0fac8@o4510533191270400.ingest.us.sentry.io/4510533199790080', // TODO: Replace with actual DSN like 'https://xxx@xxx.ingest.sentry.io/xxx'
     
     // Environment
     ENVIRONMENT: window.location.hostname === 'localhost' ? 'development' : 'production',
