@@ -75,10 +75,10 @@ class BetaFeedback {
         position: absolute;
         top: -4px;
         right: -4px;
-        background: #ef4444;
+        background: #b91c1c;
         color: white;
         font-size: 10px;
-        font-weight: 600;
+        font-weight: 700;
         padding: 2px 6px;
         border-radius: 10px;
         text-transform: uppercase;
@@ -434,11 +434,11 @@ class BetaFeedback {
     const fab = document.createElement('button');
     fab.id = 'feedbackFab';
     fab.className = 'feedback-fab';
-    fab.setAttribute('aria-label', 'Send feedback');
+    fab.setAttribute('aria-label', 'Feedback');
     fab.innerHTML = `
-      <span class="fab-icon">💬</span>
+      <span class="fab-icon" aria-hidden="true">💬</span>
       <span class="fab-label">Feedback</span>
-      <span class="badge">BETA</span>
+      <span class="badge" aria-hidden="true">BETA</span>
     `;
     
     fab.addEventListener('click', () => this.open());
