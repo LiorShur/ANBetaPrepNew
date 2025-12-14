@@ -888,6 +888,7 @@
         <button class="btn btn-secondary" id="resetFiltersBtn">🔄 Reset</button>
         <button class="btn btn-secondary" id="useMyLocationBtn">📍 Use My Location</button>
         <button class="btn btn-secondary" id="exportAllBtn" title="Export filtered reports to CSV for 311 submission">📊 Export CSV</button>
+        <button class="btn btn-secondary" id="printAllBtn" title="Print all filtered reports (can save as PDF)">🖨️ Print All</button>
       </div>
     </div>
 
@@ -2654,6 +2655,9 @@
       // Export filtered reports to CSV
       document.getElementById('exportAllBtn').addEventListener('click', exportFilteredReportsCSV);
 
+      // Print all filtered reports
+      document.getElementById('printAllBtn').addEventListener('click', printAllFilteredReports);
+
       // Use my location
       document.getElementById('useMyLocationBtn').addEventListener('click', async () => {
         await getUserLocation();
@@ -3510,7 +3514,7 @@ Generated: ${new Date().toLocaleString()}`;
     };
 
     /**
-     * Download report as HTML file
+     * Download report as HTML file (can be printed/saved as PDF)
      */
     window.downloadReport = function(reportId) {
       const report = allReports.find(r => r.id === reportId);
@@ -3519,62 +3523,174 @@ Generated: ${new Date().toLocaleString()}`;
         return;
       }
 
-      // Reuse printReport HTML generation
       const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
       const severity = report.severity || 3;
       const severityLabel = severityLabels[severity] || 'Medium';
+      const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
       const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+      const photoUrls = report.photoUrls || [];
 
-      // Simplified version for download
-      const textContent = `ACCESSIBILITY BARRIER REPORT
-============================
-For Municipal 311 Submission
-Generated: ${new Date().toLocaleString()}
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Accessibility Report - ${escapeHtml(report.title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1f2937; line-height: 1.5; background: #f8fafc; }
+    .report-container { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    h1 { color: #1f2937; border-bottom: 3px solid #667eea; padding-bottom: 12px; margin-bottom: 8px; font-size: 1.75rem; }
+    .subtitle { color: #6b7280; margin-bottom: 24px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .report-id { background: #f3f4f6; padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; }
+    .section { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+    .section-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .field { margin-bottom: 14px; }
+    .field-label { font-weight: 600; color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .field-value { font-size: 1rem; color: #111827; }
+    .severity-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; color: white; font-weight: 700; background: ${severityColor}; }
+    .temp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.8rem; margin-left: 8px; }
+    .stats-row { display: flex; gap: 30px; }
+    .stat { text-align: center; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; }
+    .verified-badge { background: #ecfdf5; border: 2px solid #10b981; color: #059669; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-top: 12px; display: inline-block; }
+    .photos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .photo-item { border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
+    .photo-item img { width: 100%; height: 150px; object-fit: cover; }
+    .qr-section { text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 12px; }
+    .map-link { background: #eff6ff; padding: 12px; border-radius: 8px; margin-top: 8px; word-break: break-all; font-size: 0.9rem; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; font-size: 0.85rem; color: #6b7280; }
+    .footer p { margin: 4px 0; }
+    .print-instructions { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; color: #92400e; }
+    @media print { 
+      body { padding: 0; background: white; } 
+      .report-container { box-shadow: none; padding: 20px; }
+      .section { break-inside: avoid; } 
+      .print-instructions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-instructions">
+    💡 <strong>To save as PDF:</strong> Press Ctrl+P (or Cmd+P on Mac), select "Save as PDF" as the printer.
+  </div>
+  <div class="report-container">
+    <div class="header-row">
+      <div>
+        <h1>🏛️ Accessibility Issue Report</h1>
+        <div class="subtitle">For Municipal 311 Submission</div>
+      </div>
+      <div class="report-id"><strong>ID:</strong> ${report.id?.substring(0, 8) || 'N/A'}</div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📋 Issue Details</div>
+      <div class="field">
+        <div class="field-label">Report Title</div>
+        <div class="field-value" style="font-size: 1.2rem; font-weight: 600;">${escapeHtml(report.title)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Issue Category</div>
+        <div class="field-value">${serviceInfo.name} <span style="color: #6b7280;">(${serviceInfo.group})</span></div>
+      </div>
+      <div class="field">
+        <div class="field-label">Severity Level</div>
+        <div class="field-value">
+          <span class="severity-badge">${severity}/5 - ${severityLabel}</span>
+          ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Description</div>
+        <div class="field-value">${escapeHtml(report.description) || 'No additional description provided'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">311 Service Code</div>
+        <div class="field-value" style="font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: inline-block;">${serviceInfo.code}</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📍 Location Information</div>
+      <div class="field">
+        <div class="field-label">Address</div>
+        <div class="field-value">${escapeHtml(report.address) || 'Address not provided'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">GPS Coordinates</div>
+        <div class="field-value">${report.latitude?.toFixed(6) || 'N/A'}, ${report.longitude?.toFixed(6) || 'N/A'}</div>
+      </div>
+      <div class="map-link">
+        <strong>📍 View on Map:</strong> https://www.google.com/maps?q=${report.latitude},${report.longitude}
+      </div>
+    </div>
+    
+    ${photoUrls.length > 0 ? `
+    <div class="section">
+      <div class="section-title">📷 Photo Evidence (${photoUrls.length})</div>
+      <div class="photos-grid">
+        ${photoUrls.slice(0, 4).map(url => `<div class="photo-item"><img src="${url}" alt="Report photo"></div>`).join('')}
+      </div>
+      ${photoUrls.length > 4 ? `<p style="margin-top: 8px; color: #6b7280; font-size: 0.85rem;">+ ${photoUrls.length - 4} more photos available online</p>` : ''}
+    </div>
+    ` : ''}
+    
+    <div class="section">
+      <div class="section-title">👥 Community Validation</div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value">${report.upvotes || 0}</div>
+          <div class="stat-label">Community Upvotes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${report.verificationCount || 0}</div>
+          <div class="stat-label">In-Person Verifications</div>
+        </div>
+      </div>
+      ${(report.verificationCount || 0) >= 3 ? '<div class="verified-badge">✅ Community Verified Report</div>' : ''}
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📅 Timeline</div>
+      <div class="field">
+        <div class="field-label">Reported On</div>
+        <div class="field-value">${date}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Current Status</div>
+        <div class="field-value" style="text-transform: uppercase; font-weight: 600;">${report.status || 'NEW'}</div>
+      </div>
+      ${isTemporary && report.expectedResolution ? `
+      <div class="field">
+        <div class="field-label">Expected Resolution</div>
+        <div class="field-value">${new Date(report.expectedResolution).toLocaleDateString()}</div>
+      </div>
+      ` : ''}
+    </div>
+    
+    <div class="footer">
+      <p><strong>Report ID:</strong> ${report.id}</p>
+      <p><strong>Source:</strong> Access Nature - Community Accessibility Mapping Platform</p>
+      <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+      <p><strong>Online Report:</strong> ${window.location.origin}/reports.html#report=${report.id}</p>
+    </div>
+  </div>
+</body>
+</html>`;
 
-ISSUE DETAILS
--------------
-Title: ${report.title}
-Category: ${serviceInfo.name} (${serviceInfo.group})
-Service Code: ${serviceInfo.code}
-Severity: ${severity}/5 - ${severityLabel}
-Type: ${report.isTemporary ? 'TEMPORARY' : 'PERMANENT'}
-
-Description:
-${report.description || 'No additional description provided.'}
-
-LOCATION
---------
-Address: ${report.address || 'Not provided'}
-GPS: ${report.latitude?.toFixed(6)}, ${report.longitude?.toFixed(6)}
-Map: https://www.google.com/maps?q=${report.latitude},${report.longitude}
-
-COMMUNITY VALIDATION
---------------------
-Upvotes: ${report.upvotes || 0}
-Verifications: ${report.verificationCount || 0}
-${(report.verificationCount || 0) >= 3 ? '✅ COMMUNITY VERIFIED' : ''}
-
-TIMELINE
---------
-Reported: ${date}
-Status: ${(report.status || 'NEW').toUpperCase()}
-
----
-Report ID: ${report.id}
-Source: Access Nature Community Platform
-`;
-
-      const blob = new Blob([textContent], { type: 'text/plain' });
+      const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `accessibility-report-${report.id?.substring(0, 8) || 'export'}.txt`;
+      a.download = `accessibility-report-${report.id?.substring(0, 8) || 'export'}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showToast('📥 Report downloaded!', 'success');
+      showToast('📥 Report downloaded! Open the file and print to PDF.', 'success');
     };
 
     /**
@@ -3710,6 +3826,191 @@ Source: Access Nature Community Platform
       URL.revokeObjectURL(url);
 
       showToast(`📊 Exported ${reportsToExport.length} reports to CSV`, 'success');
+    }
+
+    /**
+     * Print all filtered reports (for PDF export via print dialog)
+     */
+    function printAllFilteredReports() {
+      const reportsToExport = filteredReports.length > 0 ? filteredReports : allReports;
+      
+      if (reportsToExport.length === 0) {
+        showToast('No reports to print', 'error');
+        return;
+      }
+
+      if (reportsToExport.length > 50) {
+        if (!confirm(`This will generate a print-friendly document with ${reportsToExport.length} reports. This may take a moment. Continue?`)) {
+          return;
+        }
+      }
+
+      const generateReportCard = (report, index) => {
+        const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+        const severity = report.severity || 3;
+        const severityLabel = severityLabels[severity] || 'Medium';
+        const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
+        const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Unknown';
+        const isTemporary = report.isTemporary || report.durationType === 'temporary';
+        const isVerified = (report.verificationCount || 0) >= 3;
+
+        return `
+          <div class="report-card ${index > 0 ? 'page-break' : ''}">
+            <div class="card-header">
+              <div class="report-number">#${index + 1}</div>
+              <h2>${escapeHtml(report.title)}</h2>
+              <div class="badges">
+                <span class="severity-badge" style="background: ${severityColor};">${severity}/5 - ${severityLabel}</span>
+                ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+                ${isVerified ? '<span class="verified-badge">✅ VERIFIED</span>' : ''}
+              </div>
+            </div>
+            
+            <div class="card-body">
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">Category</span>
+                  <span class="value">${serviceInfo.name}</span>
+                </div>
+                <div class="field">
+                  <span class="label">Service Code</span>
+                  <span class="value code">${serviceInfo.code}</span>
+                </div>
+                <div class="field">
+                  <span class="label">Status</span>
+                  <span class="value">${(report.status || 'New').toUpperCase()}</span>
+                </div>
+              </div>
+              
+              <div class="field full-width">
+                <span class="label">Description</span>
+                <span class="value">${escapeHtml(report.description || 'No description provided')}</span>
+              </div>
+              
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">📍 Address</span>
+                  <span class="value">${escapeHtml(report.address || 'Not provided')}</span>
+                </div>
+                <div class="field">
+                  <span class="label">GPS</span>
+                  <span class="value code">${report.latitude?.toFixed(5)}, ${report.longitude?.toFixed(5)}</span>
+                </div>
+              </div>
+              
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">👍 Upvotes</span>
+                  <span class="value">${report.upvotes || 0}</span>
+                </div>
+                <div class="field">
+                  <span class="label">✓ Verifications</span>
+                  <span class="value">${report.verificationCount || 0}</span>
+                </div>
+                <div class="field">
+                  <span class="label">📅 Reported</span>
+                  <span class="value">${date}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <span>ID: ${report.id?.substring(0, 12) || 'N/A'}</span>
+              <span>Map: google.com/maps?q=${report.latitude},${report.longitude}</span>
+            </div>
+          </div>
+        `;
+      };
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Access Nature - ${reportsToExport.length} Accessibility Reports</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; padding: 20px; color: #1f2937; line-height: 1.4; }
+    
+    .print-header { background: linear-gradient(135deg, #2c5530, #4a7c59); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center; }
+    .print-header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+    .print-header p { opacity: 0.9; }
+    .print-header .stats { display: flex; justify-content: center; gap: 30px; margin-top: 16px; }
+    .print-header .stat { text-align: center; }
+    .print-header .stat-value { font-size: 1.5rem; font-weight: 700; }
+    .print-header .stat-label { font-size: 0.85rem; opacity: 0.8; }
+    
+    .report-card { background: white; border-radius: 12px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .card-header { background: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }
+    .card-header .report-number { font-size: 0.85rem; color: #6b7280; margin-bottom: 4px; }
+    .card-header h2 { font-size: 1.1rem; margin-bottom: 8px; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .severity-badge { padding: 4px 10px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: 600; }
+    .temp-badge { padding: 3px 8px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.7rem; }
+    .verified-badge { padding: 3px 8px; border-radius: 20px; background: #10b981; color: white; font-size: 0.7rem; }
+    
+    .card-body { padding: 16px 20px; }
+    .field-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .field { flex: 1; min-width: 150px; }
+    .field.full-width { flex: 100%; }
+    .field .label { display: block; font-size: 0.7rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .field .value { font-size: 0.9rem; color: #111827; }
+    .field .value.code { font-family: monospace; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+    
+    .card-footer { background: #f8fafc; padding: 10px 20px; font-size: 0.75rem; color: #6b7280; display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; }
+    
+    .print-footer { margin-top: 24px; padding: 16px; background: white; border-radius: 8px; text-align: center; font-size: 0.85rem; color: #6b7280; }
+    
+    .page-break { page-break-before: auto; }
+    
+    @media print {
+      body { padding: 0; background: white; }
+      .print-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-after: avoid; }
+      .report-card { page-break-inside: avoid; box-shadow: none; border: 1px solid #e5e7eb; }
+      .severity-badge, .temp-badge, .verified-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    
+    @media (max-width: 600px) {
+      .field-row { flex-direction: column; gap: 8px; }
+      .field { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <h1>🏛️ Access Nature - Accessibility Reports</h1>
+    <p>Bulk Report Export for Municipal 311 Submission</p>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.length}</div>
+        <div class="stat-label">Total Reports</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.filter(r => (r.verificationCount || 0) >= 3).length}</div>
+        <div class="stat-label">Verified</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.filter(r => r.severity >= 4).length}</div>
+        <div class="stat-label">High Priority</div>
+      </div>
+    </div>
+  </div>
+  
+  ${reportsToExport.map((report, i) => generateReportCard(report, i)).join('')}
+  
+  <div class="print-footer">
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()} | <strong>Source:</strong> Access Nature Community Platform</p>
+    <p style="margin-top: 4px;">To save as PDF: Press Ctrl+P (Cmd+P on Mac) → Select "Save as PDF"</p>
+  </div>
+</body>
+</html>`;
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Auto-trigger print after a short delay
+      setTimeout(() => printWindow.print(), 500);
     }
 
     /**
