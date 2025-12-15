@@ -51,16 +51,23 @@
 
 /* Auth Modal */
 .auth-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s ease;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.auth-modal.hidden {
+  display: none !important;
 }
 
 @keyframes fadeIn {
@@ -69,17 +76,19 @@
 }
 
 .auth-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.8) !important;
   backdrop-filter: blur(10px);
+  z-index: 1;
 }
 
 .auth-modal-container {
-  position: relative;
+  position: relative !important;
+  z-index: 2;
   background: white;
   border-radius: 20px;
   width: 90%;
