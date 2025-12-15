@@ -51,14 +51,7 @@
 
 /* Auth Modal */
 .auth-modal {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 999999 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  display: block !important;
 }
 
 .auth-modal.hidden {
@@ -71,17 +64,20 @@
 }
 
 .auth-modal-backdrop {
-  position: absolute !important;
+  position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
   background: rgba(0, 0, 0, 0.8) !important;
   backdrop-filter: blur(10px);
+  z-index: 999998 !important;
 }
 
 .auth-modal-container {
-  position: absolute !important;
+  position: fixed !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
@@ -92,6 +88,7 @@
   max-height: 90vh;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  z-index: 999999 !important;
   animation: slideUp 0.3s ease;
 }
 
