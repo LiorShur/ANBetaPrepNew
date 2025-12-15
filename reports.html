@@ -747,6 +747,48 @@
         justify-content: center;
       }
     }
+    
+    /* ============================================
+       AUTH MODAL - ABSOLUTE POSITIONING CENTERING
+       ============================================ */
+    #authModal {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 999999 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    
+    #authModal.hidden {
+      display: none !important;
+    }
+    
+    #authModal > .auth-modal-backdrop {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      backdrop-filter: blur(10px) !important;
+    }
+    
+    #authModal > .auth-modal-container {
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      background: white !important;
+      border-radius: 20px !important;
+      width: 90% !important;
+      max-width: 420px !important;
+      max-height: 90vh !important;
+      overflow: hidden !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3) !important;
+    }
   </style>
   
   <!-- Analytics & Error Monitoring -->
