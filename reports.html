@@ -1368,6 +1368,14 @@
           } catch (error) {
             console.warn('⚠️ UserService initialization failed:', error);
           }
+          
+          // Show loading indicator and refresh reports
+          console.log('🔄 Refreshing reports after sign-in...');
+          toast.show('Loading your reports...', 'info');
+          await loadReports();
+        } else {
+          // User signed out - refresh to show sign-in prompt
+          console.log('🔄 User signed out, refreshing content...');
           await loadReports();
         }
       });

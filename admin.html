@@ -1694,9 +1694,17 @@
       const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
       
       sections.forEach(section => {
+        // Update tab count
         const countEl = document.getElementById(`${section}Count`);
         const count = cache[section].length;
         countEl.textContent = count;
+        
+        // Also update the section header filtered count
+        const filteredData = getFilteredData(section);
+        const filteredCountEl = document.getElementById(`${section}FilteredCount`);
+        if (filteredCountEl) {
+          filteredCountEl.textContent = filteredData.length;
+        }
         
         // Add warning style if all sections are empty (likely offline)
         if (totalItems === 0) {

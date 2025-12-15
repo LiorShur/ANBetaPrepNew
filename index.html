@@ -939,12 +939,23 @@ async function makeGuidesPublic() {
       indicator?.classList.add('signed-in');
       if (text) text.textContent = user.displayName || user.email?.split('@')[0];
       if (btn) { btn.textContent = 'Sign Out'; btn.onclick = () => signOut(auth); }
+      
+      // Refresh user-specific content when signing in
+      console.log('🔄 User signed in, refreshing content...');
+      if (window.landingController) {
+        await window.landingController.updateLandingAuthStatus();
+      }
     } else {
       indicator?.classList.remove('signed-in');
       if (text) text.textContent = 'Guest';
       if (btn) { 
         btn.textContent = 'Sign In'; 
         btn.onclick = openAuthModal;
+      }
+      
+      // Hide user-specific content when signing out
+      if (window.landingController) {
+        await window.landingController.updateLandingAuthStatus();
       }
     }
   });
