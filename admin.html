@@ -1335,11 +1335,10 @@
       
       showToast('Loading data...', 'info');
       
-      // Show spinning loaders on all counts (including feedback)
+      // Show spinning loaders on all counts
       ['routes', 'guides', 'conditions', 'reports'].forEach(s => {
         document.getElementById(`${s}Count`).innerHTML = '<span class="spinner"></span>';
       });
-      document.getElementById('feedbackCount').innerHTML = '<span class="spinner"></span>';
       
       // Load sequentially to avoid overwhelming the connection
       const results = [];
@@ -1366,28 +1365,15 @@
         }
       }
       
-      // Also load feedback count (separate from main data sections)
-      try {
-        statusEl.textContent = 'Loading feedback...';
-        const { collection, query, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-        const feedbackSnapshot = await getDocs(collection(db, 'beta_feedback'));
-        const feedbackCount = feedbackSnapshot.size;
-        document.getElementById('feedbackCount').textContent = feedbackCount;
-        document.getElementById('feedbackCount').style.color = '#10b981';
-        setTimeout(() => { document.getElementById('feedbackCount').style.color = ''; }, 600);
-        console.log(`📬 Loaded feedback count: ${feedbackCount}`);
-      } catch (error) {
-        console.warn('Failed to load feedback count:', error);
-        document.getElementById('feedbackCount').textContent = '?';
-        document.getElementById('feedbackCount').style.color = '#f59e0b';
-      }
-      
       const failures = results.filter(r => !r.success);
       const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
       
       updateAllCounts();
       renderCurrentSection();
       updateConnectionStatus();
+      
+      // Load feedback count separately (doesn't block main data)
+      loadFeedbackCount();
       
       // Update status
       const timestamp = new Date().toLocaleTimeString();
@@ -1711,17 +1697,9 @@
       const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
       
       sections.forEach(section => {
-        // Update tab count
         const countEl = document.getElementById(`${section}Count`);
         const count = cache[section].length;
         countEl.textContent = count;
-        
-        // Also update the section header filtered count
-        const filteredData = getFilteredData(section);
-        const filteredCountEl = document.getElementById(`${section}FilteredCount`);
-        if (filteredCountEl) {
-          filteredCountEl.textContent = filteredData.length;
-        }
         
         // Add warning style if all sections are empty (likely offline)
         if (totalItems === 0) {
@@ -3028,6 +3006,20 @@
         loadFeedback();
       }
     };
+
+    // Load feedback count asynchronously (non-blocking)
+    async function loadFeedbackCount() {
+      try {
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        const feedbackSnapshot = await getDocs(collection(db, 'beta_feedback'));
+        const count = feedbackSnapshot.size;
+        document.getElementById('feedbackCount').textContent = count;
+        console.log(`📬 Loaded feedback count: ${count}`);
+      } catch (error) {
+        console.warn('Failed to load feedback count:', error);
+        document.getElementById('feedbackCount').textContent = '?';
+      }
+    }
 
     // ==================== FEEDBACK MANAGEMENT ====================
     
