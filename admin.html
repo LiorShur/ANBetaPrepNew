@@ -1335,10 +1335,11 @@
       
       showToast('Loading data...', 'info');
       
-      // Show spinning loaders on all counts
+      // Show spinning loaders on all counts (including feedback)
       ['routes', 'guides', 'conditions', 'reports'].forEach(s => {
         document.getElementById(`${s}Count`).innerHTML = '<span class="spinner"></span>';
       });
+      document.getElementById('feedbackCount').innerHTML = '<span class="spinner"></span>';
       
       // Load sequentially to avoid overwhelming the connection
       const results = [];
@@ -1363,6 +1364,22 @@
         } else if (!result.success) {
           countEl.style.color = '#ef4444'; // Red for failure
         }
+      }
+      
+      // Also load feedback count (separate from main data sections)
+      try {
+        statusEl.textContent = 'Loading feedback...';
+        const { collection, query, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        const feedbackSnapshot = await getDocs(collection(db, 'beta_feedback'));
+        const feedbackCount = feedbackSnapshot.size;
+        document.getElementById('feedbackCount').textContent = feedbackCount;
+        document.getElementById('feedbackCount').style.color = '#10b981';
+        setTimeout(() => { document.getElementById('feedbackCount').style.color = ''; }, 600);
+        console.log(`📬 Loaded feedback count: ${feedbackCount}`);
+      } catch (error) {
+        console.warn('Failed to load feedback count:', error);
+        document.getElementById('feedbackCount').textContent = '?';
+        document.getElementById('feedbackCount').style.color = '#f59e0b';
       }
       
       const failures = results.filter(r => !r.success);
