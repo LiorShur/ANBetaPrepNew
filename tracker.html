@@ -2,13 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Access Nature</title>
-  
-  <!-- Preconnect to external origins for faster loading -->
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#2c5530">
@@ -344,7 +339,6 @@ textarea:focus-visible,
     </div>
   </div>
 
-  <!-- Auth Modal -->
   <!-- Auth Modal Helper Functions -->
   <script>
     function closeAuthModal() {
@@ -372,6 +366,7 @@ textarea:focus-visible,
     }
   </script>
 
+  <!-- Auth Modal -->
   <div id="authModal" class="auth-modal hidden">
     <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
     <div class="auth-modal-container" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
@@ -624,7 +619,7 @@ textarea:focus-visible,
           localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
         } catch(e) {}
         updateHCButton();
-        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+        if (navigator.vibrate) navigator.vibrate(10);
       });
     })();
   </script>
