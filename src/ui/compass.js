@@ -70,6 +70,12 @@ export class CompassController {
     window.addEventListener('deviceorientation', this.orientationHandler);
     this.isRotationEnabled = true;
     
+    // Add rotation-active class to map container for oversized styling
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+      mapContainer.classList.add('rotation-active');
+    }
+    
     this.updateToggleButton();
     console.log('Compass rotation enabled');
   }
@@ -83,6 +89,12 @@ export class CompassController {
     }
 
     this.isRotationEnabled = false;
+    
+    // Remove rotation-active class from map container
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+      mapContainer.classList.remove('rotation-active');
+    }
     
     // Reset rotation
     this.resetMapRotation();
